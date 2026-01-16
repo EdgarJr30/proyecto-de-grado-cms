@@ -1,0 +1,9 @@
+@import "tailwindcss";
+@layer utilities {
+  .wrap-anywhere {
+    overflow-wrap: anywhere;  /* rompe palabras MUY largas */
+    word-break: break-word;   /* compat extra */
+    white-space: pre-wrap;    /* respeta saltos y envuelve */
+  }
+  .no-x-scroll { overflow-x: hidden; }
+}
