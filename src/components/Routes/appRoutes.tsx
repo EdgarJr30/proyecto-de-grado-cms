@@ -1,7 +1,6 @@
 import type { JSX } from 'react';
 import { Navigate } from 'react-router-dom';
-// import CreateTicketPage from '../../pages/CreateTicketPage';
-import CreateTicketRedirectPage from '../../pages/CreateTicketRedirectPage';
+import CreateTicketPage from '../../pages/CreateTicketPage';
 import LoginPage from '../../pages/LoginPage';
 import WorkOrdersPage from '../../pages/WorkOrdersPage';
 import WorkRequestsPage from '../../pages/WorkRequestsPage';
@@ -280,17 +279,9 @@ export const APP_ROUTES: AppRoute[] = [
     icon: IconAssignee,
     showInSidebar: true,
   },
-  // {
-  //   path: '/crear-ticket',
-  //   element: <CreateTicketPage />,
-  //   allowPerms: ['work_orders:create'],
-  //   name: 'Crear Ticket',
-  //   icon: IconCreate,
-  //   showInSidebar: true,
-  // },
   {
     path: '/crear-ticket',
-    element: <CreateTicketRedirectPage />,
+    element: <CreateTicketPage />,
     allowPerms: ['work_orders:create'],
     name: 'Crear Ticket',
     icon: IconCreate,
