@@ -5,6 +5,7 @@ import Collage from '../assets/COLLAGE_MLM.webp';
 import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
 import { usePermissions } from '../rbac/PermissionsContext';
+import { getPublicSociety } from '../services/societyService';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,33 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { refresh } = usePermissions();
+
+  const [societyName, setSocietyName] = useState<string>('');
+  const [loadingSociety, setLoadingSociety] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSociety = async () => {
+      try {
+        const society = await getPublicSociety();
+        if (!active) return;
+
+        setSocietyName(society?.name ?? 'Company Name');
+      } catch (err) {
+        console.error('[LoginPage] Error loading society:', err);
+        setSocietyName('Company Name');
+      } finally {
+        if (active) setLoadingSociety(false);
+      }
+    };
+
+    loadSociety();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -87,7 +115,7 @@ export default function LoginPage() {
           <div>
             <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
             <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">
-              Manteniendo la Misión
+              {loadingSociety ? 'Cargando…' : societyName}
             </h2>
           </div>
 

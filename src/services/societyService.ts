@@ -43,3 +43,14 @@ export async function createSociety(
 
   if (error) throw new Error(error.message);
 }
+
+export async function getPublicSociety(): Promise<Society | null> {
+  const { data, error } = await supabase
+    .from('societies_public')
+    .select('id,name,logo_url,updated_at')
+    .limit(1);
+
+  if (error) throw new Error(error.message);
+
+  return (data?.[0] ?? null) as Society | null;
+}

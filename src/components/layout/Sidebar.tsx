@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
-import { getLatestSociety } from '../../services/societyService';
+import { getPublicSociety } from '../../services/societyService';
 
 export default function Sidebar() {
   const { loading } = useAuth();
@@ -28,7 +28,7 @@ export default function Sidebar() {
 
     const loadSociety = async () => {
       try {
-        const society = await getLatestSociety();
+        const society = await getPublicSociety();
         if (!isMounted) return;
 
         const name = society?.name?.trim();
