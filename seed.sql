@@ -1496,6 +1496,222 @@ USING (
   OR me_has_permission('special_incidents:full_access'::text)
 );
 
+-- =========================================
+-- Anuncios con audiencia por múltiples roles
+-- =========================================
+
+-- 0.1) Tabla principal
+DROP TABLE IF EXISTS public.announcements CASCADE;
+
+CREATE TABLE public.announcements (
+  id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  message      TEXT NOT NULL,                       -- Texto del anuncio
+  level        TEXT NOT NULL DEFAULT 'info',        -- info | warning | danger | success
+  url          TEXT,                                -- Link opcional
+  is_active    BOOLEAN NOT NULL DEFAULT TRUE,       -- Switch general
+  dismissible  BOOLEAN NOT NULL DEFAULT TRUE,       -- Si el usuario puede cerrarlo
+  starts_at    TIMESTAMPTZ DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'), -- Vigencia desde
+  ends_at      TIMESTAMPTZ,                         -- Vigencia hasta (opcional)
+
+  -- NUEVO: control de audiencia
+  audience_all BOOLEAN NOT NULL DEFAULT TRUE,       -- true: todos los roles; false: roles específicos
+
+  -- Trazabilidad
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by   UUID REFERENCES public.users(id),
+  updated_by   UUID REFERENCES public.users(id)
+);
+
+-- 0.2) Tabla puente: anuncio ↔ roles (varios roles por anuncio)
+DROP TABLE IF EXISTS public.announcement_audience_roles CASCADE;
+
+CREATE TABLE public.announcement_audience_roles (
+  announcement_id BIGINT NOT NULL REFERENCES public.announcements(id) ON DELETE CASCADE,
+  role_id         INT    NOT NULL REFERENCES public.roles(id)         ON DELETE CASCADE,
+  PRIMARY KEY (announcement_id, role_id)
+);
+
+-- 0.4) Triggers de trazabilidad (usa tus funciones genéricas)
+DROP TRIGGER IF EXISTS trg_announcements_created ON public.announcements;
+CREATE TRIGGER trg_announcements_created
+BEFORE INSERT ON public.announcements
+FOR EACH ROW
+EXECUTE FUNCTION public.set_created_by();
+
+DROP TRIGGER IF EXISTS trg_announcements_updated ON public.announcements;
+CREATE TRIGGER trg_announcements_updated
+BEFORE UPDATE ON public.announcements
+FOR EACH ROW
+EXECUTE FUNCTION public.set_updated_by();
+
+-- 0.5) Habilitar RLS
+ALTER TABLE public.announcements              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.announcement_audience_roles ENABLE ROW LEVEL SECURITY;
+
+
+-- 1.1) ¿El usuario actual pertenece a la audiencia de este anuncio?
+CREATE OR REPLACE FUNCTION public.current_user_in_announcement_audience(
+  p_announcement_id BIGINT,
+  p_audience_all    BOOLEAN
+) RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT
+    CASE
+      WHEN p_audience_all IS TRUE THEN TRUE
+      ELSE EXISTS (
+        SELECT 1
+        FROM public.user_roles ur
+        JOIN public.announcement_audience_roles ar
+          ON ar.role_id = ur.role_id
+        WHERE ur.user_id = auth.uid()
+          AND ar.announcement_id = p_announcement_id
+      )
+    END;
+$$;
+
+-- 1.2) ¿Es visible públicamente? (activo + ventana de tiempo + audiencia)
+CREATE OR REPLACE FUNCTION public.is_announcement_publicly_visible(
+  p_is_active       BOOLEAN,
+  p_starts_at       TIMESTAMPTZ,
+  p_ends_at         TIMESTAMPTZ,
+  p_announcement_id BIGINT,
+  p_audience_all    BOOLEAN
+) RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT
+    (p_is_active IS TRUE)
+    AND (COALESCE(p_starts_at, now()) <= now())
+    AND (p_ends_at IS NULL OR now() < p_ends_at)
+    AND public.current_user_in_announcement_audience(p_announcement_id, p_audience_all);
+$$;
+
+-- Limitar ejecución de helpers
+REVOKE ALL ON FUNCTION public.current_user_in_announcement_audience(BIGINT, BOOLEAN) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_announcement_publicly_visible(BOOLEAN, TIMESTAMPTZ, TIMESTAMPTZ, BIGINT, BOOLEAN) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.current_user_in_announcement_audience(BIGINT, BOOLEAN) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_announcement_publicly_visible(BOOLEAN, TIMESTAMPTZ, TIMESTAMPTZ, BIGINT, BOOLEAN) TO authenticated;
+
+-- Limpieza previa
+DROP POLICY IF EXISTS announcements_public_read    ON public.announcements;
+DROP POLICY IF EXISTS announcements_manage_read    ON public.announcements;
+DROP POLICY IF EXISTS announcements_insert         ON public.announcements;
+DROP POLICY IF EXISTS announcements_update_full    ON public.announcements;
+DROP POLICY IF EXISTS announcements_delete         ON public.announcements;
+
+-- 2.1) SELECT: lectura pública (todos ven activos + vigentes + en su audiencia)
+CREATE POLICY announcements_public_read
+ON public.announcements
+FOR SELECT
+USING (
+  public.is_announcement_publicly_visible(
+    is_active,
+    starts_at,
+    ends_at,
+    id,
+    audience_all
+  )
+);
+
+-- 2.2) SELECT: lectura de gestión (ve TODO: borradores, inactivos, futuros, cualquier audiencia)
+CREATE POLICY announcements_manage_read
+ON public.announcements
+FOR SELECT
+USING (
+  public.me_has_permission('announcements:read')
+  OR public.me_has_permission('announcements:full_access')
+);
+
+-- 2.3) INSERT: crear anuncios
+CREATE POLICY announcements_insert
+ON public.announcements
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('announcements:create')
+  OR public.me_has_permission('announcements:full_access')
+);
+
+-- 2.4) UPDATE: edición completa
+CREATE POLICY announcements_update_full
+ON public.announcements
+FOR UPDATE
+USING (
+  public.me_has_permission('announcements:full_access')
+)
+WITH CHECK (
+  public.me_has_permission('announcements:full_access')
+);
+
+-- 2.5) DELETE: eliminar
+CREATE POLICY announcements_delete
+ON public.announcements
+FOR DELETE
+USING (
+  public.me_has_permission('announcements:delete')
+  OR public.me_has_permission('announcements:full_access')
+);
+
+-- Limpieza previa
+DROP POLICY IF EXISTS aar_select ON public.announcement_audience_roles;
+DROP POLICY IF EXISTS aar_insert ON public.announcement_audience_roles;
+DROP POLICY IF EXISTS aar_delete ON public.announcement_audience_roles;
+
+-- 3.1) SELECT (solo gestión)
+CREATE POLICY aar_select
+ON public.announcement_audience_roles
+FOR SELECT
+USING (
+  public.me_has_permission('announcements:read')
+  OR public.me_has_permission('announcements:full_access')
+);
+
+-- 3.2) INSERT (solo gestión total)
+CREATE POLICY aar_insert
+ON public.announcement_audience_roles
+FOR INSERT
+WITH CHECK (
+  public.me_has_permission('announcements:full_access')
+);
+
+-- 3.3) DELETE (solo gestión total)
+CREATE POLICY aar_delete
+ON public.announcement_audience_roles
+FOR DELETE
+USING (
+  public.me_has_permission('announcements:full_access')
+);
+
+CREATE OR REPLACE FUNCTION public.toggle_announcement_active(p_id BIGINT, p_active BOOLEAN)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT ( public.me_has_permission('announcements:disable')
+        OR public.me_has_permission('announcements:full_access') ) THEN
+    RAISE EXCEPTION 'permission denied';
+  END IF;
+
+  UPDATE public.announcements
+     SET is_active  = p_active,
+         updated_at = (now() AT TIME ZONE 'America/Santo_Domingo'),
+         updated_by = auth.uid()
+   WHERE id = p_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.toggle_announcement_active(BIGINT, BOOLEAN) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.toggle_announcement_active(BIGINT, BOOLEAN) TO authenticated;
+
+
+
 CREATE OR REPLACE VIEW public.v_tickets_compat (
   id,
   title,
