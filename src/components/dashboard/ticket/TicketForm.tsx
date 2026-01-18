@@ -47,7 +47,7 @@ interface TicketFormData {
   is_accepted: boolean;
   is_urgent: boolean;
   requester: string;
-  priority: 'baja' | 'media' | 'alta';
+  priority: 'Baja' | 'Media' | 'Alta';
   incident_date: string;
   deadline_date?: string; // ISO date string
   image: string; // base64 o JSON con paths
@@ -75,7 +75,7 @@ const makeInitialForm = (profile?: UserProfile | null): TicketFormData => {
     is_accepted: false,
     is_urgent: false,
     requester: requester || '',
-    priority: 'baja', // Default priority
+    priority: 'Baja', // Default priority
     incident_date: getTodayISODate(), // Default to today
     deadline_date: undefined, // Optional
     image: '',
@@ -240,7 +240,7 @@ export default function TicketForm() {
       const ticketToSave = {
         ...form,
         image: '[]',
-        priority: form.priority ?? 'baja',
+        priority: form.priority ?? 'Baja',
         status: 'Pendiente',
         assignee: 'Sin asignar',
         special_incident_id: form.special_incident_id ?? null,
@@ -788,9 +788,9 @@ export default function TicketForm() {
                   <p>
                     <strong>Incidencia especial:</strong>{' '}
                     {form.special_incident_id
-                      ? specialIncidentOptions.find(
+                      ? (specialIncidentOptions.find(
                           (o) => o.id === form.special_incident_id
-                        )?.name ?? `ID ${form.special_incident_id}`
+                        )?.name ?? `ID ${form.special_incident_id}`)
                       : '— Ninguna —'}
                   </p>
                 </div>

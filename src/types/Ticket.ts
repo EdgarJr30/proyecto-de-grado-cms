@@ -4,11 +4,8 @@ export interface Ticket {
   description: string;
   is_accepted: boolean;
   is_urgent: boolean;
-  priority: "baja" | "media" | "alta";
-  status:
-    | "Pendiente"
-    | "En Ejecución"
-    | "Finalizadas";
+  priority: 'Baja' | 'Media' | 'Alta';
+  status: 'Pendiente' | 'En Ejecución' | 'Finalizadas';
   requester: string;
   location: string;
   assignee?: string;
@@ -36,13 +33,13 @@ export type WorkOrderExtras = {
 export type WorkOrder = Ticket & WorkOrderExtras;
 
 export const Locations = [
-  "Operadora de Servicios Alimenticios",
-  "Adrian Tropical 27",
-  "Adrian Tropical Malecón",
-  "Adrian Tropical Lincoln",
-  "Adrian Tropical San Vicente",
-  "Atracciones el Lago",
-  "M7",
-  "E. Arturo Trading",
-  "Edificio Comunitario",
+  'Operadora de Servicios Alimenticios',
+  'Adrian Tropical 27',
+  'Adrian Tropical Malecón',
+  'Adrian Tropical Lincoln',
+  'Adrian Tropical San Vicente',
+  'Atracciones el Lago',
+  'M7',
+  'E. Arturo Trading',
+  'Edificio Comunitario',
 ];
