@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import Navbar from '../../components/navigation/Navbar';
-import AnnouncementsTable from '../../components/dashboard/announcements/AnnouncementsTable';
+import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 
 export default function AnnouncementsManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');

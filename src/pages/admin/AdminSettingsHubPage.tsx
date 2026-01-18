@@ -11,12 +11,12 @@ import {
   AlertTriangle,
   Megaphone,
 } from 'lucide-react';
-import GeneralSettings from '../../components/dashboard/admin/GeneralSettings';
+import GeneralSettings from '../../components/dashboard/admin/settings/GeneralSettings';
 import RoleList from '../../components/dashboard/roles/RoleList';
 import PermissionsTable from '../../components/dashboard/permissions/PermissionsTable';
 import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
-import AnnouncementsTable from '../../components/dashboard/announcements/AnnouncementsTable';
+import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
 
 type TabKey =
@@ -119,7 +119,7 @@ function TopTabs({
           disabled={disabledSocietyTab}
           className="sm:flex-none"
         />
-
+        {/* ✅ General: NO se bloquea aquí; adentro GeneralSettings decide qué mostrar */}
         <Item
           k="general"
           label="General"
@@ -144,7 +144,6 @@ export default function AdminSettingsHubPage() {
   const canManageIncidents =
     canIncidentsFull || canIncidentsDisable || canIncidentsDelete;
 
-  // Permisos de anuncios
   const canAnnouncementsRead = useCan('announcements:read');
   const canAnnouncementsFull = useCan('announcements:full_access');
   const canAnnouncementsDisable = useCan('announcements:disable');
@@ -155,12 +154,10 @@ export default function AdminSettingsHubPage() {
     canAnnouncementsDelete ||
     canAnnouncementsRead;
 
-  // ✅ NUEVO: permisos de sociedad (ajusta estos códigos a los tuyos)
   const canSocietyRead = useCan('society:read');
   const canSocietyFull = useCan('society:full_access');
   const canSocietyDisable = useCan('society:disable');
   const canSocietyDelete = useCan('society:delete');
-
   const canManageSociety =
     canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
 
@@ -169,6 +166,7 @@ export default function AdminSettingsHubPage() {
 
   const rawTab = q.get('tab') as TabKey | null;
 
+  // ✅ Tab inicial: prioriza lo “admin”; si no, cae en general
   const computedInitial: TabKey =
     rawTab ||
     (canManageRoles
@@ -185,84 +183,58 @@ export default function AdminSettingsHubPage() {
 
   const [tab, setTab] = useState<TabKey>(computedInitial);
 
-  // Estado del modal “Usuarios por rol”
   const [roleUsersModal, setRoleUsersModal] = useState<{
     open: boolean;
     roleId?: number;
   }>({ open: false });
 
-  // Redirecciones por permisos
+  // ✅ Si el tab pedido no está permitido (excepto general), cae al primero permitido o general.
+  const pickFirstAllowedTab = (): TabKey => {
+    if (canManageRoles) return 'roles';
+    if (canSeePermissions) return 'permissions';
+    if (canManageIncidents) return 'incidents';
+    if (canManageAnnouncements) return 'announcements';
+    if (canManageSociety) return 'sociedad';
+    return 'general';
+  };
+
   useEffect(() => {
     if (tab === 'roles' && !canManageRoles) {
-      const next: TabKey = canSeePermissions
-        ? 'permissions'
-        : canManageIncidents
-          ? 'incidents'
-          : canManageAnnouncements
-            ? 'announcements'
-            : canManageSociety
-              ? 'sociedad'
-              : 'general';
+      const next = pickFirstAllowedTab();
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
     }
 
     if (tab === 'permissions' && !canSeePermissions) {
-      const next: TabKey = canManageRoles
-        ? 'roles'
-        : canManageIncidents
-          ? 'incidents'
-          : canManageAnnouncements
-            ? 'announcements'
-            : canManageSociety
-              ? 'sociedad'
-              : 'general';
+      const next = pickFirstAllowedTab();
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
     }
 
     if (tab === 'incidents' && !canManageIncidents) {
-      const next: TabKey = canManageRoles
-        ? 'roles'
-        : canSeePermissions
-          ? 'permissions'
-          : canManageAnnouncements
-            ? 'announcements'
-            : canManageSociety
-              ? 'sociedad'
-              : 'general';
+      const next = pickFirstAllowedTab();
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
     }
 
     if (tab === 'announcements' && !canManageAnnouncements) {
-      const next: TabKey = canManageRoles
-        ? 'roles'
-        : canSeePermissions
-          ? 'permissions'
-          : canManageIncidents
-            ? 'incidents'
-            : canManageSociety
-              ? 'sociedad'
-              : 'general';
+      const next = pickFirstAllowedTab();
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
     }
 
-    // ✅ NUEVO: redirección si forzan ?tab=sociedad sin permiso
     if (tab === 'sociedad' && !canManageSociety) {
-      const next: TabKey = canManageRoles
-        ? 'roles'
-        : canSeePermissions
-          ? 'permissions'
-          : canManageIncidents
-            ? 'incidents'
-            : canManageAnnouncements
-              ? 'announcements'
-              : 'general';
+      const next = pickFirstAllowedTab();
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
     }
+
+    // ✅ NO redirigimos "general": adentro se muestra lo que corresponda.
   }, [
     tab,
     canManageRoles,
@@ -273,7 +245,6 @@ export default function AdminSettingsHubPage() {
     navigate,
   ]);
 
-  // Mantener tab en la URL
   useEffect(() => {
     const params = new URLSearchParams();
     params.set('tab', tab);
@@ -362,7 +333,6 @@ export default function AdminSettingsHubPage() {
             </Can>
           )}
 
-          {/* ✅ NUEVO: Sociedad (render aquí; luego tú haces SocietySettingsTable parecido a AnnouncementsTable) */}
           {tab === 'sociedad' && (
             <Can perm="society:read">
               <div className="space-y-2">

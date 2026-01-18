@@ -47,6 +47,7 @@ export const RESOURCES = {
   special_incidents: 'special_incidents',
   announcements: 'announcements',
   society: 'society',
+  locations: 'locations',
 
   // === Inventario ===
   inventory_items: 'inventory_items',
@@ -145,6 +146,18 @@ export const PERMISSIONS: PermissionDef[] = [
   ),
   p(RESOURCES.society, 'disable', 'Activar/Desactivar sociedades'),
   p(RESOURCES.society, 'delete', 'Eliminar sociedades'),
+
+  // Locations
+  p(RESOURCES.locations, 'read', 'Ver ubicaciones'),
+  p(RESOURCES.locations, 'create', 'Crear ubicaciones'),
+  p(RESOURCES.locations, 'update', 'Editar ubicaciones'),
+  p(RESOURCES.locations, 'delete', 'Eliminar ubicaciones'),
+  p(RESOURCES.locations, 'disable', 'Activar/Desactivar ubicaciones'),
+  p(
+    RESOURCES.locations,
+    'full_access',
+    'Acceso total ubicaciones (crear/modificar/eliminar)'
+  ),
 
   // === Inventario: Catálogo de artículos ===
   p(RESOURCES.inventory_items, 'read', 'Ver catálogo de artículos'),

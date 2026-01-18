@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
-import { useCan } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import { supabase } from '../../../../lib/supabaseClient';
+import { useCan } from '../../../../rbac/PermissionsContext';
+import { showToastError, showToastSuccess } from '../../../../notifications';
 
-import type { Announcement } from '../../../types/Announcements';
-import type { AdminListParams } from '../../../services/announcementService'; // ajusta si tu archivo tiene otro nombre
+import type { Announcement } from '../../../../types/Announcements';
+import type { AdminListParams } from '../../../../services/announcementService'; // ajusta si tu archivo tiene otro nombre
 import {
   getAllAnnouncementsForAdmin,
   upsertAnnouncement,
@@ -13,7 +13,7 @@ import {
   getAnnouncementAudienceRoles,
   setAnnouncementAudienceRoles,
   clearAnnouncementAudienceRoles,
-} from '../../../services/announcementService';
+} from '../../../../services/announcementService';
 
 interface Props {
   searchTerm: string;
@@ -1213,8 +1213,8 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
                         ? 'Guardando…'
                         : 'Creando…'
                       : isEditing
-                      ? 'Guardar cambios'
-                      : 'Crear'}
+                        ? 'Guardar cambios'
+                        : 'Crear'}
                   </button>
                 </div>
               </form>

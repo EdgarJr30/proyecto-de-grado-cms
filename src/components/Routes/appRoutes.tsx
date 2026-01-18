@@ -340,17 +340,29 @@ export const APP_ROUTES: AppRoute[] = [
     path: '/admin/settings',
     element: <AdminSettingsHubPage />,
     allowPerms: [
+      // RBAC
       'rbac:manage_roles',
       'rbac:manage_permissions',
+
+      // Society / Branding
       'society:read',
       'society:full_access',
+
+      // Catálogos
       'special_incidents:read',
       'announcements:read',
+
+      // ✅ NUEVO: Locations
+      'locations:read',
+      'locations:full_access',
+      'locations:disable',
+      'locations:delete',
     ],
     name: 'Configuración',
     icon: IconPermissions,
     showInSidebar: true,
   },
+
   {
     path: '/admin/permisos',
     element: <RoleManagementPage />,
