@@ -24,8 +24,8 @@ function statusClass(s: Ticket['status']) {
 }
 
 function priorityClass(p?: Ticket['priority']) {
-  if (p === 'alta') return 'bg-orange-100 text-orange-800 border-orange-200';
-  if (p === 'media') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+  if (p === 'Alta') return 'bg-orange-100 text-orange-800 border-orange-200';
+  if (p === 'Media') return 'bg-yellow-100 text-yellow-800 border-yellow-200';
   return 'bg-green-100 text-green-800 border-green-200';
 }
 
