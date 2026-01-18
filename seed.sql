@@ -9,24 +9,6 @@ create extension if not exists unaccent;
 create extension if not exists pgcrypto;
 
 -- =========[ 1) ENUMS ]=========
--- location_enum
-do $$
-begin
-  if not exists(select 1 from pg_type where typname='location_enum') then
-    create type location_enum as enum (
-      'Operadora de Servicios Alimenticios',
-      'Adrian Tropical 27',
-      'Adrian Tropical Malecón',
-      'Adrian Tropical Lincoln',
-      'Adrian Tropical San Vicente',
-      'Atracciones el Lago',
-      'M7',
-      'E. Arturo Trading',
-      'Edificio Comunitario'
-    );
-  end if;
-end$$;
-
 -- priority_enum (usado en reports y UI)
 do $$
 begin
@@ -77,7 +59,7 @@ create table if not exists public.users (
   rol_id bigint null references public.roles(id),
   name text not null,
   last_name text not null,
-  location location_enum not null default 'Operadora de Servicios Alimenticios',
+  location_id bigint,
   email text,
   phone text,
   created_at timestamp default now() not null,
@@ -151,7 +133,7 @@ create table if not exists public.tickets (
   is_urgent boolean not null,
   priority priority_enum not null,
   requester text not null,
-  location location_enum not null,
+  location_id bigint,
   assignee text not null, -- legado visible
   incident_date date not null,
   deadline_date date,
@@ -166,6 +148,8 @@ create table if not exists public.tickets (
   updated_by uuid,
   assignee_id bigint
 );
+
+
 
 -- FK creador (si existe users)
 do $$
@@ -216,13 +200,13 @@ end$$;
 -- índices tickets
 create index if not exists idx_tickets_status        on public.tickets(status);
 create index if not exists idx_tickets_isaccepted    on public.tickets(is_accepted);
-create index if not exists idx_tickets_location      on public.tickets(location);
+create index if not exists idx_tickets_location      on public.tickets(location_id);
 create index if not exists idx_tickets_created_by    on public.tickets(created_by);
 create index if not exists idx_tickets_title_trgm     on public.tickets using gin (title gin_trgm_ops);
 create index if not exists idx_tickets_requester_trgm on public.tickets using gin (requester gin_trgm_ops);
-create index if not exists idx_tickets_pend_accepted_loc on public.tickets(status, location)
+create index if not exists idx_tickets_pend_accepted_loc on public.tickets(status, location_id)
   where status='Pendiente' and is_accepted=true;
-create index if not exists idx_tickets_not_pend_loc on public.tickets(status, location)
+create index if not exists idx_tickets_not_pend_loc on public.tickets(status, location_id)
   where status <> 'Pendiente';
 
 -- =========[ 4) TRIGGERS / AUDITORÍA ]=========
@@ -476,7 +460,7 @@ create or replace function public.create_user_in_public (
   p_email text,
   p_name text,
   p_last_name text,
-  p_location location_enum,
+  p_location bigint,
   p_rol_id integer default null
 ) returns void language plpgsql security definer set search_path=public as $$
 begin
@@ -484,13 +468,13 @@ begin
     raise exception 'forbidden: users:create required';
   end if;
 
-  insert into public.users(id, email, name, last_name, location)
+  insert into public.users(id, email, name, last_name, location_id)
   values (p_id, p_email, p_name, p_last_name, p_location)
   on conflict (id) do update
     set email     = excluded.email,
         name      = excluded.name,
         last_name = excluded.last_name,
-        location  = excluded.location;
+        location_id = excluded.location_id;
 
   if p_rol_id is not null then
     if not public.me_has_permission('rbac:manage_roles') then
@@ -505,11 +489,11 @@ begin
   end if;
 end;
 $$;
-grant execute on function public.create_user_in_public(uuid, text, text, text, location_enum, integer) to authenticated;
+grant execute on function public.create_user_in_public(uuid, text, text, text, bigint, integer) to authenticated;
 
 -- RPC: conteos
 create or replace function public.ticket_counts(
-  p_location text default null,
+  p_location bigint default null,
   p_term     text default null
 )
 returns table(status text, total bigint)
@@ -519,7 +503,7 @@ as $$
   from public.tickets t
   where
     (t.status <> 'Pendiente' or t.is_accepted = true)
-    and (p_location is null or t.location = p_location::location_enum)
+    and (p_location is null or t.location_id = p_location::bigint)
     and (
       p_term is null
       or t.title ilike '%'||p_term||'%'
@@ -529,7 +513,7 @@ as $$
   group by t.status
   order by t.status;
 $$;
-grant execute on function public.ticket_counts(text, text) to authenticated;
+grant execute on function public.ticket_counts(bigint, text) to authenticated;
 
 -- =========[ 6) RLS ]=========
 alter table public.roles enable row level security;
@@ -740,7 +724,13 @@ BEGIN
       ('assignees','delete','assignees:delete','Eliminar técnicos',NULL),
       ('assignees','full_access','assignees:full_access','Acceso total técnicos',NULL),
       ('assignees','cancel','assignees:cancel','Activar/Desactivar técnicos',NULL),
-      ('home','read','home:read','Dashboard/Home',NULL)
+      ('home','read','home:read','Dashboard/Home',NULL),
+      ('locations','read','locations:read','Ver ubicaciones',NULL),
+      ('locations','create','locations:create','Crear ubicaciones',NULL),
+      ('locations','update','locations:update','Editar ubicaciones',NULL),
+      ('locations','delete','locations:delete','Eliminar ubicaciones',NULL),
+      ('locations','disable','locations:disable','Activar/Desactivar ubicaciones',NULL),
+      ('locations','full_access','locations:full_access','Acceso total ubicaciones',NULL)
   )
   INSERT INTO public.permissions(id, resource, action, code, label, description, is_active, created_at)
   SELECT gen_random_uuid(), s.resource, s.action::permission_action, s.code, s.label, s.description, TRUE, NOW()
@@ -906,7 +896,7 @@ create index if not exists ix_tickets_status_archived_created
   on public.tickets (status, is_archived, created_at desc);
 
 create index if not exists ix_tickets_accepted_archived_status_loc_assignee_created
-  on public.tickets (is_accepted, is_archived, status, location, assignee_id, created_at desc);
+  on public.tickets (is_accepted, is_archived, status, location_id, assignee_id, created_at desc);
 
 ALTER TABLE public.users
   ALTER COLUMN created_at
@@ -1006,17 +996,6 @@ SELECT
     WHERE wa.work_order_id = t.id AND wa.is_active AND wa.role = 'SECONDARY'
   ) AS secondary_assignee_ids
 FROM public.tickets t;
-
--- 6) Compatibilidad: tickets + agregados + effective_assignee_id
--- CREATE OR REPLACE VIEW public.v_tickets_compat AS
--- SELECT
---   t.*,
---   a.primary_assignee_id,
---   a.secondary_assignee_ids,
---   COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
--- FROM public.tickets t
--- LEFT JOIN public.v_work_order_assignees_agg a
---   ON a.work_order_id = t.id;
 
 -- 7) RLS y Policies
 ALTER TABLE public.work_order_assignees ENABLE ROW LEVEL SECURITY;
@@ -1348,18 +1327,6 @@ SELECT
   ) AS secondary_assignee_ids
 FROM public.tickets t;
 
--- CREATE OR REPLACE VIEW public.v_tickets_compat AS
--- SELECT
---   t.*,
---   a.primary_assignee_id,
---   a.secondary_assignee_ids,
---   COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
--- FROM public.tickets t
--- LEFT JOIN public.v_work_order_assignees_agg a
---   ON a.work_order_id = t.id;
-
-
--- 1️⃣ Crear tabla con campos de trazabilidad
 DROP TABLE IF EXISTS public.special_incidents CASCADE;
 
 CREATE TABLE public.special_incidents (
@@ -1374,6 +1341,7 @@ CREATE TABLE public.special_incidents (
   updated_by UUID REFERENCES public.users(id)
 );
 
+-- Crear funciones de trazabilidad
 CREATE OR REPLACE FUNCTION public.set_updated_by()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -1397,6 +1365,16 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  new.updated_at = now();
+  RETURN new;
+END;
+$$;
+
 CREATE TRIGGER trg_special_incidents_updated
 BEFORE UPDATE ON public.special_incidents
 FOR EACH ROW
@@ -1410,9 +1388,6 @@ EXECUTE FUNCTION public.set_created_by();
 ALTER TABLE public.tickets
   ADD COLUMN IF NOT EXISTS special_incident_id INTEGER;
 
--- 2) Llave foránea con políticas recomendadas
---    - ON UPDATE CASCADE: si cambia el id (raro), se propaga
---    - ON DELETE SET NULL: si borran la incidencia, el ticket no se rompe
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -1719,7 +1694,7 @@ CREATE OR REPLACE VIEW public.v_tickets_compat (
   is_urgent,
   priority,
   requester,
-  location,
+  location_id,
   assignee,
   incident_date,
   deadline_date,
@@ -1754,7 +1729,7 @@ SELECT
   t.is_urgent,
   t.priority,
   t.requester,
-  t.location,
+  t.location_id,
   t.assignee,
   t.incident_date,
   t.deadline_date,
@@ -2753,7 +2728,6 @@ GRANT SELECT ON public.vw_warehouse_stock TO anon, authenticated;
 
 COMMIT;
 
-
 begin;
 
 -- societies
@@ -2769,16 +2743,93 @@ create table if not exists public.societies (
 
 create index if not exists societies_name_idx on public.societies (name);
 
--- updated_at
-create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
+-- ===========================================
+-- LOCATIONS (CRUD en vez de location_enum)
+-- ===========================================
+
+create table if not exists public.locations (
+  id bigserial primary key,
+  name text not null unique,
+  code text not null unique, -- slug para UI/API, ej: adrian_tropical_27
+  description text,
+  is_active boolean not null default true,
+
+  created_at timestamptz not null default (now() AT TIME ZONE 'America/Santo_Domingo'),
+  updated_at timestamptz not null default (now() AT TIME ZONE 'America/Santo_Domingo'),
+  created_by uuid null references public.users(id),
+  updated_by uuid null references public.users(id)
+);
+
+create index if not exists locations_is_active_idx on public.locations(is_active);
+create index if not exists locations_name_trgm_idx on public.locations using gin (name gin_trgm_ops);
+
+drop trigger if exists trg_locations_created on public.locations;
+create trigger trg_locations_created
+before insert on public.locations
+for each row execute function public.set_created_by();
+
+drop trigger if exists trg_locations_updated on public.locations;
+create trigger trg_locations_updated
+before update on public.locations
+for each row execute function public.set_updated_by();
+
+-- RLS
+alter table public.locations enable row level security;
+
+drop policy if exists locations_select_active on public.locations;
+create policy locations_select_active
+on public.locations
+for select to authenticated
+using (
+  is_active = true
+  and (
+    public.me_has_permission('locations:read')
+    or public.me_has_permission('locations:full_access')
+  )
+);
+
+drop policy if exists locations_select_full on public.locations;
+create policy locations_select_full
+on public.locations
+for select to authenticated
+using (
+  public.me_has_permission('locations:full_access')
+);
+
+drop policy if exists locations_insert_rbac on public.locations;
+create policy locations_insert_rbac
+on public.locations
+for insert to authenticated
+with check ( public.me_has_permission('locations:full_access') );
+
+drop policy if exists locations_update_rbac on public.locations;
+create policy locations_update_rbac
+on public.locations
+for update to authenticated
+using ( public.me_has_permission('locations:full_access') )
+with check ( public.me_has_permission('locations:full_access') );
+
+drop policy if exists locations_disable_rbac on public.locations;
+create policy locations_disable_rbac
+on public.locations
+for update to authenticated
+using (
+  public.me_has_permission('locations:disable')
+  or public.me_has_permission('locations:full_access')
+)
+with check (
+  public.me_has_permission('locations:disable')
+  or public.me_has_permission('locations:full_access')
+);
+
+drop policy if exists locations_delete_rbac on public.locations;
+create policy locations_delete_rbac
+on public.locations
+for delete to authenticated
+using (
+  public.me_has_permission('locations:delete')
+  or public.me_has_permission('locations:full_access')
+);
 
 do $$
 begin
@@ -2832,10 +2883,7 @@ on conflict (id) do update set public = true;
 
 commit;
 
-
-
 -- =========[ STORAGE / BRANDING (idempotente) ]=========
-
 DO $$
 BEGIN
   -- Bucket branding (public)
@@ -2848,7 +2896,6 @@ BEGIN
      WHERE id = 'branding';
   END IF;
 END$$;
-
 -- Policies en storage.objects (requiere owner)
 DO $$
 BEGIN
@@ -2919,7 +2966,6 @@ BEGIN
 END$$;
 
 -- =========[ STORAGE / ATTACHMENTS (idempotente) ]=========
-
 DO $$
 BEGIN
   -- Bucket attachments (public)
@@ -2932,7 +2978,6 @@ BEGIN
      WHERE id = 'attachments';
   END IF;
 END$$;
-
 -- Policies en storage.objects (requiere owner)
 DO $$
 BEGIN
