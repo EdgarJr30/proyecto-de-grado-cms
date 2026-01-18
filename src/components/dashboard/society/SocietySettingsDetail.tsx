@@ -1,29 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../../../lib/supabaseClient';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
-
-type Society = {
-  id: number;
-  name: string;
-  logo_url: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type FormState = {
-  id?: number;
-  name: string;
-  logo_url: string | null;
-  is_active: boolean;
-};
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  logo_url: null,
-  is_active: true,
-};
+import {
+  EMPTY_SOCIETY_FORM,
+  type Society,
+  type SocietyFormState,
+} from '../../../types/Society';
+import {
+  getLatestSociety,
+  createSociety,
+  updateSociety,
+} from '../../../services/societyService';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -39,7 +26,7 @@ export default function SocietySettingsDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [society, setSociety] = useState<Society | null>(null);
 
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<SocietyFormState>(EMPTY_SOCIETY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,26 +55,18 @@ export default function SocietySettingsDetail() {
   async function loadLatestSociety() {
     if (!canRead) {
       setSociety(null);
-      setForm(EMPTY_FORM);
+      setForm(EMPTY_SOCIETY_FORM);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('societies')
-        .select('id,name,logo_url,is_active,created_at,updated_at')
-        .order('updated_at', { ascending: false })
-        .limit(1);
-
-      if (error) throw new Error(error.message);
-
-      const s = (data?.[0] ?? null) as Society | null;
+      const s = await getLatestSociety();
       setSociety(s);
 
       if (!s) {
-        setForm(EMPTY_FORM);
+        setForm(EMPTY_SOCIETY_FORM);
       } else {
         setForm({
           id: s.id,
@@ -101,7 +80,7 @@ export default function SocietySettingsDetail() {
         e instanceof Error ? e.message : 'Error cargando sociedad'
       );
       setSociety(null);
-      setForm(EMPTY_FORM);
+      setForm(EMPTY_SOCIETY_FORM);
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +93,7 @@ export default function SocietySettingsDetail() {
 
   function onCancel() {
     if (!society) {
-      setForm(EMPTY_FORM);
+      setForm(EMPTY_SOCIETY_FORM);
       return;
     }
     setForm({
@@ -141,29 +120,19 @@ export default function SocietySettingsDetail() {
 
     setSubmitting(true);
     try {
-      const now = new Date().toISOString();
-
       if (isEditing && form.id) {
-        const { error } = await supabase
-          .from('societies')
-          .update({
-            name,
-            logo_url: form.logo_url,
-            is_active: form.is_active,
-            updated_at: now,
-          })
-          .eq('id', form.id);
-
-        if (error) throw new Error(error.message);
-        showToastSuccess('Configuración actualizada.');
-      } else {
-        const { error } = await supabase.from('societies').insert({
+        await updateSociety(form.id, {
           name,
           logo_url: form.logo_url,
           is_active: form.is_active,
         });
-
-        if (error) throw new Error(error.message);
+        showToastSuccess('Configuración actualizada.');
+      } else {
+        await createSociety({
+          name,
+          logo_url: form.logo_url,
+          is_active: form.is_active,
+        });
         showToastSuccess('Empresa creada.');
       }
 
