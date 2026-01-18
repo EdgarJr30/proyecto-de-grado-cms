@@ -1,5 +1,4 @@
-// src/components/Layout/Sidebar.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
@@ -8,82 +7,25 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
-import { getPublicSociety } from '../../services/societyService';
-import { getBrandingPublicUrl } from '../../services/brandingStorageService';
-
-type PublicSociety = {
-  id: number;
-  name: string;
-  logo_url: string | null;
-  login_img_url: string | null;
-  updated_at: string;
-};
+import { useBranding } from '../../context/BrandingContext';
 
 export default function Sidebar() {
   const { loading } = useAuth();
   const { profile } = useUser();
   const { has, ready, roles } = usePermissions();
+  const { societyName, logoSrc } = useBranding();
 
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const [society, setSociety] = useState<PublicSociety | null>(null);
   const year = new Date().getFullYear();
 
-  const societyName = society?.name?.trim() || 'CompanyName';
-
-  const logoSrc = useMemo(() => {
-    if (society?.logo_url) return getBrandingPublicUrl(society.logo_url);
-    return DefaultSidebarLogo;
-  }, [society?.logo_url]);
-
-  // cargar sociedad desde la BD (name + logo_url)
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadSociety = async () => {
-      try {
-        const s = (await getPublicSociety()) as PublicSociety | null;
-        if (!isMounted) return;
-        setSociety(s);
-      } catch (error: unknown) {
-        // no frenamos el UI por esto, solo log
-        if (error instanceof Error) {
-          console.error('Error cargando sociedad:', error.message);
-        } else {
-          console.error('Error cargando sociedad:', error);
-        }
-        if (isMounted) setSociety(null);
-      }
-    };
-
-    void loadSociety();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Mientras carga auth o permisos → skeleton
-  if (loading || !ready) {
-    return (
-      <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
-        <div className="p-6 border-b border-gray-700">
-          <img src={logoSrc} alt="Logo" className="h-8 w-auto" />
-        </div>
-        <div className="p-4 space-y-2">
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
-        </div>
-        <AppVersion className="text-center mt-auto" />
-      </aside>
-    );
-  }
+  // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
+  // Si quieres 0 flash, en vez de default puedes mostrar skeleton del logo.
+  const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
 
   // Menú por permisos (any-of)
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const visibleMenu = useMemo(
     () => APP_ROUTES.filter((r) => r.showInSidebar && has(r.allowPerms)),
     [has]
@@ -105,6 +47,23 @@ export default function Sidebar() {
   const initials = profile?.name?.trim()?.charAt(0).toUpperCase() ?? 'U';
   const fullName = profile ? `${profile.name} ${profile.last_name}` : 'Usuario';
   const rolesString = roles.length ? roles.join(', ') : '—';
+
+  // Mientras carga auth o permisos → skeleton
+  if (loading || !ready) {
+    return (
+      <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
+        <div className="p-6 border-b border-gray-700">
+          <div className="h-8 w-32 rounded bg-gray-800 animate-pulse" />
+        </div>
+        <div className="p-4 space-y-2">
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+        </div>
+        <AppVersion className="text-center mt-auto" />
+      </aside>
+    );
+  }
 
   return (
     <>
@@ -148,7 +107,12 @@ export default function Sidebar() {
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-700">
-          <img src={logoSrc} alt="Logo" className="h-8 w-auto" />
+          {/* si quieres 0 flash: cuando logoSrc sea null, muestra skeleton */}
+          {logoSrc ? (
+            <img src={finalLogoSrc} alt="Logo" className="h-8 w-auto" />
+          ) : (
+            <div className="h-8 w-32 rounded bg-gray-800 animate-pulse" />
+          )}
         </div>
 
         {/* Menú */}
@@ -198,7 +162,9 @@ export default function Sidebar() {
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-gray-800 transition font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 cursor-pointer"
+          className="w-full flex items-center gap-2 px-4 py-3 text-red-500 hover:bg-gray-800 transition font-medium
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+                     focus-visible:ring-offset-gray-900 cursor-pointer"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

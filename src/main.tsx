@@ -11,6 +11,7 @@ import { UserProvider } from './context/UserContext';
 import { AssigneeProvider } from './context/AssigneeContext';
 import { PermissionsProvider } from './rbac/PermissionsContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { BrandingProvider } from './context/BrandingContext';
 
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
@@ -30,41 +31,43 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <BrowserRouter>
             <PermissionsProvider>
               <SettingsProvider>
-                <ToastContainer
-                  position="top-right"
-                  autoClose={3000}
-                  hideProgressBar={false}
-                  newestOnTop={false}
-                  closeOnClick
-                  pauseOnFocusLoss
-                  draggable
-                  pauseOnHover
-                  theme="colored"
-                />
-                <Routes>
-                  {/* Públicas / especiales */}
-                  {PUBLIC_ROUTES.map((r) => (
-                    <Route key={r.path} path={r.path} element={r.element} />
-                  ))}
+                <BrandingProvider>
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop={false}
+                    closeOnClick
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                    theme="colored"
+                  />
+                  <Routes>
+                    {/* Públicas / especiales */}
+                    {PUBLIC_ROUTES.map((r) => (
+                      <Route key={r.path} path={r.path} element={r.element} />
+                    ))}
 
-                  {/* Protegidas dinamicamente */}
-                  {APP_ROUTES.map((r) => (
-                    <Route
-                      key={r.path}
-                      path={r.path}
-                      element={
-                        <ProtectedRoute>
-                          <RequirePerm allow={r.allowPerms}>
-                            {r.element}
-                          </RequirePerm>
-                        </ProtectedRoute>
-                      }
-                    />
-                  ))}
+                    {/* Protegidas dinamicamente */}
+                    {APP_ROUTES.map((r) => (
+                      <Route
+                        key={r.path}
+                        path={r.path}
+                        element={
+                          <ProtectedRoute>
+                            <RequirePerm allow={r.allowPerms}>
+                              {r.element}
+                            </RequirePerm>
+                          </ProtectedRoute>
+                        }
+                      />
+                    ))}
 
-                  {/* comodín */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
+                    {/* comodín */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </BrandingProvider>
               </SettingsProvider>
             </PermissionsProvider>
           </BrowserRouter>

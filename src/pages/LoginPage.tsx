@@ -1,20 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DefaultLogo from '../assets/logo.png';
 import DefaultCollage from '../assets/login_img.png';
 import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
 import { usePermissions } from '../rbac/PermissionsContext';
-import { getPublicSociety } from '../services/societyService';
-import { getBrandingPublicUrl } from '../services/brandingStorageService';
-
-type PublicSociety = {
-  id: number;
-  name: string;
-  logo_url: string | null;
-  login_img_url: string | null;
-  updated_at: string;
-};
+import { useBranding } from '../context/BrandingContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -25,50 +16,12 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { refresh } = usePermissions();
 
-  const [loadingSociety, setLoadingSociety] = useState(true);
-  const [society, setSociety] = useState<PublicSociety | null>(null);
+  const { societyName, logoSrc, loginImgSrc } = useBranding();
 
-  const societyName = society?.name ?? 'Company Name';
+  const finalLogo = logoSrc ?? DefaultLogo;
+  const finalCollage = loginImgSrc ?? DefaultCollage;
 
-  // URLs finales (con fallback a assets locales)
-  const logoSrc = useMemo(() => {
-    if (society?.logo_url) return getBrandingPublicUrl(society.logo_url);
-    return DefaultLogo;
-  }, [society?.logo_url]);
-
-  const collageSrc = useMemo(() => {
-    if (society?.login_img_url)
-      return getBrandingPublicUrl(society.login_img_url);
-    return DefaultCollage;
-  }, [society?.login_img_url]);
-
-  // 1) Cargar branding público (name + logo + imagen login)
-  useEffect(() => {
-    let active = true;
-
-    const loadSociety = async () => {
-      setLoadingSociety(true);
-      try {
-        const s = (await getPublicSociety()) as PublicSociety | null;
-        if (!active) return;
-        setSociety(s);
-      } catch (err) {
-        console.error('[LoginPage] Error loading society:', err);
-        if (!active) return;
-        setSociety(null);
-      } finally {
-        if (active) setLoadingSociety(false);
-      }
-    };
-
-    void loadSociety();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // 2) Si ya está autenticado, redirige
+  // Si ya está autenticado, redirige
   useEffect(() => {
     let active = true;
 
@@ -84,9 +37,6 @@ export default function LoginPage() {
 
         const user = data.session?.user;
         if (user) {
-          console.log(
-            '[LoginPage] already authenticated, refreshing permissions…'
-          );
           await refresh({ silent: false });
           navigate('/inicio', { replace: true });
         }
@@ -120,7 +70,6 @@ export default function LoginPage() {
       }
 
       if (data.session?.user) {
-        console.log('[LoginPage] login ok, refreshing permissions…');
         await refresh({ silent: false });
         navigate('/inicio', { replace: true });
       }
@@ -140,13 +89,19 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
-            <img
-              src={logoSrc}
-              alt="Logo"
-              className="h-14 sm:h-16 lg:h-20 w-auto mb-2"
-            />
+            {/* Evita flash: si no hay logo en cache todavía, muestra skeleton */}
+            {logoSrc ? (
+              <img
+                src={finalLogo}
+                alt="Logo"
+                className="h-14 sm:h-16 lg:h-20 w-auto mb-2"
+              />
+            ) : (
+              <div className="h-14 w-40 rounded bg-gray-200 animate-pulse mb-2" />
+            )}
+
             <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">
-              {loadingSociety ? 'Cargando…' : societyName}
+              {societyName}
             </h2>
           </div>
 
@@ -223,7 +178,7 @@ export default function LoginPage() {
       <div className="relative hidden w-0 flex-1 lg:block">
         <img
           alt="Collage MLM"
-          src={collageSrc}
+          src={finalCollage}
           aria-hidden="true"
           loading="lazy"
           className="absolute inset-0 size-full object-cover"
