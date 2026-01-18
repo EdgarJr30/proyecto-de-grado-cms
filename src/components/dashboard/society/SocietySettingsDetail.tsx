@@ -11,9 +11,31 @@ import {
   createSociety,
   updateSociety,
 } from '../../../services/societyService';
+import imageCompression from 'browser-image-compression';
+import {
+  uploadSocietyBrandingImage,
+  getBrandingPublicUrl,
+} from '../../../services/brandingStorageService';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
+}
+
+async function compressToWebp(file: File): Promise<File> {
+  const options = {
+    maxSizeMB: 1,
+    maxWidthOrHeight: 1200,
+    useWebWorker: true,
+    fileType: 'image/webp',
+    initialQuality: 0.85,
+  };
+
+  const compressed = await imageCompression(file, options);
+
+  // Renombra a .webp
+  return new File([compressed], file.name.replace(/\.\w+$/, '.webp'), {
+    type: 'image/webp',
+  });
 }
 
 export default function SocietySettingsDetail() {
@@ -29,28 +51,49 @@ export default function SocietySettingsDetail() {
   const [form, setForm] = useState<SocietyFormState>(EMPTY_SOCIETY_FORM);
   const [submitting, setSubmitting] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Inputs separados
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const loginImgInputRef = useRef<HTMLInputElement>(null);
 
-  const isEditing = useMemo(() => typeof form.id === 'number', [form.id]);
+  // Files + previews (para ver antes de guardar)
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [loginImgFile, setLoginImgFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [loginPreview, setLoginPreview] = useState<string | null>(null);
+
+  // const isEditing = useMemo(() => typeof form.id === 'number', [form.id]);
   const initial = useMemo(
     () => (form.name.trim()[0] || 'E').toUpperCase(),
     [form.name]
   );
 
+  // URLs para pintar en UI (preview local tiene prioridad)
+  const logoSrc = useMemo(() => {
+    if (logoPreview) return logoPreview;
+    if (form.logo_url) return getBrandingPublicUrl(form.logo_url);
+    return null;
+  }, [logoPreview, form.logo_url]);
+
+  const loginImgSrc = useMemo(() => {
+    if (loginPreview) return loginPreview;
+    if (form.login_img_url) return getBrandingPublicUrl(form.login_img_url);
+    return null;
+  }, [loginPreview, form.login_img_url]);
+
   const isDirty = useMemo(() => {
-    if (!society) {
-      return (
-        form.name.trim() !== '' ||
+    const baseDirty = !society
+      ? form.name.trim() !== '' ||
         form.logo_url !== null ||
+        form.login_img_url !== null ||
         form.is_active !== true
-      );
-    }
-    return (
-      form.name !== society.name ||
-      (form.logo_url ?? null) !== (society.logo_url ?? null) ||
-      form.is_active !== society.is_active
-    );
-  }, [form, society]);
+      : form.name !== society.name ||
+        (form.logo_url ?? null) !== (society.logo_url ?? null) ||
+        (form.login_img_url ?? null) !== (society.login_img_url ?? null) ||
+        form.is_active !== society.is_active;
+
+    // Si seleccionaste archivos nuevos, también cuenta como dirty
+    return baseDirty || !!logoFile || !!loginImgFile;
+  }, [form, society, logoFile, loginImgFile]);
 
   async function loadLatestSociety() {
     if (!canRead) {
@@ -72,6 +115,7 @@ export default function SocietySettingsDetail() {
           id: s.id,
           name: s.name,
           logo_url: s.logo_url,
+          login_img_url: s.login_img_url,
           is_active: s.is_active,
         });
       }
@@ -92,17 +136,67 @@ export default function SocietySettingsDetail() {
   }, [canRead]);
 
   function onCancel() {
+    // Revertir form a lo que está en DB (si existe)
     if (!society) {
       setForm(EMPTY_SOCIETY_FORM);
-      return;
+    } else {
+      setForm({
+        id: society.id,
+        name: society.name,
+        logo_url: society.logo_url,
+        login_img_url: society.login_img_url,
+        is_active: society.is_active,
+      });
     }
-    setForm({
-      id: society.id,
-      name: society.name,
-      logo_url: society.logo_url,
-      is_active: society.is_active,
-    });
+
+    // Limpiar selección local
+    setLogoFile(null);
+    setLoginImgFile(null);
+    setLogoPreview(null);
+    setLoginPreview(null);
+
+    // Reset input file (por si eliges el mismo archivo otra vez)
+    if (logoInputRef.current) logoInputRef.current.value = '';
+    if (loginImgInputRef.current) loginImgInputRef.current.value = '';
   }
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    try {
+      const webp = await compressToWebp(f);
+      setLogoFile(webp);
+
+      const reader = new FileReader();
+      reader.onload = () => setLogoPreview(reader.result as string);
+      reader.readAsDataURL(webp);
+    } catch (err) {
+      showToastError(`Error preparando el logo. ${String(err)}`);
+      setLogoFile(null);
+      setLogoPreview(null);
+    }
+  };
+
+  const handleLoginImgChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+
+    try {
+      const webp = await compressToWebp(f);
+      setLoginImgFile(webp);
+
+      const reader = new FileReader();
+      reader.onload = () => setLoginPreview(reader.result as string);
+      reader.readAsDataURL(webp);
+    } catch (err) {
+      showToastError(`Error preparando la imagen del login. ${String(err)}`);
+      setLoginImgFile(null);
+      setLoginPreview(null);
+    }
+  };
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
@@ -120,21 +214,54 @@ export default function SocietySettingsDetail() {
 
     setSubmitting(true);
     try {
-      if (isEditing && form.id) {
-        await updateSociety(form.id, {
+      // 1) Asegura societyId (crear si no existe)
+      let societyId = form.id;
+
+      if (!societyId) {
+        const created = await createSociety({
           name,
-          logo_url: form.logo_url,
           is_active: form.is_active,
         });
-        showToastSuccess('Configuración actualizada.');
-      } else {
-        await createSociety({
-          name,
-          logo_url: form.logo_url,
-          is_active: form.is_active,
-        });
-        showToastSuccess('Empresa creada.');
+        societyId = created.id;
       }
+
+      // 2) Subir imágenes si aplican
+      let nextLogoPath = form.logo_url ?? null;
+      let nextLoginPath = form.login_img_url ?? null;
+
+      if (logoFile) {
+        nextLogoPath = await uploadSocietyBrandingImage(
+          logoFile,
+          societyId,
+          'logo'
+        );
+      }
+
+      if (loginImgFile) {
+        nextLoginPath = await uploadSocietyBrandingImage(
+          loginImgFile,
+          societyId,
+          'login'
+        );
+      }
+
+      // 3) Guardar en DB
+      await updateSociety(societyId, {
+        name,
+        logo_url: nextLogoPath,
+        login_img_url: nextLoginPath,
+        is_active: form.is_active,
+      });
+
+      showToastSuccess('Configuración actualizada.');
+
+      // Limpia selección local
+      setLogoFile(null);
+      setLoginImgFile(null);
+      setLogoPreview(null);
+      setLoginPreview(null);
+      if (logoInputRef.current) logoInputRef.current.value = '';
+      if (loginImgInputRef.current) loginImgInputRef.current.value = '';
 
       await loadLatestSociety();
     } catch (e) {
@@ -170,13 +297,21 @@ export default function SocietySettingsDetail() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Logo row (responsive) */}
+                {/* ============== LOGO ============== */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-2xl border bg-white shadow-sm flex items-center justify-center">
-                      <div className="h-12 w-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold">
-                        {initial}
-                      </div>
+                    <div className="h-16 w-16 rounded-2xl border bg-white shadow-sm overflow-hidden flex items-center justify-center">
+                      {logoSrc ? (
+                        <img
+                          src={logoSrc}
+                          alt="Logo de la empresa"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-2xl font-bold">
+                          {initial}
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -184,28 +319,111 @@ export default function SocietySettingsDetail() {
                         Logo de la empresa
                       </div>
                       <div className="mt-0.5 text-sm text-gray-500">
-                        (Luego lo conectamos a Storage)
+                        Recomendado: cuadrado, fondo limpio.
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <input
-                      ref={fileInputRef}
+                      ref={logoInputRef}
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      disabled
+                      disabled={!canEdit || submitting}
+                      onChange={(e) => void handleLogoChange(e)}
                     />
                     <button
                       type="button"
-                      disabled
-                      title="Pendiente: upload a Supabase Storage"
+                      disabled={!canEdit || submitting}
                       className="inline-flex w-full sm:w-auto justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => logoInputRef.current?.click()}
                     >
                       Cambiar logo
                     </button>
+
+                    {(logoFile || form.logo_url) && (
+                      <button
+                        type="button"
+                        disabled={!canEdit || submitting}
+                        className="inline-flex w-full sm:w-auto justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setLogoFile(null);
+                          setLogoPreview(null);
+                          setForm((f) => ({ ...f, logo_url: null }));
+                          if (logoInputRef.current)
+                            logoInputRef.current.value = '';
+                        }}
+                        title="Quitar logo (se aplica al Guardar)"
+                      >
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ============== IMAGEN LOGIN ============== */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-28 sm:w-32 rounded-2xl border bg-white shadow-sm overflow-hidden flex items-center justify-center">
+                      {loginImgSrc ? (
+                        <img
+                          src={loginImgSrc}
+                          alt="Imagen del login"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-gray-50 text-gray-400 text-xs">
+                          Sin imagen
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        Imagen del login
+                      </div>
+                      <div className="mt-0.5 text-sm text-gray-500">
+                        Recomendado: horizontal (banner) con buena luz.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      ref={loginImgInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={!canEdit || submitting}
+                      onChange={(e) => void handleLoginImgChange(e)}
+                    />
+                    <button
+                      type="button"
+                      disabled={!canEdit || submitting}
+                      className="inline-flex w-full sm:w-auto justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                      onClick={() => loginImgInputRef.current?.click()}
+                    >
+                      Cambiar imagen
+                    </button>
+
+                    {(loginImgFile || form.login_img_url) && (
+                      <button
+                        type="button"
+                        disabled={!canEdit || submitting}
+                        className="inline-flex w-full sm:w-auto justify-center rounded-xl border px-4 py-2 text-sm font-medium text-gray-900 shadow-sm hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                        onClick={() => {
+                          setLoginImgFile(null);
+                          setLoginPreview(null);
+                          setForm((f) => ({ ...f, login_img_url: null }));
+                          if (loginImgInputRef.current)
+                            loginImgInputRef.current.value = '';
+                        }}
+                        title="Quitar imagen (se aplica al Guardar)"
+                      >
+                        Quitar
+                      </button>
+                    )}
                   </div>
                 </div>
 

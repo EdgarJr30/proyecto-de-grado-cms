@@ -4,18 +4,20 @@ import type { Society, SocietyFormState } from '../types/Society';
 export async function getLatestSociety(): Promise<Society | null> {
   const { data, error } = await supabase
     .from('societies')
-    .select('id,name,logo_url,is_active,created_at,updated_at')
+    .select('id,name,logo_url,login_img_url,is_active,created_at,updated_at')
     .order('updated_at', { ascending: false })
     .limit(1);
 
   if (error) throw new Error(error.message);
-
   return (data?.[0] ?? null) as Society | null;
 }
 
 export async function updateSociety(
   id: number,
-  payload: Pick<SocietyFormState, 'name' | 'logo_url' | 'is_active'>
+  payload: Pick<
+    SocietyFormState,
+    'name' | 'logo_url' | 'login_img_url' | 'is_active'
+  >
 ): Promise<void> {
   const now = new Date().toISOString();
 
@@ -24,6 +26,7 @@ export async function updateSociety(
     .update({
       name: payload.name.trim(),
       logo_url: payload.logo_url,
+      login_img_url: payload.login_img_url,
       is_active: payload.is_active,
       updated_at: now,
     })
@@ -33,24 +36,27 @@ export async function updateSociety(
 }
 
 export async function createSociety(
-  payload: Pick<SocietyFormState, 'name' | 'logo_url' | 'is_active'>
-): Promise<void> {
-  const { error } = await supabase.from('societies').insert({
-    name: payload.name.trim(),
-    logo_url: payload.logo_url,
-    is_active: payload.is_active,
-  });
+  payload: Pick<SocietyFormState, 'name' | 'is_active'>
+): Promise<Society> {
+  const { data, error } = await supabase
+    .from('societies')
+    .insert({
+      name: payload.name.trim(),
+      is_active: payload.is_active,
+    })
+    .select('id,name,logo_url,login_img_url,is_active,created_at,updated_at')
+    .single();
 
   if (error) throw new Error(error.message);
+  return data as Society;
 }
 
 export async function getPublicSociety(): Promise<Society | null> {
   const { data, error } = await supabase
     .from('societies_public')
-    .select('id,name,logo_url,updated_at')
+    .select('id,name,logo_url,login_img_url,updated_at')
     .limit(1);
 
   if (error) throw new Error(error.message);
-
   return (data?.[0] ?? null) as Society | null;
 }

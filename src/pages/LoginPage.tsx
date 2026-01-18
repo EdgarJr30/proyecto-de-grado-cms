@@ -1,47 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Logo from '../assets/logo_horizontal.svg';
-import Collage from '../assets/COLLAGE_MLM.webp';
+import DefaultLogo from '../assets/logo.png';
+import DefaultCollage from '../assets/login_img.png';
 import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
 import { usePermissions } from '../rbac/PermissionsContext';
 import { getPublicSociety } from '../services/societyService';
+import { getBrandingPublicUrl } from '../services/brandingStorageService';
+
+type PublicSociety = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  login_img_url: string | null;
+  updated_at: string;
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
   const navigate = useNavigate();
   const { refresh } = usePermissions();
 
-  const [societyName, setSocietyName] = useState<string>('');
   const [loadingSociety, setLoadingSociety] = useState(true);
+  const [society, setSociety] = useState<PublicSociety | null>(null);
 
+  const societyName = society?.name ?? 'Company Name';
+
+  // URLs finales (con fallback a assets locales)
+  const logoSrc = useMemo(() => {
+    if (society?.logo_url) return getBrandingPublicUrl(society.logo_url);
+    return DefaultLogo;
+  }, [society?.logo_url]);
+
+  const collageSrc = useMemo(() => {
+    if (society?.login_img_url)
+      return getBrandingPublicUrl(society.login_img_url);
+    return DefaultCollage;
+  }, [society?.login_img_url]);
+
+  // 1) Cargar branding público (name + logo + imagen login)
   useEffect(() => {
     let active = true;
 
     const loadSociety = async () => {
+      setLoadingSociety(true);
       try {
-        const society = await getPublicSociety();
+        const s = (await getPublicSociety()) as PublicSociety | null;
         if (!active) return;
-
-        setSocietyName(society?.name ?? 'Company Name');
+        setSociety(s);
       } catch (err) {
         console.error('[LoginPage] Error loading society:', err);
-        setSocietyName('Company Name');
+        if (!active) return;
+        setSociety(null);
       } finally {
         if (active) setLoadingSociety(false);
       }
     };
 
-    loadSociety();
+    void loadSociety();
 
     return () => {
       active = false;
     };
   }, []);
 
+  // 2) Si ya está autenticado, redirige
   useEffect(() => {
     let active = true;
 
@@ -68,11 +95,11 @@ export default function LoginPage() {
       }
     };
 
-    run();
+    void run();
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, [navigate, refresh]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +108,7 @@ export default function LoginPage() {
 
     try {
       const { data, error } = await signInWithPassword(email.trim(), password);
+
       if (error) {
         const msg = error.message?.toLowerCase() || '';
         setError(
@@ -93,7 +121,6 @@ export default function LoginPage() {
 
       if (data.session?.user) {
         console.log('[LoginPage] login ok, refreshing permissions…');
-        // Fuerza refresh de permisos (bloqueante) para evitar 403 por permisos aún no cargados
         await refresh({ silent: false });
         navigate('/inicio', { replace: true });
       }
@@ -113,7 +140,11 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col justify-center px-4 py-8 sm:py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div>
-            <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
+            <img
+              src={logoSrc}
+              alt="Logo"
+              className="h-14 sm:h-16 lg:h-20 w-auto mb-2"
+            />
             <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">
               {loadingSociety ? 'Cargando…' : societyName}
             </h2>
@@ -180,12 +211,9 @@ export default function LoginPage() {
 
             <p className="mt-10 text-center text-sm/6 text-gray-500">
               Desarrollado por{' '}
-              <a
-                href=""
-                className="font-semibold text-indigo-600 hover:text-indigo-500"
-              >
-                Innovación & Desarrollo CILM
-              </a>
+              <span className="font-semibold text-indigo-600">
+                Innovación &amp; Desarrollo CILM
+              </span>
             </p>
             <AppVersion className="text-center mt-4" />
           </div>
@@ -195,7 +223,7 @@ export default function LoginPage() {
       <div className="relative hidden w-0 flex-1 lg:block">
         <img
           alt="Collage MLM"
-          src={Collage}
+          src={collageSrc}
           aria-hidden="true"
           loading="lazy"
           className="absolute inset-0 size-full object-cover"
