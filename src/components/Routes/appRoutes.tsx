@@ -16,6 +16,7 @@ import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
 import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
+import SocietiesManagementPage from '../../pages/admin/SocietiesManagementPage';
 import InventoryHomePage from '../../pages/osalm/inventory/home/InventoryHomePage';
 import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
 import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
@@ -320,12 +321,32 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Incidencias',
     showInSidebar: false,
   },
+  {
+    path: '/admin/sociedades',
+    element: <SocietiesManagementPage />,
+    allowPerms: [
+      'society:read',
+      'society:create',
+      'society:full_access',
+      'society:disable',
+      'society:delete',
+    ],
+    name: 'Sociedades',
+    showInSidebar: false,
+  },
 
   // Administración de permisos y roles
   {
     path: '/admin/settings',
     element: <AdminSettingsHubPage />,
-    allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
+    allowPerms: [
+      'rbac:manage_roles',
+      'rbac:manage_permissions',
+      'society:read',
+      'society:full_access',
+      'special_incidents:read',
+      'announcements:read',
+    ],
     name: 'Configuración',
     icon: IconPermissions,
     showInSidebar: true,

@@ -17,13 +17,15 @@ import PermissionsTable from '../../components/dashboard/permissions/Permissions
 import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/announcements/AnnouncementsTable';
+import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsTable';
 
 type TabKey =
   | 'general'
   | 'roles'
   | 'permissions'
   | 'incidents'
-  | 'announcements';
+  | 'announcements'
+  | 'sociedad';
 
 function useQuery() {
   const { search } = useLocation();
@@ -37,6 +39,7 @@ function TopTabs({
   disabledRolesTab,
   disabledIncidentsTab,
   disabledAnnouncementsTab,
+  disabledSocietyTab,
 }: {
   value: TabKey;
   onChange: (t: TabKey) => void;
@@ -44,6 +47,7 @@ function TopTabs({
   disabledRolesTab?: boolean;
   disabledIncidentsTab?: boolean;
   disabledAnnouncementsTab?: boolean;
+  disabledSocietyTab?: boolean;
 }) {
   const Item = ({
     k,
@@ -63,7 +67,6 @@ function TopTabs({
       disabled={disabled}
       onClick={() => onChange(k)}
       className={cn(
-        // ancho fluido para móvil; en pantallas ≥sm el ancho se ajusta al contenido
         'inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-medium transition cursor-pointer w-full sm:w-auto',
         value === k
           ? 'bg-indigo-600 text-white'
@@ -80,7 +83,6 @@ function TopTabs({
 
   return (
     <div className="rounded-2xl border bg-white p-2 shadow-sm">
-      {/* contenedor flexible que envuelve; en móvil se apilan, y si hay espacio caben 2 por fila */}
       <div className="flex flex-wrap gap-2">
         <Item
           k="roles"
@@ -103,7 +105,6 @@ function TopTabs({
           disabled={disabledIncidentsTab}
           className="sm:flex-none"
         />
-        {/* ⬇️ NUEVO: pestaña Anuncios */}
         <Item
           k="announcements"
           label="Anuncios"
@@ -111,6 +112,14 @@ function TopTabs({
           disabled={disabledAnnouncementsTab}
           className="sm:flex-none"
         />
+        <Item
+          k="sociedad"
+          label="Sociedad"
+          icon={<Settings className="h-4 w-4" />}
+          disabled={disabledSocietyTab}
+          className="sm:flex-none"
+        />
+
         <Item
           k="general"
           label="General"
@@ -146,6 +155,15 @@ export default function AdminSettingsHubPage() {
     canAnnouncementsDelete ||
     canAnnouncementsRead;
 
+  // ✅ NUEVO: permisos de sociedad (ajusta estos códigos a los tuyos)
+  const canSocietyRead = useCan('society:read');
+  const canSocietyFull = useCan('society:full_access');
+  const canSocietyDisable = useCan('society:disable');
+  const canSocietyDelete = useCan('society:delete');
+
+  const canManageSociety =
+    canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
 
@@ -156,12 +174,14 @@ export default function AdminSettingsHubPage() {
     (canManageRoles
       ? 'roles'
       : canSeePermissions
-      ? 'permissions'
-      : canManageIncidents
-      ? 'incidents'
-      : canManageAnnouncements
-      ? 'announcements'
-      : 'general');
+        ? 'permissions'
+        : canManageIncidents
+          ? 'incidents'
+          : canManageAnnouncements
+            ? 'announcements'
+            : canManageSociety
+              ? 'sociedad'
+              : 'general');
 
   const [tab, setTab] = useState<TabKey>(computedInitial);
 
@@ -169,9 +189,7 @@ export default function AdminSettingsHubPage() {
   const [roleUsersModal, setRoleUsersModal] = useState<{
     open: boolean;
     roleId?: number;
-  }>({
-    open: false,
-  });
+  }>({ open: false });
 
   // Redirecciones por permisos
   useEffect(() => {
@@ -179,43 +197,69 @@ export default function AdminSettingsHubPage() {
       const next: TabKey = canSeePermissions
         ? 'permissions'
         : canManageIncidents
-        ? 'incidents'
-        : canManageAnnouncements
-        ? 'announcements'
-        : 'general';
+          ? 'incidents'
+          : canManageAnnouncements
+            ? 'announcements'
+            : canManageSociety
+              ? 'sociedad'
+              : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
+
     if (tab === 'permissions' && !canSeePermissions) {
       const next: TabKey = canManageRoles
         ? 'roles'
         : canManageIncidents
-        ? 'incidents'
-        : canManageAnnouncements
-        ? 'announcements'
-        : 'general';
+          ? 'incidents'
+          : canManageAnnouncements
+            ? 'announcements'
+            : canManageSociety
+              ? 'sociedad'
+              : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
+
     if (tab === 'incidents' && !canManageIncidents) {
       const next: TabKey = canManageRoles
         ? 'roles'
         : canSeePermissions
-        ? 'permissions'
-        : canManageAnnouncements
-        ? 'announcements'
-        : 'general';
+          ? 'permissions'
+          : canManageAnnouncements
+            ? 'announcements'
+            : canManageSociety
+              ? 'sociedad'
+              : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
+
     if (tab === 'announcements' && !canManageAnnouncements) {
       const next: TabKey = canManageRoles
         ? 'roles'
         : canSeePermissions
-        ? 'permissions'
-        : canManageIncidents
-        ? 'incidents'
-        : 'general';
+          ? 'permissions'
+          : canManageIncidents
+            ? 'incidents'
+            : canManageSociety
+              ? 'sociedad'
+              : 'general';
+      setTab(next);
+      navigate(`/admin/settings?tab=${next}`, { replace: true });
+    }
+
+    // ✅ NUEVO: redirección si forzan ?tab=sociedad sin permiso
+    if (tab === 'sociedad' && !canManageSociety) {
+      const next: TabKey = canManageRoles
+        ? 'roles'
+        : canSeePermissions
+          ? 'permissions'
+          : canManageIncidents
+            ? 'incidents'
+            : canManageAnnouncements
+              ? 'announcements'
+              : 'general';
       setTab(next);
       navigate(`/admin/settings?tab=${next}`, { replace: true });
     }
@@ -225,6 +269,7 @@ export default function AdminSettingsHubPage() {
     canSeePermissions,
     canManageIncidents,
     canManageAnnouncements,
+    canManageSociety,
     navigate,
   ]);
 
@@ -253,7 +298,7 @@ export default function AdminSettingsHubPage() {
               <h1 className="text-3xl font-bold">Configuración</h1>
               <p className="text-sm text-gray-500">
                 Administra parámetros de la plataforma, roles, permisos,
-                incidencias y anuncios.
+                incidencias, anuncios y sociedad.
               </p>
             </div>
 
@@ -264,6 +309,7 @@ export default function AdminSettingsHubPage() {
               disabledRolesTab={!canManageRoles}
               disabledIncidentsTab={!canManageIncidents}
               disabledAnnouncementsTab={!canManageAnnouncements}
+              disabledSocietyTab={!canManageSociety}
             />
           </div>
         </header>
@@ -312,6 +358,20 @@ export default function AdminSettingsHubPage() {
                   rol.
                 </p>
                 <AnnouncementsTable searchTerm={searchTerm} />
+              </div>
+            </Can>
+          )}
+
+          {/* ✅ NUEVO: Sociedad (render aquí; luego tú haces SocietySettingsTable parecido a AnnouncementsTable) */}
+          {tab === 'sociedad' && (
+            <Can perm="society:read">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Sociedad</h2>
+                <p className="text-sm text-gray-500">
+                  Parametriza los datos de cada empresa: nombre, logo, colores y
+                  branding general.
+                </p>
+                <SocietySettingsTable searchTerm={searchTerm} />
               </div>
             </Can>
           )}

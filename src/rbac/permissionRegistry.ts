@@ -46,6 +46,7 @@ export const RESOURCES = {
   rbac: 'rbac',
   special_incidents: 'special_incidents',
   announcements: 'announcements',
+  society: 'society',
 
   // === Inventario ===
   inventory_items: 'inventory_items',
@@ -133,6 +134,17 @@ export const PERMISSIONS: PermissionDef[] = [
   ),
   p(RESOURCES.announcements, 'disable', 'Activar/Desactivar anuncios'),
   p(RESOURCES.announcements, 'delete', 'Eliminar anuncios'),
+
+  // Sociedad (Parametrización de empresa / branding)
+  p(RESOURCES.society, 'read', 'Ver sociedades (panel de gestión)'),
+  p(RESOURCES.society, 'create', 'Crear sociedades'),
+  p(
+    RESOURCES.society,
+    'full_access',
+    'Acceso total sociedades (crear/editar/eliminar)'
+  ),
+  p(RESOURCES.society, 'disable', 'Activar/Desactivar sociedades'),
+  p(RESOURCES.society, 'delete', 'Eliminar sociedades'),
 
   // === Inventario: Catálogo de artículos ===
   p(RESOURCES.inventory_items, 'read', 'Ver catálogo de artículos'),
