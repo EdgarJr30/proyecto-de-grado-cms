@@ -1,7 +1,7 @@
 // src/components/Layout/Sidebar.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import Logo from '../../assets/logo_horizontal_blanc.svg';
+import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
 import AppVersion from '../ui/AppVersion';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,15 @@ import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { getPublicSociety } from '../../services/societyService';
+import { getBrandingPublicUrl } from '../../services/brandingStorageService';
+
+type PublicSociety = {
+  id: number;
+  name: string;
+  logo_url: string | null;
+  login_img_url: string | null;
+  updated_at: string;
+};
 
 export default function Sidebar() {
   const { loading } = useAuth();
@@ -19,20 +28,25 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const [societyName, setSocietyName] = useState('CompanyName');
+  const [society, setSociety] = useState<PublicSociety | null>(null);
   const year = new Date().getFullYear();
 
-  //cargar nombre desde la BD
+  const societyName = society?.name?.trim() || 'CompanyName';
+
+  const logoSrc = useMemo(() => {
+    if (society?.logo_url) return getBrandingPublicUrl(society.logo_url);
+    return DefaultSidebarLogo;
+  }, [society?.logo_url]);
+
+  // cargar sociedad desde la BD (name + logo_url)
   useEffect(() => {
     let isMounted = true;
 
     const loadSociety = async () => {
       try {
-        const society = await getPublicSociety();
+        const s = (await getPublicSociety()) as PublicSociety | null;
         if (!isMounted) return;
-
-        const name = society?.name?.trim();
-        if (name) setSocietyName(name);
+        setSociety(s);
       } catch (error: unknown) {
         // no frenamos el UI por esto, solo log
         if (error instanceof Error) {
@@ -40,22 +54,23 @@ export default function Sidebar() {
         } else {
           console.error('Error cargando sociedad:', error);
         }
+        if (isMounted) setSociety(null);
       }
     };
 
-    loadSociety();
+    void loadSociety();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Mientras carga auth o permisos → skeleton (ya no depende de un hook extra)
+  // Mientras carga auth o permisos → skeleton
   if (loading || !ready) {
     return (
       <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
         <div className="p-6 border-b border-gray-700">
-          <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
+          <img src={logoSrc} alt="Logo" className="h-8 w-auto" />
         </div>
         <div className="p-4 space-y-2">
           <div className="h-9 rounded bg-gray-800 animate-pulse" />
@@ -89,7 +104,6 @@ export default function Sidebar() {
 
   const initials = profile?.name?.trim()?.charAt(0).toUpperCase() ?? 'U';
   const fullName = profile ? `${profile.name} ${profile.last_name}` : 'Usuario';
-
   const rolesString = roles.length ? roles.join(', ') : '—';
 
   return (
@@ -134,7 +148,7 @@ export default function Sidebar() {
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-700">
-          <img src={Logo} alt="MLM Logo" className="h-8 w-auto" />
+          <img src={logoSrc} alt="Logo" className="h-8 w-auto" />
         </div>
 
         {/* Menú */}
