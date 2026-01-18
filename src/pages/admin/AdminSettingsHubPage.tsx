@@ -17,7 +17,7 @@ import PermissionsTable from '../../components/dashboard/permissions/Permissions
 import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/announcements/AnnouncementsTable';
-import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsTable';
+import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
 
 type TabKey =
   | 'general'
@@ -371,7 +371,7 @@ export default function AdminSettingsHubPage() {
                   Parametriza los datos de cada empresa: nombre, logo, colores y
                   branding general.
                 </p>
-                <SocietySettingsTable searchTerm={searchTerm} />
+                <SocietySettingsTable />
               </div>
             </Can>
           )}
