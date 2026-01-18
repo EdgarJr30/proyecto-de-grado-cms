@@ -1008,15 +1008,15 @@ SELECT
 FROM public.tickets t;
 
 -- 6) Compatibilidad: tickets + agregados + effective_assignee_id
-CREATE OR REPLACE VIEW public.v_tickets_compat AS
-SELECT
-  t.*,
-  a.primary_assignee_id,
-  a.secondary_assignee_ids,
-  COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
-FROM public.tickets t
-LEFT JOIN public.v_work_order_assignees_agg a
-  ON a.work_order_id = t.id;
+-- CREATE OR REPLACE VIEW public.v_tickets_compat AS
+-- SELECT
+--   t.*,
+--   a.primary_assignee_id,
+--   a.secondary_assignee_ids,
+--   COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
+-- FROM public.tickets t
+-- LEFT JOIN public.v_work_order_assignees_agg a
+--   ON a.work_order_id = t.id;
 
 -- 7) RLS y Policies
 ALTER TABLE public.work_order_assignees ENABLE ROW LEVEL SECURITY;
@@ -1348,18 +1348,20 @@ SELECT
   ) AS secondary_assignee_ids
 FROM public.tickets t;
 
-CREATE OR REPLACE VIEW public.v_tickets_compat AS
-SELECT
-  t.*,
-  a.primary_assignee_id,
-  a.secondary_assignee_ids,
-  COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
-FROM public.tickets t
-LEFT JOIN public.v_work_order_assignees_agg a
-  ON a.work_order_id = t.id;
+-- CREATE OR REPLACE VIEW public.v_tickets_compat AS
+-- SELECT
+--   t.*,
+--   a.primary_assignee_id,
+--   a.secondary_assignee_ids,
+--   COALESCE(a.primary_assignee_id, t.assignee_id) AS effective_assignee_id
+-- FROM public.tickets t
+-- LEFT JOIN public.v_work_order_assignees_agg a
+--   ON a.work_order_id = t.id;
 
 
 -- 1️⃣ Crear tabla con campos de trazabilidad
+DROP TABLE IF EXISTS public.special_incidents CASCADE;
+
 CREATE TABLE public.special_incidents (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,               -- Ej: “Huracán”, “Tormenta eléctrica”
@@ -1709,8 +1711,6 @@ $$;
 
 REVOKE ALL ON FUNCTION public.toggle_announcement_active(BIGINT, BOOLEAN) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.toggle_announcement_active(BIGINT, BOOLEAN) TO authenticated;
-
-
 
 CREATE OR REPLACE VIEW public.v_tickets_compat (
   id,
