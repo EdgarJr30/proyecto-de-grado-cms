@@ -2,7 +2,6 @@
 -- CMMS - Tenant bootstrap (idempotente)
 -- Ejecutar en el esquema PUBLIC de Supabase
 -- ============================================================
-
 -- =========[ 0) EXTENSIONES ]=========
 create extension if not exists pg_trgm;
 create extension if not exists unaccent;
