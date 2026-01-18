@@ -298,9 +298,9 @@ export default function WorkOrdersBoard({ filters }: Props) {
           onOpenModal={openModal}
           getPriorityStyles={(priority) => {
             const styles: Record<Ticket['priority'], string> = {
-              baja: 'bg-green-100 text-green-800 border-green-200',
-              media: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-              alta: 'bg-orange-100 text-orange-800 border-orange-200',
+              Baja: 'bg-green-100 text-green-800 border-green-200',
+              Media: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+              Alta: 'bg-orange-100 text-orange-800 border-orange-200',
             };
             return (
               styles[priority] || 'bg-gray-100 text-gray-800 border-gray-200'
