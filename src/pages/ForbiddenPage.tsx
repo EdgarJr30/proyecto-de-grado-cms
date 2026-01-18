@@ -1,10 +1,13 @@
-// src/pages/ForbiddenPage.tsx
 import { useNavigate } from 'react-router-dom';
 import AppVersion from '../components/ui/AppVersion';
 import { signOut } from '../utils/auth';
+import { useBranding } from '../context/BrandingContext';
 
 export default function ForbiddenPage() {
   const navigate = useNavigate();
+  const { societyName } = useBranding();
+
+  const year = new Date().getFullYear();
 
   const handleLogout = async () => {
     try {
@@ -36,14 +39,19 @@ export default function ForbiddenPage() {
       <div className="mt-6 flex flex-col sm:flex-row gap-3 w-full max-w-sm">
         <button
           onClick={goHome}
-          className="w-full px-4 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          className="w-full px-4 py-3 rounded-md bg-gray-800 hover:bg-gray-700 text-white font-medium transition
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+                     focus-visible:ring-offset-gray-900"
         >
           Ir al inicio
         </button>
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md border border-red-500 text-red-500 hover:bg-red-500/10 transition font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md border border-red-500
+                     text-red-500 hover:bg-red-500/10 transition font-medium
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+                     focus-visible:ring-offset-gray-900"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +74,7 @@ export default function ForbiddenPage() {
 
       {/* Footer */}
       <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800 mt-10 w-full max-w-sm">
-        © 2025 CILM
+        © {year} {societyName}
       </div>
       <AppVersion className="text-center mt-0 mb-2" />
     </div>
