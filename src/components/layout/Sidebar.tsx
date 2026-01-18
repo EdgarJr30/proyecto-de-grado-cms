@@ -1,5 +1,5 @@
 // src/components/Layout/Sidebar.tsx
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../../assets/logo_horizontal_blanc.svg';
 import { signOut } from '../../utils/auth';
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
+import { getLatestSociety } from '../../services/societyService';
 
 export default function Sidebar() {
   const { loading } = useAuth();
@@ -16,7 +17,38 @@ export default function Sidebar() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const [isOpen, setIsOpen] = useState(false); // se usa para móvil
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [societyName, setSocietyName] = useState('CompanyName');
+  const year = new Date().getFullYear();
+
+  //cargar nombre desde la BD
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSociety = async () => {
+      try {
+        const society = await getLatestSociety();
+        if (!isMounted) return;
+
+        const name = society?.name?.trim();
+        if (name) setSocietyName(name);
+      } catch (error: unknown) {
+        // no frenamos el UI por esto, solo log
+        if (error instanceof Error) {
+          console.error('Error cargando sociedad:', error.message);
+        } else {
+          console.error('Error cargando sociedad:', error);
+        }
+      }
+    };
+
+    loadSociety();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Mientras carga auth o permisos → skeleton (ya no depende de un hook extra)
   if (loading || !ready) {
@@ -173,7 +205,7 @@ export default function Sidebar() {
 
         {/* Footer */}
         <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800">
-          © 2025 CILM
+          © {year} {societyName}
         </div>
         <AppVersion className="text-center mt-0 mb-2" />
       </aside>
