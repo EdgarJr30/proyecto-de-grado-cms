@@ -1,13 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import AppVersion from '../components/ui/AppVersion';
 import { signOut } from '../utils/auth';
-import { useBranding } from '../context/BrandingContext';
+import Footer from '../components/ui/Footer';
 
 export default function ForbiddenPage() {
   const navigate = useNavigate();
-  const { societyName } = useBranding();
-
-  const year = new Date().getFullYear();
 
   const handleLogout = async () => {
     try {
@@ -71,12 +67,7 @@ export default function ForbiddenPage() {
           Cerrar sesión
         </button>
       </div>
-
-      {/* Footer */}
-      <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800 mt-10 w-full max-w-sm">
-        © {year} {societyName}
-      </div>
-      <AppVersion className="text-center mt-0 mb-2" />
+      <Footer />
     </div>
   );
 }

@@ -166,9 +166,7 @@ export default function LoginPage() {
 
             <p className="mt-10 text-center text-sm/6 text-gray-500">
               Desarrollado por{' '}
-              <span className="font-semibold text-indigo-600">
-                Innovación &amp; Desarrollo CILM
-              </span>
+              <span className="font-semibold text-indigo-600">Mooncode</span>
             </p>
             <AppVersion className="text-center mt-4" />
           </div>

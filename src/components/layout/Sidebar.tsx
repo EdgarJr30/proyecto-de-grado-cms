@@ -2,27 +2,24 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
-import AppVersion from '../ui/AppVersion';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
 import { APP_ROUTES } from '../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useBranding } from '../../context/BrandingContext';
+import Footer from '../ui/Footer';
 
 export default function Sidebar() {
   const { loading } = useAuth();
   const { profile } = useUser();
   const { has, ready, roles } = usePermissions();
-  const { societyName, logoSrc } = useBranding();
+  const { logoSrc } = useBranding();
 
   const location = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
-  const year = new Date().getFullYear();
-
   // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
-  // Si quieres 0 flash, en vez de default puedes mostrar skeleton del logo.
   const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
 
   // Menú por permisos (any-of)
@@ -60,7 +57,6 @@ export default function Sidebar() {
           <div className="h-9 rounded bg-gray-800 animate-pulse" />
           <div className="h-9 rounded bg-gray-800 animate-pulse" />
         </div>
-        <AppVersion className="text-center mt-auto" />
       </aside>
     );
   }
@@ -107,7 +103,6 @@ export default function Sidebar() {
       >
         {/* Logo */}
         <div className="p-6 border-b border-gray-700">
-          {/* si quieres 0 flash: cuando logoSrc sea null, muestra skeleton */}
           {logoSrc ? (
             <img src={finalLogoSrc} alt="Logo" className="h-8 w-auto" />
           ) : (
@@ -182,12 +177,7 @@ export default function Sidebar() {
           </svg>
           Cerrar sesión
         </button>
-
-        {/* Footer */}
-        <div className="px-4 py-3 text-xs text-gray-400 border-t border-gray-800">
-          © {year} {societyName}
-        </div>
-        <AppVersion className="text-center mt-0 mb-2" />
+        <Footer variant="dark" />
       </aside>
     </>
   );
