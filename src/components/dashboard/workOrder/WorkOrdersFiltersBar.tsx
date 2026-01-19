@@ -1,4 +1,3 @@
-// src/components/dashboard/workOrder/WorkOrdersFiltersBar.tsx
 import FilterBar from '../../ui/filters/FilterBar';
 import {
   WorkOrdersFilters,
@@ -10,7 +9,6 @@ type Props = {
 };
 
 export default function WorkOrdersFiltersBar({ onApply }: Props) {
-  // ✅ pasa el genérico para que los tipos de clave coincidan
   return (
     <FilterBar<WorkOrdersFilterKey>
       schema={WorkOrdersFilters}
