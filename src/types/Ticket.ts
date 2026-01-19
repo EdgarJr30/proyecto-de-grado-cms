@@ -7,15 +7,15 @@ export interface Ticket {
   priority: 'Baja' | 'Media' | 'Alta';
   status: 'Pendiente' | 'En Ejecución' | 'Finalizadas';
   requester: string;
-  location: string;
+  location_id: number | null;
   assignee?: string;
   assignee_id?: number;
   incident_date: string;
-  deadline_date?: string; // ISO date string
-  image?: string; // base64
+  deadline_date?: string;
+  image?: string;
   email?: string;
   phone?: string;
-  created_at: string; // ISO date string
+  created_at: string;
   comments?: string;
   is_archived: boolean;
   finalized_at?: string | null;
@@ -31,15 +31,3 @@ export type WorkOrderExtras = {
 };
 
 export type WorkOrder = Ticket & WorkOrderExtras;
-
-export const Locations = [
-  'Operadora de Servicios Alimenticios',
-  'Adrian Tropical 27',
-  'Adrian Tropical Malecón',
-  'Adrian Tropical Lincoln',
-  'Adrian Tropical San Vicente',
-  'Atracciones el Lago',
-  'M7',
-  'E. Arturo Trading',
-  'Edificio Comunitario',
-];

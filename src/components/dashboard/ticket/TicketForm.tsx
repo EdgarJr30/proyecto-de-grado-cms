@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Locations } from '../../../types/Ticket';
+import { useMemo, useState, useEffect } from 'react';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Label } from '../../ui/label';
@@ -22,7 +21,6 @@ import {
   validateTitle,
   validateDescription,
   validateRequester,
-  validateLocation,
   validateIncidentDate,
   validateEmail,
   validatePhone,
@@ -41,6 +39,13 @@ import { useNavigate } from 'react-router-dom';
 import { showToastError } from '../../../notifications';
 
 // ==== Tipos ====
+type DbLocation = {
+  id: number;
+  name: string;
+  code: string;
+  is_active: boolean;
+};
+
 interface TicketFormData {
   title: string;
   description: string;
@@ -51,7 +56,7 @@ interface TicketFormData {
   incident_date: string;
   deadline_date?: string; // ISO date string
   image: string; // base64 o JSON con paths
-  location: string;
+  location_id: number | null; // ✅ DB field
   email?: string;
   phone?: string;
   created_at: string; // ISO date string
@@ -63,7 +68,7 @@ type UserProfile = {
   last_name?: string | null;
   email?: string | null;
   phone?: string | null;
-  location?: string | null;
+  location_id?: number | null; // ✅ DB field
 };
 
 // ==== Helper para construir el formulario inicial con datos del perfil ====
@@ -79,7 +84,7 @@ const makeInitialForm = (profile?: UserProfile | null): TicketFormData => {
     incident_date: getTodayISODate(), // Default to today
     deadline_date: undefined, // Optional
     image: '',
-    location: profile?.location ?? '',
+    location_id: profile?.location_id ?? null,
     email: profile?.email ?? '',
     phone: profile?.phone ?? '',
     created_at: getNowInTimezoneForStorage('America/Santo_Domingo'),
@@ -104,8 +109,18 @@ export default function TicketForm() {
   const [loadingIncidents, setLoadingIncidents] = useState(false);
   const [incidentsError, setIncidentsError] = useState<string | null>(null);
 
+  // ✅ Locations desde DB
+  const [locations, setLocations] = useState<DbLocation[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+
   const progress = (step / 4) * 100;
   const navigate = useNavigate();
+
+  const locationNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    locations.forEach((l) => map.set(l.id, l.name));
+    return map;
+  }, [locations]);
 
   const handleChange = (
     name: keyof TicketFormData,
@@ -180,7 +195,7 @@ export default function TicketForm() {
     } catch (err) {
       setErrors((prev) => ({
         ...prev,
-        image: `Ocurrió un error al comprimir las imágenes. ${err}`,
+        image: `Ocurrió un error al comprimir las imágenes. ${String(err)}`,
       }));
       setSelectedFiles([]);
       setImagePreview([]);
@@ -199,8 +214,11 @@ export default function TicketForm() {
     if (step === 2) {
       newErrors.requester = validateRequester(form.requester) ?? undefined;
       newErrors.email = validateEmail(form.email ?? '') ?? undefined;
-      newErrors.location = validateLocation(form.location) ?? undefined;
       newErrors.phone = validatePhone(form.phone) ?? undefined;
+
+      // ✅ location_id requerido
+      newErrors.location_id =
+        form.location_id == null ? 'Selecciona una ubicación.' : undefined;
     }
 
     if (step === 3) {
@@ -277,16 +295,51 @@ export default function TicketForm() {
         navigate('/mi-perfil');
       }
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Error al crear el ticket:', error.message);
-      } else {
-        console.error('Error al crear el ticket:', error);
-      }
-      showToastError(`Hubo un error al crear el ticket. ${error}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      console.error('Error al crear el ticket:', msg);
+      showToastError(`Hubo un error al crear el ticket. ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // ✅ Cargar ubicaciones activas desde DB
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      setLoadingLocations(true);
+      try {
+        const { data, error } = await (
+          await import('../../../lib/supabaseClient')
+        ).supabase
+          .from('locations')
+          .select('id,name,code,is_active')
+          .eq('is_active', true)
+          .order('name');
+
+        if (!active) return;
+
+        if (error) {
+          showToastError(error.message);
+          setLocations([]);
+        } else {
+          setLocations((data ?? []) as DbLocation[]);
+        }
+      } catch (err: unknown) {
+        if (!active) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        showToastError(msg);
+        setLocations([]);
+      } finally {
+        if (active) setLoadingLocations(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Carga del perfil + rehidratación del form al montar
   useEffect(() => {
@@ -302,7 +355,6 @@ export default function TicketForm() {
         setLoadingIncidents(true);
         const data = await getActiveSpecialIncidents(); // devuelve {id,name,...}
         if (!active) return;
-        // Si usaste getActiveSpecialIncidents que trae más columnas, mapea:
         const opts = data.map((d) => ({ id: d.id, name: d.name }));
         setSpecialIncidentOptions(opts);
         setIncidentsError(null);
@@ -564,26 +616,43 @@ export default function TicketForm() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">
+                  <Label htmlFor="location_id">
                     Ubicación <span className="text-red-500">*</span>
                   </Label>
+
                   <Select
-                    value={form.location}
-                    onValueChange={(value) => handleChange('location', value)}
+                    value={
+                      form.location_id != null ? String(form.location_id) : ''
+                    }
+                    onValueChange={(value) =>
+                      handleChange(
+                        'location_id',
+                        value === 'none' ? null : Number(value)
+                      )
+                    }
+                    disabled={loadingLocations}
                   >
-                    <SelectTrigger className="cursor-pointer">
-                      <SelectValue placeholder="Selecciona una ubicación" />
+                    <SelectTrigger className="cursor-pointer" id="location_id">
+                      <SelectValue
+                        placeholder={
+                          loadingLocations
+                            ? 'Cargando ubicaciones...'
+                            : 'Selecciona una ubicación'
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {Locations.map((loc) => (
-                        <SelectItem key={loc} value={loc}>
-                          {loc}
+                      <SelectItem value="none">— Selecciona —</SelectItem>
+                      {locations.map((loc) => (
+                        <SelectItem key={loc.id} value={String(loc.id)}>
+                          {loc.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.location && (
-                    <p className="text-sm text-red-500">{errors.location}</p>
+
+                  {errors.location_id && (
+                    <p className="text-sm text-red-500">{errors.location_id}</p>
                   )}
                 </div>
               </div>
@@ -644,6 +713,7 @@ export default function TicketForm() {
                   )}
                 </div>
               </div>
+
               {/* Select de Special Incident (opcional) */}
               <div className="space-y-2">
                 <Label htmlFor="specialIncident">
@@ -654,7 +724,7 @@ export default function TicketForm() {
                     form.special_incident_id != null
                       ? String(form.special_incident_id)
                       : ''
-                  } // 👈 placeholder cuando ''
+                  }
                   onValueChange={(value) =>
                     handleChange(
                       'special_incident_id',
@@ -676,7 +746,6 @@ export default function TicketForm() {
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* 👇 ya NO uses value="" aquí */}
                     <SelectItem value="none">— Ninguna —</SelectItem>
                     {specialIncidentOptions.map((opt) => (
                       <SelectItem key={opt.id} value={String(opt.id)}>
@@ -689,6 +758,7 @@ export default function TicketForm() {
                   <p className="text-sm text-red-500">{incidentsError}</p>
                 )}
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="image">
                   Imagen del incidente, máximo 3 imágenes{' '}
@@ -742,11 +812,11 @@ export default function TicketForm() {
                     📝 Información del Ticket
                   </h3>
                   <p>
-                    <strong>Título:</strong>
+                    <strong>Título:</strong>{' '}
                     <span className="wrap-anywhere">{form.title}</span>
                   </p>
                   <p>
-                    <strong>Descripción:</strong>
+                    <strong>Descripción:</strong>{' '}
                     <span className="wrap-anywhere">{form.description}</span>
                   </p>
                   <p>
@@ -774,7 +844,11 @@ export default function TicketForm() {
                     📍 Ubicación
                   </h3>
                   <p>
-                    <strong>Ubicación:</strong> {form.location}
+                    <strong>Ubicación:</strong>{' '}
+                    {form.location_id != null
+                      ? (locationNameById.get(form.location_id) ??
+                        `ID ${form.location_id}`)
+                      : '—'}
                   </p>
                 </div>
 

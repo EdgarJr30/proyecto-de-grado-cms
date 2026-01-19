@@ -6,7 +6,7 @@ export type DbUser = {
   email: string;
   name: string | null;
   last_name: string | null;
-  location: string | null;
+  location_id: number | null;
   rol_id: number | null;
   created_at: string;
   is_active: boolean;
@@ -18,19 +18,22 @@ type Paginated = {
 };
 
 /* =========================
-   Lista general (YA EXISTENTE)
+   Lista general
    ========================= */
 export async function getUsersPaginated(opts: {
   page: number;
   pageSize: number;
   search?: string;
-  location?: string;
+  location_id: number | null;
   includeInactive?: boolean;
-}) {
-  const { page, pageSize, search, location, includeInactive } = opts;
+}): Promise<Paginated> {
+  const { page, pageSize, search, location_id, includeInactive } = opts;
+
   let q = supabase
     .from('users')
-    .select('*', { count: 'exact' })
+    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
+      count: 'exact',
+    })
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
 
@@ -39,8 +42,8 @@ export async function getUsersPaginated(opts: {
     q = q.or(`email.ilike.${s},name.ilike.${s},last_name.ilike.${s}`);
   }
 
-  if (location && location !== 'TODAS') {
-    q = q.eq('location', location);
+  if (location_id != null) {
+    q = q.eq('location_id', location_id);
   }
 
   if (!includeInactive) {
@@ -49,26 +52,27 @@ export async function getUsersPaginated(opts: {
 
   const { data, error, count } = await q;
   if (error) throw error;
+
   return { data: (data ?? []) as DbUser[], count: count ?? 0 };
 }
 
 export async function updateUser(userId: string, patch: Partial<DbUser>) {
-  // Solo campos editables de ficha (no toques id/created_at)
   const { error } = await supabase
     .from('users')
     .update({
       name: patch.name ?? null,
       last_name: patch.last_name ?? null,
       email: patch.email ?? null,
-      location: patch.location ?? null,
+      location_id: patch.location_id ?? null,
       rol_id:
         typeof patch.rol_id === 'number'
           ? patch.rol_id
           : patch.rol_id === null
-          ? null
-          : undefined, // evita sobreescribir si no se envía
+            ? null
+            : undefined,
     })
     .eq('id', userId);
+
   if (error) throw error;
 }
 
@@ -77,7 +81,7 @@ export async function setUserActive(userId: string, active: boolean) {
     .from('users')
     .update({ is_active: active })
     .eq('id', userId);
-  if (error) throw error; // Trigger/RLS: users:cancel
+  if (error) throw error;
 }
 
 export async function bulkSetUserActive(ids: string[], active: boolean) {
@@ -86,19 +90,18 @@ export async function bulkSetUserActive(ids: string[], active: boolean) {
     .from('users')
     .update({ is_active: active })
     .in('id', ids);
-  if (error) throw error; // Trigger/RLS: users:cancel
+  if (error) throw error;
 }
 
 export async function deleteUser(userId: string) {
   const { error } = await supabase.from('users').delete().eq('id', userId);
-  if (error) throw error; // RLS: users:delete
+  if (error) throw error;
 }
 
 /* =========================================
    NUEVO: Paginación por rol y asignaciones
    ========================================= */
 
-/** Lista usuarios que pertenecen a un rol específico */
 export async function getUsersByRolePaginated(opts: {
   roleId: number;
   page: number;
@@ -110,10 +113,9 @@ export async function getUsersByRolePaginated(opts: {
 
   let q = supabase
     .from('users')
-    .select(
-      'id,email,name,last_name,location,rol_id,is_active,created_at',
-      { count: 'exact' }
-    )
+    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
+      count: 'exact',
+    })
     .eq('rol_id', roleId);
 
   if (!includeInactive) q = q.eq('is_active', true);
@@ -121,12 +123,7 @@ export async function getUsersByRolePaginated(opts: {
   if (search && search.trim().length >= 2) {
     const s = `%${search.trim()}%`;
     q = q.or(
-      [
-        `email.ilike.${s}`,
-        `name.ilike.${s}`,
-        `last_name.ilike.${s}`,
-        `location.ilike.${s}`,
-      ].join(',')
+      [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
     );
   }
 
@@ -141,7 +138,6 @@ export async function getUsersByRolePaginated(opts: {
   return { data: (data ?? []) as DbUser[], count: count ?? 0 };
 }
 
-/** Lista usuarios SIN rol (para agregarlos al rol actual) */
 export async function getUsersWithoutRolePaginated(opts: {
   page: number;
   pageSize: number;
@@ -152,10 +148,9 @@ export async function getUsersWithoutRolePaginated(opts: {
 
   let q = supabase
     .from('users')
-    .select(
-      'id,email,name,last_name,location,rol_id,is_active,created_at',
-      { count: 'exact' }
-    )
+    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
+      count: 'exact',
+    })
     .is('rol_id', null);
 
   if (!includeInactive) q = q.eq('is_active', true);
@@ -163,12 +158,7 @@ export async function getUsersWithoutRolePaginated(opts: {
   if (search && search.trim().length >= 2) {
     const s = `%${search.trim()}%`;
     q = q.or(
-      [
-        `email.ilike.${s}`,
-        `name.ilike.${s}`,
-        `last_name.ilike.${s}`,
-        `location.ilike.${s}`,
-      ].join(',')
+      [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
     );
   }
 
@@ -183,7 +173,6 @@ export async function getUsersWithoutRolePaginated(opts: {
   return { data: (data ?? []) as DbUser[], count: count ?? 0 };
 }
 
-/** Asigna un rol a un conjunto de usuarios */
 export async function bulkSetUsersRole(
   userIds: string[],
   roleId: number
@@ -193,15 +182,14 @@ export async function bulkSetUsersRole(
     .from('users')
     .update({ rol_id: roleId })
     .in('id', userIds);
-  if (error) throw error; // RLS: rbac:manage_roles
+  if (error) throw error;
 }
 
-/** Quita el rol (lo deja en NULL) a un conjunto de usuarios */
 export async function bulkClearUsersRole(userIds: string[]): Promise<void> {
   if (!userIds.length) return;
   const { error } = await supabase
     .from('users')
     .update({ rol_id: null })
     .in('id', userIds);
-  if (error) throw error; // RLS: rbac:manage_roles
+  if (error) throw error;
 }

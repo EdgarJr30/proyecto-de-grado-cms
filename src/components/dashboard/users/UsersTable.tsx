@@ -2,12 +2,10 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../../../context/AuthContext';
 import { useUser } from '../../../context/UserContext';
-import { LOCATIONS } from '../../../constants/locations';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { supabaseNoPersist } from '../../../lib/supabaseNoPersist';
 import {
   getUsersPaginated,
-  updateUser,
   setUserActive,
   bulkSetUserActive,
   deleteUser,
@@ -16,6 +14,7 @@ import {
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
+import UserEditModal from './UserEditModal';
 
 interface Role {
   id: number;
@@ -24,7 +23,7 @@ interface Role {
 
 interface Props {
   searchTerm: string;
-  selectedLocation: string;
+  selectedLocation: string; // viene del filtro (string)
 }
 
 const PAGE_SIZE = 8;
@@ -46,7 +45,7 @@ function ActiveChip({ active }: { active: boolean }) {
   );
 }
 
-// Helper seguro para extraer mensajes de error (evita TS2339)
+// Helper seguro para extraer mensajes de error
 function extractErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;
@@ -68,23 +67,11 @@ function extractErrorMessage(err: unknown): string {
   return 'Ocurrió un error';
 }
 
-type FormState = {
-  id?: string;
+type DbLocation = {
+  id: number;
   name: string;
-  last_name: string;
-  email: string;
-  location: string;
-  rol_id: number | '';
+  code: string;
   is_active: boolean;
-};
-
-const EMPTY_FORM: FormState = {
-  name: '',
-  last_name: '',
-  email: '',
-  location: '',
-  rol_id: '',
-  is_active: true,
 };
 
 export default function UsersTable({ searchTerm, selectedLocation }: Props) {
@@ -104,12 +91,16 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
   const [detail, setDetail] = useState<DbUser | null>(null);
 
-  // Crear usuario (modal)
+  // === Modal editar (separado) ===
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<DbUser | null>(null);
+
+  // === Crear usuario (modal) ===
   const [openCreate, setOpenCreate] = useState(false);
   const [nameC, setNameC] = useState('');
   const [lastNameC, setLastNameC] = useState('');
   const [emailC, setEmailC] = useState('');
-  const [locationC, setLocationC] = useState('');
+  const [locationIdC, setLocationIdC] = useState<number | ''>('');
   const [passwordC, setPasswordC] = useState('');
   const [rolIdC, setRolIdC] = useState<number | ''>('');
   const [submittingCreate, setSubmittingCreate] = useState(false);
@@ -118,11 +109,8 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     text: string;
   } | null>(null);
 
-  // Editar usuario (modal)
-  const [openForm, setOpenForm] = useState(false);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [submitting, setSubmitting] = useState(false);
-  const isEditing = useMemo(() => typeof form.id === 'string', [form.id]);
+  const [locations, setLocations] = useState<DbLocation[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
 
   const isSearching = searchTerm.trim().length >= 2;
 
@@ -136,9 +124,13 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   const canDelete = useCan('users:delete');
   const canManageRoles = useCan('rbac:manage_roles');
 
-  const [errors] = useState<Partial<Record<keyof FormState | 'image', string>>>(
-    {}
-  );
+  const errors: Partial<Record<'email', string>> = {};
+
+  const locationNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const l of locations) m.set(l.id, l.name);
+    return m;
+  }, [locations]);
 
   useLayoutEffect(() => {
     const isIndet =
@@ -146,7 +138,43 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     setChecked(selectedRows.length === rows.length && rows.length > 0);
     setIndeterminate(isIndet);
     if (checkbox.current) checkbox.current.indeterminate = isIndet;
-  }, [selectedRows, rows.length]);
+  }, [selectedRows, rows.length, rows]);
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      setLoadingLocations(true);
+      try {
+        const { data, error } = await (
+          await import('../../../lib/supabaseClient')
+        ).supabase
+          .from('locations')
+          .select('id,name,code,is_active')
+          .eq('is_active', true)
+          .order('name');
+
+        if (!active) return;
+
+        if (error) {
+          showToastError(error.message);
+          setLocations([]);
+        } else {
+          setLocations((data ?? []) as DbLocation[]);
+        }
+      } catch (err: unknown) {
+        if (!active) return;
+        showToastError(extractErrorMessage(err));
+        setLocations([]);
+      } finally {
+        if (active) setLoadingLocations(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function toggleAll() {
     setSelectedRows(checked || indeterminate ? [] : rows);
@@ -154,29 +182,41 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     setIndeterminate(false);
   }
 
+  function toIntOrNull(v: string): number | null {
+    const s = v.trim();
+    if (!s) return null;
+    if (!/^\d+$/.test(s)) return null;
+    return Number(s);
+  }
+
   async function reload(resetPage?: boolean) {
     if (!canRead && !canFull) return;
     setIsLoading(true);
+
     try {
       const p = resetPage ? 0 : page;
-      const { data, count } = await getUsersPaginated({
+
+      const locationFilter = toIntOrNull(selectedLocation);
+
+      const { data, count: total } = await getUsersPaginated({
         page: p,
         pageSize: PAGE_SIZE,
         search: isSearching ? searchTerm : undefined,
-        location: selectedLocation,
+        location_id: locationFilter,
         includeInactive,
       });
+
       setRows(data);
-      setCount(count);
+      setCount(total);
       if (resetPage) setPage(0);
-    } catch (e) {
+    } catch (e: unknown) {
       showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
   }
 
-  // Cargar roles y tabla
+  // Cargar roles
   useEffect(() => {
     let active = true;
     (async () => {
@@ -199,69 +239,27 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     };
   }, []);
 
+  // filtros
   useEffect(() => {
-    void reload(true); // filtros
+    void reload(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeInactive, selectedLocation, isSearching, searchTerm]);
 
+  // paginación (solo si NO está buscando)
   useEffect(() => {
     if (isSearching) return;
-    void reload(false); // paginación
+    void reload(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
-  // --- Acciones ----
+  // --- Editar ---
   function openEdit(u: DbUser) {
     if (!canFull) {
       showToastError('No tienes permiso para editar usuarios.');
       return;
     }
-    setForm({
-      id: u.id,
-      name: u.name ?? '',
-      last_name: u.last_name ?? '',
-      email: u.email ?? '',
-      location: u.location ?? '',
-      rol_id: u.rol_id ?? '',
-      is_active: u.is_active,
-    });
-    setOpenForm(true);
-  }
-
-  async function submitForm(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canFull) {
-      showToastError('No tienes permiso para editar usuarios.');
-      return;
-    }
-    if (
-      !form.id ||
-      !form.email.trim() ||
-      !form.name.trim() ||
-      !form.last_name.trim() ||
-      !form.location
-    ) {
-      showToastError('Completa nombre, apellido, email y ubicación.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const patch: Partial<DbUser> = {
-        name: form.name,
-        last_name: form.last_name,
-        email: form.email,
-        location: form.location,
-      };
-      if (canManageRoles) {
-        patch.rol_id = typeof form.rol_id === 'number' ? form.rol_id : null;
-      }
-      await updateUser(form.id, patch as DbUser);
-      showToastSuccess('Usuario actualizado.');
-      setOpenForm(false);
-      await reload();
-    } catch (e) {
-      showToastError(extractErrorMessage(e));
-    } finally {
-      setSubmitting(false);
-    }
+    setEditingUser(u);
+    setOpenEditModal(true);
   }
 
   // SweetAlert2 de confirmación
@@ -313,7 +311,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
           : `Usuario desactivado: ${u.email}`
       );
       await reload();
-    } catch (e) {
+    } catch (e: unknown) {
       showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
@@ -343,7 +341,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       showToastSuccess(`Se desactivaron ${selectedRows.length} usuarios.`);
       setSelectedRows([]);
       await reload();
-    } catch (e) {
+    } catch (e: unknown) {
       showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
@@ -368,7 +366,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       await deleteUser(u.id);
       showToastSuccess(`Usuario eliminado: ${u.email}`);
       await reload();
-    } catch (e) {
+    } catch (e: unknown) {
       showToastError(extractErrorMessage(e));
     } finally {
       setIsLoading(false);
@@ -380,11 +378,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     setNameC('');
     setLastNameC('');
     setEmailC('');
-    setLocationC('');
+    setLocationIdC('');
     setPasswordC('');
     setRolIdC('');
     setMsgCreate(null);
   };
+
   const closeCreate = () => {
     setOpenCreate(false);
     resetCreate();
@@ -394,8 +393,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     e.preventDefault();
     setMsgCreate(null);
 
-    if (!nameC || !lastNameC || !emailC || !passwordC || !locationC) {
-      setMsgCreate({ type: 'err', text: 'Completa todos los campos.' });
+    if (!nameC || !lastNameC || !emailC || !passwordC) {
+      setMsgCreate({
+        type: 'err',
+        text: 'Completa nombre, apellido, email y password.',
+      });
       return;
     }
     if (canManageRoles && !rolIdC) {
@@ -405,25 +407,30 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
     setSubmittingCreate(true);
     sessionStorage.setItem('admin:create-user:guard', '1');
+
     try {
       const { data: signUpRes, error: signUpErr } =
         await supabaseNoPersist.auth.signUp({
-          email: emailC,
+          email: emailC.trim(),
           password: passwordC,
-          options: { data: { name: nameC } },
+          options: { data: { name: nameC.trim() } },
         });
+
       if (signUpErr) throw signUpErr;
 
       const newId = signUpRes.user?.id;
-      if (!newId)
+      if (!newId) {
         throw new Error('No se obtuvo el ID del usuario creado en Auth.');
+      }
+
+      const locationId = typeof locationIdC === 'number' ? locationIdC : null;
 
       const payload = {
         p_id: newId,
-        p_email: emailC,
-        p_name: nameC,
-        p_last_name: lastNameC,
-        p_location: locationC,
+        p_email: emailC.trim(),
+        p_name: nameC.trim(),
+        p_last_name: lastNameC.trim(),
+        p_location: locationId,
         p_rol_id: canManageRoles ? Number(rolIdC) : null,
       };
 
@@ -438,13 +445,13 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         refreshUser({ silent: true }),
       ]);
 
-      // ✅ Toast al crear
-      showToastSuccess(`Usuario creado: ${emailC}`);
+      showToastSuccess(`Usuario creado: ${emailC.trim()}`);
 
       setMsgCreate({ type: 'ok', text: 'Usuario creado correctamente.' });
       await reload(true);
+
       setTimeout(closeCreate, 700);
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = extractErrorMessage(err);
       setMsgCreate({ type: 'err', text: msg });
       showToastError(msg);
@@ -452,6 +459,13 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       setSubmittingCreate(false);
     }
   }
+
+  const renderLocation = (u: DbUser) => {
+    if (typeof u.location_id === 'number') {
+      return locationNameById.get(u.location_id) ?? String(u.location_id);
+    }
+    return '—';
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -476,13 +490,13 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
           <button
             type="button"
             onClick={() => setOpenCreate(true)}
-            disabled={!canFull || !canManageRoles}
+            disabled={!canFull}
             title={
               !canFull
                 ? 'No tienes permiso para crear/editar usuarios'
                 : !canManageRoles
-                ? 'No tienes permiso para asignar rol (rbac:manage_roles)'
-                : undefined
+                  ? 'No tienes permiso para asignar rol (rbac:manage_roles)'
+                  : undefined
             }
             className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
@@ -491,7 +505,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
           <button
             type="button"
-            onClick={handleBulkDeactivate}
+            onClick={() => void handleBulkDeactivate()}
             disabled={selectedRows.length === 0 || isLoading || !canCancel}
             title={
               !canCancel
@@ -532,6 +546,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
               const selected = selectedRows.includes(u);
               const roleName =
                 roles.find((r) => r.id === u.rol_id)?.name ?? '—';
+
               return (
                 <div
                   key={u.id}
@@ -566,9 +581,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
                     <div className="flex-1 min-w-0">
                       <div className="text-base font-semibold text-gray-900 line-clamp-1">
-                        {u.name || u.last_name
-                          ? `${u.name ?? ''} ${u.last_name ?? ''}`.trim()
-                          : '—'}
+                        {`${u.name ?? ''} ${u.last_name ?? ''}`.trim() || '—'}
                       </div>
 
                       <div className="mt-0.5 text-sm text-gray-600 line-clamp-1">
@@ -586,7 +599,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                       <div className="mt-3 text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                         <span>
                           <span className="text-gray-400">Ubicación:</span>{' '}
-                          {u.location || '—'}
+                          {renderLocation(u)}
                         </span>
                         <span>
                           <span className="text-gray-400">Creado:</span>{' '}
@@ -611,6 +624,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     >
                       Ver
                     </button>
+
                     <button
                       className="text-emerald-600 hover:text-emerald-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled={!canFull}
@@ -624,6 +638,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     >
                       Editar
                     </button>
+
                     <button
                       className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled={!canCancel}
@@ -639,6 +654,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     >
                       {u.is_active ? 'Desactivar' : 'Activar'}
                     </button>
+
                     <button
                       className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled={!canDelete}
@@ -712,6 +728,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     </th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {isLoading ? (
                     <tr>
@@ -736,6 +753,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                       const selected = selectedRows.includes(u);
                       const roleName =
                         roles.find((r) => r.id === u.rol_id)?.name ?? '—';
+
                       return (
                         <tr
                           key={u.id}
@@ -754,9 +772,10 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                             )}
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                               checked={selected}
                               onChange={(e) => {
+                                if (!canCancel) return;
                                 if (e.target.checked)
                                   setSelectedRows((prev) => [...prev, u]);
                                 else
@@ -767,6 +786,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                               disabled={!canCancel}
                             />
                           </td>
+
                           <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
                             {u.name ?? '—'}
                           </td>
@@ -777,7 +797,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                             {u.email}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                            {u.location ?? '—'}
+                            {renderLocation(u)}
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
                             {roleName}
@@ -792,6 +812,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                               'display'
                             )}
                           </td>
+
                           <td
                             className="px-4 py-4 whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
@@ -809,6 +830,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                               >
                                 Editar
                               </button>
+
                               <button
                                 className="text-gray-700 hover:text-gray-900 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 disabled={!canCancel}
@@ -821,6 +843,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                               >
                                 {u.is_active ? 'Desactivar' : 'Activar'}
                               </button>
+
                               <button
                                 className="text-rose-600 hover:text-rose-500 text-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                                 disabled={!canDelete}
@@ -886,6 +909,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   ✕
                 </button>
               </div>
+
               <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <div className="text-gray-500">Nombre</div>
@@ -903,7 +927,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                 </div>
                 <div>
                   <div className="text-gray-500">Ubicación</div>
-                  <div className="text-gray-900">{detail.location ?? '—'}</div>
+                  <div className="text-gray-900">{renderLocation(detail)}</div>
                 </div>
                 <div>
                   <div className="text-gray-500">Estado</div>
@@ -922,6 +946,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   </div>
                 </div>
               </div>
+
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   className="rounded-md border px-3 py-2 text-sm"
@@ -935,7 +960,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   title={!canFull ? 'No tienes permiso para editar' : undefined}
                   onClick={() => {
                     if (!canFull) return;
-                    openEdit(detail!);
+                    openEdit(detail);
                     setDetail(null);
                   }}
                 >
@@ -959,6 +984,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   ✕
                 </button>
               </div>
+
               <p className="mt-1 text-sm text-gray-500">
                 Se creará en Auth y en public.users
               </p>
@@ -975,6 +1001,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     required
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Apellido
@@ -986,6 +1013,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     required
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Email
@@ -1004,34 +1032,46 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                       <p className="text-sm text-red-500">{errors.email}</p>
                     )}
                     <p
-                      className={`text-xs ml-auto ${
+                      className={cx(
+                        'text-xs ml-auto',
                         emailC.length >= Math.floor(MAX_EMAIL_LENGTH * 0.85)
                           ? 'text-red-500'
                           : 'text-gray-400'
-                      }`}
+                      )}
                     >
                       {emailC.length}/{MAX_EMAIL_LENGTH} caracteres
                     </p>
                   </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Ubicación
+                    Ubicación{' '}
+                    <span className="text-xs text-gray-400">(opcional)</span>
                   </label>
                   <select
                     className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={locationC}
-                    onChange={(e) => setLocationC(e.target.value)}
-                    required
+                    value={locationIdC}
+                    onChange={(e) =>
+                      setLocationIdC(
+                        e.target.value ? Number(e.target.value) : ''
+                      )
+                    }
+                    disabled={loadingLocations}
                   >
-                    <option value="">Selecciona una ubicación…</option>
-                    {LOCATIONS.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
+                    <option value="">
+                      {loadingLocations
+                        ? 'Cargando ubicaciones…'
+                        : 'Sin ubicación'}
+                    </option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
                       </option>
                     ))}
                   </select>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Password
@@ -1045,6 +1085,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     required
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Rol
@@ -1052,7 +1093,9 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   <select
                     className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={rolIdC}
-                    onChange={(e) => setRolIdC(Number(e.target.value))}
+                    onChange={(e) =>
+                      setRolIdC(e.target.value ? Number(e.target.value) : '')
+                    }
                     required={canManageRoles}
                     disabled={!canManageRoles}
                     title={
@@ -1072,11 +1115,12 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
                 {msgCreate && (
                   <p
-                    className={`text-sm ${
+                    className={cx(
+                      'text-sm',
                       msgCreate.type === 'ok'
                         ? 'text-green-600'
                         : 'text-red-600'
-                    }`}
+                    )}
                   >
                     {msgCreate.text}
                   </p>
@@ -1105,172 +1149,23 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         </div>
       )}
 
-      {/* Modal Editar usuario */}
-      {openForm && (
-        <div className="fixed inset-0 z-50">
-          <div
-            className="fixed inset-0 bg-black/30"
-            onClick={() => setOpenForm(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">
-                  {isEditing ? 'Editar usuario' : 'Nuevo usuario'}
-                </h2>
-                <button
-                  onClick={() => setOpenForm(false)}
-                  className="text-gray-500"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={submitForm} className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Nombre
-                  </label>
-                  <input
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Apellido
-                  </label>
-                  <input
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={form.last_name}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, last_name: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    required
-                  />
-                  <div className="flex justify-between items-center">
-                    {errors.email && (
-                      <p className="text-sm text-red-500">{errors.email}</p>
-                    )}
-                    <p
-                      className={`text-xs ml-auto ${
-                        form.email.length >= Math.floor(MAX_EMAIL_LENGTH * 0.85)
-                          ? 'text-red-500'
-                          : 'text-gray-400'
-                      }`}
-                    >
-                      {form.email.length}/{MAX_EMAIL_LENGTH} caracteres
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Ubicación
-                  </label>
-                  <select
-                    className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={form.location}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, location: e.target.value }))
-                    }
-                    required
-                  >
-                    <option value="">Selecciona una ubicación…</option>
-                    {LOCATIONS.map((loc) => (
-                      <option key={loc} value={loc}>
-                        {loc}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Rol
-                  </label>
-                  <select
-                    className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={form.rol_id}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, rol_id: Number(e.target.value) }))
-                    }
-                    disabled={!canManageRoles}
-                    title={
-                      !canManageRoles
-                        ? 'No tienes permiso para cambiar el rol'
-                        : undefined
-                    }
-                  >
-                    <option value="">Sin rol…</option>
-                    {roles.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Estado solo lectura (cambiar con botón dedicado) */}
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700 select-none">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-600 cursor-not-allowed"
-                    checked={form.is_active}
-                    readOnly
-                  />
-                  Activo (usa el botón Activar/Desactivar)
-                </label>
-
-                <div className="mt-6 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setOpenForm(false)}
-                    className="rounded-md border px-3 py-2 text-sm"
-                    disabled={submitting}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
-                    disabled={submitting || !canFull}
-                    title={
-                      !canFull
-                        ? 'No tienes permiso para crear/editar usuarios'
-                        : undefined
-                    }
-                  >
-                    {submitting
-                      ? isEditing
-                        ? 'Guardando…'
-                        : 'Creando…'
-                      : isEditing
-                      ? 'Guardar cambios'
-                      : 'Crear'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Editar usuario (separado) */}
+      <UserEditModal
+        open={openEditModal}
+        user={editingUser}
+        onClose={() => {
+          setOpenEditModal(false);
+          setEditingUser(null);
+        }}
+        onSaved={async () => {
+          await reload(false);
+        }}
+        roles={roles}
+        locations={locations}
+        loadingLocations={loadingLocations}
+        canFull={canFull}
+        canManageRoles={canManageRoles}
+      />
     </div>
   );
 }
