@@ -47,7 +47,7 @@ export default function WorkRequestsPage() {
         </div>
 
         <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
-          {/* ✅ Ahora el board recibe filters en lugar de searchTerm/location */}
+          {/* ✅ Ahora el board recibe filters en lugar de searchTerm/location_id */}
           <WorkRequestsBoard filters={mergedFilters} />
         </section>
       </main>

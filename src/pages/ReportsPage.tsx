@@ -11,7 +11,7 @@ export default function ReportsPage() {
 
   // armar filtros comunes
   const filters: ReportFilters = {
-    location: selectedLocation || undefined,
+    location_id: selectedLocation || undefined,
     // puedo incluir rango de fechas si tu Navbar lo provee:
     // from: "2025-08-01T00:00:00",
     // to:   "2025-08-31T23:59:59",
@@ -36,9 +36,9 @@ export default function ReportsPage() {
         <section className="px-4 md:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-auto">
           <TicketsByStatusBar filters={filters} />
 
-          {/* Agrupar por location / assignee / requester (con opción de filtrar por status) */}
+          {/* Agrupar por location_id / assignee / requester (con opción de filtrar por status) */}
           <CountByFieldBar
-            groupBy="location"
+            groupBy="location_id"
             title="Tickets por ubicación (aceptados)"
             filters={filters}
           />

@@ -26,7 +26,7 @@ ChartJS.register(
 );
 
 interface Props {
-  groupBy: 'location' | 'assignee' | 'requester';
+  groupBy: 'location_id' | 'assignee' | 'requester';
   title: string;
   filters?: ReportFilters; // aquí podemos pasar status para filtrar
 }

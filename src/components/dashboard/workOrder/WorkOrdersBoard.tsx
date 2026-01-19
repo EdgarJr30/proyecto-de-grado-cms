@@ -73,10 +73,10 @@ export default function WorkOrdersBoard({ filters }: Props) {
           ? ((filters as Record<string, unknown>).q as string).trim() ||
             undefined
           : undefined,
-      location:
-        typeof (filters as Record<string, unknown> | undefined)?.location ===
+      location_id:
+        typeof (filters as Record<string, unknown> | undefined)?.location_id ===
         'string'
-          ? ((filters as Record<string, unknown>).location as string)
+          ? ((filters as Record<string, unknown>).location_id as string)
           : undefined,
     }),
     [filters]
@@ -218,7 +218,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
       const affected =
         prev.status !== patch.status ||
         prev.is_accepted !== patch.is_accepted ||
-        prev.location !== patch.location;
+        prev.location_id !== patch.location_id;
 
       if (affected) {
         bumpCountsLocal(prev as Ticket, patch as Ticket);
@@ -262,7 +262,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
           if (
             oldRow.status !== newRow.status ||
             oldRow.is_accepted !== newRow.is_accepted ||
-            oldRow.location !== newRow.location ||
+            oldRow.location_id !== newRow.location_id ||
             oldRow.is_archived !== newRow.is_archived
           ) {
             bumpCountsLocal(oldRow, newRow);
@@ -323,8 +323,8 @@ export default function WorkOrdersBoard({ filters }: Props) {
           lastUpdatedTicket={lastUpdatedTicket as unknown as Ticket}
           selectedLocation={
             typeof (filters as Record<string, unknown> | undefined)
-              ?.location === 'string'
-              ? ((filters as Record<string, unknown>).location as string)
+              ?.location_id === 'string'
+              ? ((filters as Record<string, unknown>).location_id as string)
               : undefined
           }
           count={counts[status]}

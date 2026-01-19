@@ -210,7 +210,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
       next[idNum] =
         typeof current !== 'undefined'
           ? current
-          : (t as Ticket).assignee_id ?? '';
+          : ((t as Ticket).assignee_id ?? '');
     }
     setAssigneesMap(next);
   }
@@ -276,10 +276,10 @@ export default function WorkRequestsBoard({ filters }: Props) {
               !canFullWR
                 ? 'No tienes permiso para aceptar'
                 : !selectedTicket.length
-                ? 'Selecciona al menos una solicitud'
-                : !canMassAccept
-                ? 'Todos los seleccionados deben tener responsable'
-                : undefined
+                  ? 'Selecciona al menos una solicitud'
+                  : !canMassAccept
+                    ? 'Todos los seleccionados deben tener responsable'
+                    : undefined
             }
             className={
               'inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500' +
@@ -411,7 +411,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-gray-700">{t.requester}</span>
                         <span className="text-gray-400">•</span>
-                        <span className="text-gray-700">{t.location}</span>
+                        <span className="text-gray-700">{t.location_id}</span>
                       </div>
                       <div className="mt-3 flex items-center gap-2">
                         <PriorityChip value={t.priority ?? 'Media'} />
@@ -456,8 +456,8 @@ export default function WorkRequestsBoard({ filters }: Props) {
                         !canFullWR
                           ? 'No tienes permiso para aceptar'
                           : !assigneeValue
-                          ? 'Selecciona un responsable'
-                          : undefined
+                            ? 'Selecciona un responsable'
+                            : undefined
                       }
                       onClick={(e) => {
                         e.stopPropagation();
@@ -642,7 +642,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                             <StatusChip value={t.status ?? 'Nueva'} />
                           </td>
                           <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                            {t.location}
+                            {t.location_id}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             {firstAsset ? (
@@ -716,8 +716,8 @@ export default function WorkRequestsBoard({ filters }: Props) {
                                   !canFullWR
                                     ? 'No tienes permiso para aceptar'
                                     : !assigneeValue
-                                    ? 'Selecciona un responsable'
-                                    : undefined
+                                      ? 'Selecciona un responsable'
+                                      : undefined
                                 }
                                 onClick={() => handleAcceptOne(Number(t.id))}
                               >

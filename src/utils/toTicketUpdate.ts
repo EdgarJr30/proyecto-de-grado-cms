@@ -2,9 +2,26 @@
 import type { Ticket, WorkOrder } from '../types/Ticket';
 
 const TICKET_KEYS: (keyof Ticket)[] = [
-  'id','title','description','is_accepted','is_urgent','priority','status',
-  'requester','location','assignee','assignee_id','incident_date','deadline_date',
-  'image','email','phone','created_at','comments','is_archived','finalized_at'
+  'id',
+  'title',
+  'description',
+  'is_accepted',
+  'is_urgent',
+  'priority',
+  'status',
+  'requester',
+  'location_id',
+  'assignee',
+  'assignee_id',
+  'incident_date',
+  'deadline_date',
+  'image',
+  'email',
+  'phone',
+  'created_at',
+  'comments',
+  'is_archived',
+  'finalized_at',
 ];
 
 export function toTicketUpdate(input: Partial<WorkOrder>): Partial<Ticket> {

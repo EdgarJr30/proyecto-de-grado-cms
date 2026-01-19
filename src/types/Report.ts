@@ -1,12 +1,12 @@
-export type TicketStatus = "Pendiente" | "En Ejecución" | "Finalizadas";
+export type TicketStatus = 'Pendiente' | 'En Ejecución' | 'Finalizadas';
 
 export interface ReportFilters {
-  location?: string;
+  location_id?: string;
   assignee?: string;
   requester?: string;
-  status?: TicketStatus;   // útil para filtrar cuando agrupas por otro campo
-  from?: string;           // ISO: "2025-08-01T00:00:00"
-  to?: string;             // ISO: "2025-08-31T23:59:59"
+  status?: TicketStatus; // útil para filtrar cuando agrupas por otro campo
+  from?: string; // ISO: "2025-08-01T00:00:00"
+  to?: string; // ISO: "2025-08-31T23:59:59"
 }
 
 export interface CountByStatusDTO {
@@ -15,6 +15,6 @@ export interface CountByStatusDTO {
 }
 
 export interface CountByFieldDTO {
-  key: string;   // location | assignee | requester
+  key: string; // location_id | assignee | requester
   count: number;
 }

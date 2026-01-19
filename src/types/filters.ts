@@ -17,11 +17,11 @@ export type FilterValue =
   | { from?: string; to?: string }; // ISO date range
 
 export type BaseField<T extends string = string> = {
-  key: T;                 // clave única (ej: 'location', 'priority', 'created_at')
-  label: string;          // etiqueta visible
-  column?: string;        // si difiere del key en DB
+  key: T; // clave única (ej: 'location_id', 'priority', 'created_at')
+  label: string; // etiqueta visible
+  column?: string; // si difiere del key en DB
   operator?: FilterOperator;
-  hidden?: boolean;       // para tener campos “técnicos”
+  hidden?: boolean; // para tener campos “técnicos”
   defaultValue?: FilterValue;
   responsive?: 'bar' | 'drawer' | 'both'; // dónde aparece por defecto
   immediate?: boolean;
@@ -64,7 +64,7 @@ export type FilterField<T extends string = string> =
   | DateRangeField<T>;
 
 export type FilterSchema<T extends string = string> = {
-  id: string;             // ej: 'tickets' | 'assignees'
+  id: string; // ej: 'tickets' | 'assignees'
   fields: FilterField<T>[];
   // map para columnas reales si lo prefieres centralizado
   columnMap?: Record<T, string>;

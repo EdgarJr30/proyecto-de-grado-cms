@@ -213,7 +213,7 @@ export default function InventoryAuditWarehousePage() {
 
 function AuditSessionCard({ session }: { session: AuditSession }) {
   const navigate = useNavigate();
-  const location = useLocation();
+  const location_id = useLocation();
 
   const statusConfig: Record<
     AuditStatus,
@@ -240,18 +240,18 @@ function AuditSessionCard({ session }: { session: AuditSession }) {
 
   const isArea = session.isArea;
   const mainTitle = isArea
-    ? session.areaName ?? 'Área de almacén'
+    ? (session.areaName ?? 'Área de almacén')
     : session.warehouse;
 
   const subtitle = isArea
     ? `${session.warehouse}${session.areaCode ? ` · ${session.areaCode}` : ''}`
     : session.warehouseCode
-    ? `Código: ${session.warehouseCode}`
-    : undefined;
+      ? `Código: ${session.warehouseCode}`
+      : undefined;
 
   const handleClick = () => {
     navigate(
-      `/osalm/conteos_inventario/auditoria/almacenes/${session.id}${location.search}`
+      `/osalm/conteos_inventario/auditoria/almacenes/${session.id}${location_id.search}`
     );
   };
 

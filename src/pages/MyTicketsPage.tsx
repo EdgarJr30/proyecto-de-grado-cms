@@ -128,7 +128,9 @@ export default function MyTicketsPage() {
                     </p>
                     <p>
                       <strong>Ubicación:</strong>{' '}
-                      <span className="wrap-anywhere">{ticket.location}</span>
+                      <span className="wrap-anywhere">
+                        {ticket.location_id}
+                      </span>
                     </p>
                     <p>
                       <strong>Solicitante:</strong> {ticket.requester}

@@ -375,8 +375,8 @@ export default function EditWorkOrdersModal({
           <div>
             <label className="block text-sm font-medium">Ubicación</label>
             <select
-              name="location"
-              value={edited.location || ''}
+              name="location_id"
+              value={edited.location_id || ''}
               disabled
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             >

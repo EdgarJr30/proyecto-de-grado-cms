@@ -196,8 +196,8 @@ export default function WorkRequestsDetailModal({
                 !canFullWR
                   ? 'No tienes permiso para aceptar'
                   : !assigneeValue
-                  ? 'Selecciona un responsable'
-                  : undefined
+                    ? 'Selecciona un responsable'
+                    : undefined
               }
               className={
                 'inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
@@ -236,7 +236,7 @@ export default function WorkRequestsDetailModal({
               </div>
               <div>
                 <dt className="text-gray-500">Ubicación</dt>
-                <dd className="text-gray-900">{ticket.location}</dd>
+                <dd className="text-gray-900">{ticket.location_id}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Fecha de creación</dt>

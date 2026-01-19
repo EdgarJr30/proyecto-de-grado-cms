@@ -26,7 +26,7 @@ function FilterIcon(props: React.SVGProps<SVGSVGElement>) {
 
 interface NavbarProps {
   onSearch: (term: string) => void;
-  onFilterLocation: (location: string) => void;
+  onFilterLocation: (location_id: string) => void;
   selectedLocation: string;
 }
 

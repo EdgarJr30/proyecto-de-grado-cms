@@ -9,7 +9,7 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const { loading, isAuthenticated } = useAuth();
-  const location = useLocation();
+  const location_id = useLocation();
 
   // 🔇 Importante: NO hay listener de visibilitychange aquí.
 
@@ -24,6 +24,6 @@ export default function ProtectedRoute({
   return isAuthenticated ? (
     <>{children}</>
   ) : (
-    <Navigate to="/login" state={{ from: location }} replace />
+    <Navigate to="/login" state={{ from: location_id }} replace />
   );
 }

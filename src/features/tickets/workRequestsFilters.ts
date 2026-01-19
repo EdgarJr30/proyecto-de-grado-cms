@@ -5,7 +5,7 @@ export type WorkRequestsFilterKey =
   | 'q'
   | 'status'
   | 'priority'
-  | 'location'
+  | 'location_id'
   | 'created_at'
   | 'has_image'
   | 'accepted';
@@ -46,7 +46,7 @@ export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
       responsive: 'bar',
     },
     {
-      key: 'location',
+      key: 'location_id',
       type: 'select',
       label: 'Todas las ubicaciones',
       options: LOCATIONS.map((l) => ({ label: l, value: l })),

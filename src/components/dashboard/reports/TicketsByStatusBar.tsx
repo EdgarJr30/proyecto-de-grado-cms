@@ -26,7 +26,7 @@ ChartJS.register(
 );
 
 interface Props {
-  filters?: ReportFilters; // { location?, assignee?, requester?, from?, to? }
+  filters?: ReportFilters; // { location_id?, assignee?, requester?, from?, to? }
 }
 
 export default function TicketsByStatusBar({ filters }: Props) {

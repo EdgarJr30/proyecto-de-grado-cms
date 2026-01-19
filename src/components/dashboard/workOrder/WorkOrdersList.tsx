@@ -196,7 +196,7 @@ export default function WorkOrdersList({
 
                   {/* Ubicación */}
                   <td className="px-4 py-4">
-                    <div className="text-sm text-gray-500">{t.location}</div>
+                    <div className="text-sm text-gray-500">{t.location_id}</div>
                   </td>
 
                   {/* Técnico */}

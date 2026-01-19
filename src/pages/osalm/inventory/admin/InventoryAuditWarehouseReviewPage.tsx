@@ -90,7 +90,7 @@ export default function InventoryWarehouseAuditReviewPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const location = useLocation();
+  const location_id = useLocation();
 
   const isReadOnly = isClosedFromDb;
 
@@ -363,7 +363,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                 onClick={() =>
                   navigate(
                     `/osalm/conteos_inventario/auditoria/almacenes${
-                      location.search || '?tab=warehouses'
+                      location_id.search || '?tab=warehouses'
                     }`
                   )
                 }
@@ -436,7 +436,7 @@ export default function InventoryWarehouseAuditReviewPage() {
                   onClick={() =>
                     navigate(
                       `/osalm/conteos_inventario/auditoria/almacenes${
-                        location.search || '?tab=warehouses'
+                        location_id.search || '?tab=warehouses'
                       }`
                     )
                   }
@@ -672,10 +672,10 @@ export default function InventoryWarehouseAuditReviewPage() {
                         {isReadOnly
                           ? 'Conteo cerrado'
                           : saving
-                          ? 'Guardando…'
-                          : auditStatus === 'completed'
-                          ? 'Guardar y cerrar'
-                          : 'Guardar cambios'}
+                            ? 'Guardando…'
+                            : auditStatus === 'completed'
+                              ? 'Guardar y cerrar'
+                              : 'Guardar cambios'}
                       </button>
                     </div>
                   </div>

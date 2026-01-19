@@ -15,7 +15,7 @@ export default function Sidebar() {
   const { has, ready, roles } = usePermissions();
   const { logoSrc } = useBranding();
 
-  const location = useLocation();
+  const location_id = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -118,7 +118,7 @@ export default function Sidebar() {
               to={item.path}
               onClick={() => setIsOpen(false)}
               className={`px-4 py-3 rounded transition font-medium flex items-center gap-2 ${
-                location.pathname === item.path
+                location_id.pathname === item.path
                   ? 'bg-blue-600 text-white'
                   : 'hover:bg-gray-800'
               }`}
@@ -147,9 +147,9 @@ export default function Sidebar() {
               <p className="text-xs text-gray-400 truncate">{rolesString}</p>
             </div>
           </div>
-          {profile?.location && (
+          {profile?.location_id && (
             <p className="mt-1 text-[11px] text-gray-400 truncate">
-              {profile.location}
+              {profile.location_id}
             </p>
           )}
         </div>

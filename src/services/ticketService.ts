@@ -139,7 +139,7 @@ export async function getTicketsByStatusPaginated(
 
 export async function getFilteredTickets(
   term: string,
-  location?: string,
+  location_id?: string,
   isAccepted?: boolean
 ): Promise<Ticket[]> {
   let query = supabase
@@ -152,8 +152,8 @@ export async function getFilteredTickets(
     query = query.eq('is_accepted', isAccepted);
   }
 
-  if (location) {
-    query = query.eq('location', location);
+  if (location_id) {
+    query = query.eq('location_id', location_id);
   }
 
   if (term.length >= 2) {
@@ -173,7 +173,7 @@ export async function getFilteredTickets(
 export async function getUnacceptedTicketsPaginated(
   page: number,
   pageSize: number,
-  location?: string
+  location_id?: string
 ) {
   const from = page * pageSize;
   const to = from + pageSize - 1;
@@ -186,8 +186,8 @@ export async function getUnacceptedTicketsPaginated(
     .order('id', { ascending: false })
     .range(from, to);
 
-  if (location) {
-    query = query.eq('location', location);
+  if (location_id) {
+    query = query.eq('location_id', location_id);
   }
 
   const { data, error, count } = await query;
@@ -289,10 +289,10 @@ export async function acceptTickets(input: AcceptTicketsInput): Promise<void> {
 /** RPC de conteos (sin cambios) */
 export async function getTicketCountsRPC(filters?: {
   term?: string;
-  location?: string;
+  location_id?: string;
 }): Promise<TicketCounts> {
   const { data, error } = await supabase.rpc('ticket_counts', {
-    p_location: filters?.location ?? null,
+    p_location: filters?.location_id ?? null,
     p_term: filters?.term ?? null,
   });
 
@@ -343,8 +343,8 @@ export async function getTicketsByFiltersPaginated(
     q = q.or(ors.join(','));
   }
 
-  const location = (values.location as string) || '';
-  if (location) q = q.eq('location', location);
+  const location_id = (values.location_id as string) || '';
+  if (location_id) q = q.eq('location_id', location_id);
 
   if (typeof values.accepted === 'boolean') {
     q = q.eq('is_accepted', values.accepted);
@@ -416,9 +416,9 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
     q = q.or(ors.join(','));
   }
 
-  const locationRaw = (values as Record<string, unknown>)['location'];
-  const location = typeof locationRaw === 'string' ? locationRaw : undefined;
-  if (location) q = q.eq('location', location);
+  const locationRaw = (values as Record<string, unknown>)['location_id'];
+  const location_id = typeof locationRaw === 'string' ? locationRaw : undefined;
+  if (location_id) q = q.eq('location_id', location_id);
 
   const assigneeIdRaw = (values as Record<string, unknown>)['assignee_id'];
   if (

@@ -21,7 +21,7 @@ export interface WorkOrdersFilters {
   q?: string;
   status?: Status[];
   priority?: Priority[];
-  location?: Location;
+  location_id?: Location;
   assignee?: string;
   requester?: string;
   daterange?: { from?: string; to?: string };
@@ -38,7 +38,7 @@ export interface TicketCompatRow {
   is_urgent: boolean;
   priority: Priority;
   requester: string | null;
-  location: Location;
+  location_id: Location;
   assignee: string | null;
   incident_date: string | null;
   deadline_date: string | null;
@@ -73,7 +73,7 @@ const header: CsvHeader = {
   is_urgent: 'Urgente',
   priority: 'Prioridad',
   requester: 'Solicitante',
-  location: 'Ubicación',
+  location_id: 'Ubicación',
   assignee: 'Técnico (legacy)',
   primary_assignee_name: 'Técnico Principal',
   secondary_assignees_names: 'Técnicos Secundarios',
@@ -99,7 +99,7 @@ function serializeRow(r: TicketCompatRow): CsvRow {
     is_urgent: r.is_urgent ? 'Sí' : 'No',
     priority: r.priority,
     requester: r.requester ?? '',
-    location: r.location,
+    location_id: r.location_id,
     assignee: r.assignee ?? '',
 
     primary_assignee_name: r.primary_assignee_name ?? '',
@@ -133,7 +133,7 @@ function buildQuery(filters: WorkOrdersFilters) {
         'is_urgent',
         'priority',
         'requester',
-        'location',
+        'location_id',
         'assignee',
         'incident_date',
         'deadline_date',
@@ -159,14 +159,14 @@ function buildQuery(filters: WorkOrdersFilters) {
       ].join(',')
     );
 
-    if (typeof filters.is_accepted === 'boolean') {
+  if (typeof filters.is_accepted === 'boolean') {
     q = q.eq('is_accepted', filters.is_accepted);
   }
 
   if (filters.created_by) q = q.eq('created_by', filters.created_by);
   if (filters.status?.length) q = q.in('status', filters.status);
   if (filters.priority?.length) q = q.in('priority', filters.priority);
-  if (filters.location) q = q.eq('location', filters.location);
+  if (filters.location_id) q = q.eq('location_id', filters.location_id);
   if (filters.assignee) {
     const term = `%${filters.assignee}%`;
     q = q.or(
@@ -192,7 +192,7 @@ function buildQuery(filters: WorkOrdersFilters) {
         `title.ilike.${term}`,
         `description.ilike.${term}`,
         `requester.ilike.${term}`,
-        `location.ilike.${term}`,
+        `location_id.ilike.${term}`,
         `status.ilike.${term}`,
         `priority.ilike.${term}`,
         `email.ilike.${term}`,

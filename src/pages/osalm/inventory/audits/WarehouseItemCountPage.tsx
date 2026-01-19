@@ -64,8 +64,8 @@ function extractErrorMessage(err: unknown): string {
 
 export default function WarehouseItemCountPage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as LocationState;
+  const location_id = useLocation();
+  const state = location_id.state as LocationState;
   const area = state?.area ?? null;
   const { warehouseId, warehouseItemId } = useParams<RouteParams>();
   const [warehouse, setWarehouse] = useState<WarehouseHeader | null>(null);

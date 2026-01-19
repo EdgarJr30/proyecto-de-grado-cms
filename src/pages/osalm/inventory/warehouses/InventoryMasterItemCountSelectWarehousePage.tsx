@@ -19,8 +19,8 @@ type WarehouseHeader = { id: number; code: string; name: string };
 
 export default function InventoryMasterItemCountSelectWarehousePage() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const state = location.state as LocationState;
+  const location_id = useLocation();
+  const state = location_id.state as LocationState;
 
   const { itemId } = useParams<RouteParams>();
 

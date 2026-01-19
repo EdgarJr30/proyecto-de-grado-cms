@@ -319,7 +319,7 @@ export default function RoleUsersPage({
                       {u.email}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {u.location ?? '—'}
+                      {u.location_id ?? '—'}
                     </td>
                     <td className="px-4 py-3">
                       <ActiveChip active={u.is_active} />
@@ -555,7 +555,7 @@ function AddUsersModal({
                         </td>
                         <td className="px-4 py-2 text-sm">{u.email}</td>
                         <td className="px-4 py-2 text-sm">
-                          {u.location ?? '—'}
+                          {u.location_id ?? '—'}
                         </td>
                         <td className="px-4 py-2">
                           <ActiveChip active={u.is_active} />

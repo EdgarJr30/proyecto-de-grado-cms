@@ -57,7 +57,7 @@ export default function WorkOrdersColumn({
   const observer = useRef<IntersectionObserver | null>(null);
 
   // Decide qué tickets renderizar
-  const ticketsToRender = isFiltering ? tickets ?? [] : localTickets;
+  const ticketsToRender = isFiltering ? (tickets ?? []) : localTickets;
   // Loading solo cuando no hay tickets para mostrar y está cargando
   const showSkeleton = isInitialLoading && !isFiltering;
 
@@ -118,8 +118,8 @@ export default function WorkOrdersColumn({
     typeof count === 'number'
       ? count
       : isFiltering
-      ? (tickets ?? []).length
-      : localTickets.length;
+        ? (tickets ?? []).length
+        : localTickets.length;
 
   useEffect(() => {
     pageRef.current = page;
@@ -384,7 +384,7 @@ export default function WorkOrdersColumn({
                         />
                       </svg>
                       <span className="truncate break-words">
-                        Ubicación: {ticket.location || 'No especificada'}
+                        Ubicación: {ticket.location_id || 'No especificada'}
                       </span>
                     </div>
 

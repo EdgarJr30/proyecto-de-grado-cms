@@ -1,9 +1,16 @@
 // src/hooks/useFilters.ts
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FilterSchema, FilterState, FilterField, FilterValue } from '../types/filters';
+import type {
+  FilterSchema,
+  FilterState,
+  FilterField,
+  FilterValue,
+} from '../types/filters';
 
-function parseFromURL<T extends string>(fields: FilterField<T>[]): FilterState<T> {
-  const params = new URLSearchParams(window.location.search);
+function parseFromURL<T extends string>(
+  fields: FilterField<T>[]
+): FilterState<T> {
+  const params = new URLSearchParams(window.location_id.search);
   const state: FilterState<T> = {};
   for (const f of fields) {
     if (f.hidden) continue;
@@ -19,29 +26,46 @@ function parseFromURL<T extends string>(fields: FilterField<T>[]): FilterState<T
   return state;
 }
 
-function writeToURL<T extends string>(fields: FilterField<T>[], values: FilterState<T>) {
-  const params = new URLSearchParams(window.location.search);
+function writeToURL<T extends string>(
+  fields: FilterField<T>[],
+  values: FilterState<T>
+) {
+  const params = new URLSearchParams(window.location_id.search);
   for (const f of fields) {
-    if (f.hidden) { params.delete(f.key); continue; }
+    if (f.hidden) {
+      params.delete(f.key);
+      continue;
+    }
     const v = values[f.key];
     const empty =
-      v === undefined || v === null || v === '' ||
+      v === undefined ||
+      v === null ||
+      v === '' ||
       (Array.isArray(v) && v.length === 0);
-    if (empty) { params.delete(f.key); continue; }
+    if (empty) {
+      params.delete(f.key);
+      continue;
+    }
 
-    if (f.type === 'multiselect' && Array.isArray(v)) params.set(f.key, v.join(','));
-    else if (f.type === 'boolean' && typeof v === 'boolean') params.set(f.key, String(v));
+    if (f.type === 'multiselect' && Array.isArray(v))
+      params.set(f.key, v.join(','));
+    else if (f.type === 'boolean' && typeof v === 'boolean')
+      params.set(f.key, String(v));
     else if (f.type === 'daterange' && typeof v === 'object' && v) {
       const { from = '', to = '' } = v as { from?: string; to?: string };
       params.set(f.key, `${from}|${to}`);
     } else params.set(f.key, String(v));
   }
-  const newUrl = `${window.location.pathname}?${params.toString()}`;
+  const newUrl = `${window.location_id.pathname}?${params.toString()}`;
   window.history.replaceState(null, '', newUrl);
 }
 
 function stableString(v: unknown) {
-  try { return JSON.stringify(v); } catch { return ''; }
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return '';
+  }
 }
 
 export function useFilters<T extends string>(schema: FilterSchema<T>) {
@@ -70,10 +94,11 @@ export function useFilters<T extends string>(schema: FilterSchema<T>) {
   }, [schema.fields, valuesKey, values]);
 
   const setValue = <K extends T>(key: K, v: FilterValue | undefined) => {
-    setValues(prev => {
+    setValues((prev) => {
       const prevVal = prev[key];
       const same =
-        (Array.isArray(prevVal) && Array.isArray(v) &&
+        (Array.isArray(prevVal) &&
+          Array.isArray(v) &&
           stableString(prevVal) === stableString(v)) ||
         prevVal === v;
       if (same) return prev;
@@ -92,7 +117,7 @@ export function useFilters<T extends string>(schema: FilterSchema<T>) {
         v !== '' &&
         (!Array.isArray(v) || v.length > 0) &&
         (typeof v !== 'object' ||
-          (v && typeof v === 'object' && (('from' in v) || ('to' in v))));
+          (v && typeof v === 'object' && ('from' in v || 'to' in v)));
       return acc + (isActive ? 1 : 0);
     }, 0);
   }, [schema.fields, valuesKey]); // 👈 depende del hash, no del objeto vivo

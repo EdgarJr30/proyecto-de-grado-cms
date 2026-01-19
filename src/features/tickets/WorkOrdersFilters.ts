@@ -6,7 +6,7 @@ export type WorkOrdersFilterKey =
   | 'q'
   | 'status'
   | 'priority'
-  | 'location'
+  | 'location_id'
   | 'created_at'
   | 'has_image';
 
@@ -19,7 +19,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       label: 'Buscar',
       placeholder: 'Buscar por id, título, solicitante…',
       responsive: 'bar',
-      minChars: 2, 
+      minChars: 2,
       immediate: true,
     },
     {
@@ -45,7 +45,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       responsive: 'bar',
     },
     {
-      key: 'location',
+      key: 'location_id',
       type: 'select',
       label: 'Todas las ubicaciones',
       options: LOCATIONS.map((l) => ({ label: l, value: l })),
