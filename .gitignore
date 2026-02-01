@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+sql
 
 # Editor directories and files
 .vscode/*
@@ -23,5 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 .env*
+.sql
 
 VIEJO_htaccess
