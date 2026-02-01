@@ -17,7 +17,6 @@ import {
 
 interface Props {
   searchTerm: string;
-  // compat con Navbar (si no se usa para anuncios, lo ignoramos)
   selectedLocation?: string;
 }
 

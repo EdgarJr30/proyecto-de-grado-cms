@@ -323,8 +323,8 @@ export default function WorkOrdersBoard({ filters }: Props) {
           lastUpdatedTicket={lastUpdatedTicket as unknown as Ticket}
           selectedLocation={
             typeof (filters as Record<string, unknown> | undefined)
-              ?.location_id === 'string'
-              ? ((filters as Record<string, unknown>).location_id as string)
+              ?.location_id === 'number'
+              ? ((filters as Record<string, unknown>).location_id as number)
               : undefined
           }
           count={counts[status]}

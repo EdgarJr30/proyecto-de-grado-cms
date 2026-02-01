@@ -20,7 +20,7 @@ interface Props {
   pageSize?: number;
   reloadSignal: number;
   lastUpdatedTicket: Ticket | null;
-  selectedLocation?: string;
+  selectedLocation?: number;
   isFiltering: boolean;
   count?: number;
   getSpecialIncidentAdornment?: (t: Ticket) => JSX.Element | null;

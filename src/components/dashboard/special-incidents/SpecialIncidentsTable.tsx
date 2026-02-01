@@ -14,7 +14,7 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 interface Props {
   searchTerm: string;
   // se mantiene por compatibilidad con Navbar
-  selectedLocation?: string;
+  selectedLocation?: number;
 }
 
 const PAGE_SIZE = 8;

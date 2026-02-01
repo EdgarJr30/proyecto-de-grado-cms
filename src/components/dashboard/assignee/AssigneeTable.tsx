@@ -16,7 +16,7 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 interface Props {
   searchTerm: string;
   // `selectedLocation` no aplica para assignees; se ignora
-  selectedLocation?: string;
+  selectedLocation?: number;
 }
 
 const PAGE_SIZE = 8;
@@ -957,8 +957,8 @@ export default function AssigneesTable({ searchTerm }: Props) {
                         ? 'Guardando…'
                         : 'Creando…'
                       : isEditing
-                      ? 'Guardar cambios'
-                      : 'Crear'}
+                        ? 'Guardar cambios'
+                        : 'Crear'}
                   </button>
                 </div>
               </form>
