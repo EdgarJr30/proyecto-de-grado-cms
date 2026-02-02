@@ -48,6 +48,7 @@ export const RESOURCES = {
   announcements: 'announcements',
   society: 'society',
   locations: 'locations',
+  assets: 'assets',
 
   // === Inventario ===
   inventory_items: 'inventory_items',
@@ -157,6 +158,18 @@ export const PERMISSIONS: PermissionDef[] = [
     RESOURCES.locations,
     'full_access',
     'Acceso total ubicaciones (crear/modificar/eliminar)'
+  ),
+
+  // Assets (Activos)
+  p(RESOURCES.assets, 'read', 'Ver activos'),
+  p(RESOURCES.assets, 'create', 'Crear activos'),
+  p(RESOURCES.assets, 'update', 'Editar activos'),
+  p(RESOURCES.assets, 'delete', 'Eliminar activos'),
+  p(RESOURCES.assets, 'disable', 'Activar/Desactivar activos'),
+  p(
+    RESOURCES.assets,
+    'full_access',
+    'Acceso total activos (crear/modificar/eliminar/asignar a tickets)'
   ),
 
   // === Inventario: Catálogo de artículos ===

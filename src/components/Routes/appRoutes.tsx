@@ -24,6 +24,7 @@ import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin
 import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
 import InventoryMasterItemsPage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemsPage';
 import InventoryMasterItemCountSelectWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemCountSelectWarehousePage';
+import AssetsHomePage from '../../pages/admin/AssetsHomePage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -334,6 +335,21 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Sociedades',
     showInSidebar: false,
   },
+  // Assests (Activos)
+  {
+    path: '/admin/assets',
+    element: <AssetsHomePage />,
+    allowPerms: [
+      'assets:read',
+      'assets:create',
+      'assets:update',
+      'assets:delete',
+      'assets:disable',
+      'assets:full_access',
+    ],
+    name: 'Activos',
+    showInSidebar: false,
+  },
 
   // Administración de permisos y roles
   {
@@ -352,17 +368,20 @@ export const APP_ROUTES: AppRoute[] = [
       'special_incidents:read',
       'announcements:read',
 
-      // ✅ NUEVO: Locations
+      // Locations
       'locations:read',
       'locations:full_access',
       'locations:disable',
       'locations:delete',
+
+      // Assets
+      'assets:read',
+      'assets:full_access',
     ],
     name: 'Configuración',
     icon: IconPermissions,
     showInSidebar: true,
   },
-
   {
     path: '/admin/permisos',
     element: <RoleManagementPage />,

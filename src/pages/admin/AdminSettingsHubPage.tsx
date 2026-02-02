@@ -18,6 +18,7 @@ import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
+import AssetsBoard from '../../components/dashboard/assets/AssetsBoard';
 
 type TabKey =
   | 'general'
@@ -25,7 +26,8 @@ type TabKey =
   | 'permissions'
   | 'incidents'
   | 'announcements'
-  | 'sociedad';
+  | 'sociedad'
+  | 'assets';
 
 function useQuery() {
   const { search } = useLocation();
@@ -40,6 +42,7 @@ function TopTabs({
   disabledIncidentsTab,
   disabledAnnouncementsTab,
   disabledSocietyTab,
+  disabledAssetsTab,
 }: {
   value: TabKey;
   onChange: (t: TabKey) => void;
@@ -48,6 +51,7 @@ function TopTabs({
   disabledIncidentsTab?: boolean;
   disabledAnnouncementsTab?: boolean;
   disabledSocietyTab?: boolean;
+  disabledAssetsTab?: boolean;
 }) {
   const Item = ({
     k,
@@ -119,6 +123,13 @@ function TopTabs({
           disabled={disabledSocietyTab}
           className="sm:flex-none"
         />
+        <Item
+          k="assets"
+          label="Activos"
+          icon={<Settings className="h-4 w-4" />}
+          disabled={disabledAssetsTab}
+          className="sm:flex-none"
+        />
         {/* ✅ General: NO se bloquea aquí; adentro GeneralSettings decide qué mostrar */}
         <Item
           k="general"
@@ -161,6 +172,13 @@ export default function AdminSettingsHubPage() {
   const canManageSociety =
     canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
 
+  const canAssetsRead = useCan('assets:read');
+  const canAssetsFull = useCan('assets:full_access');
+  const canAssetsDisable = useCan('assets:disable');
+  const canAssetsDelete = useCan('assets:delete');
+  const canManageAssets =
+    canAssetsFull || canAssetsDisable || canAssetsDelete || canAssetsRead;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
 
@@ -179,7 +197,9 @@ export default function AdminSettingsHubPage() {
             ? 'announcements'
             : canManageSociety
               ? 'sociedad'
-              : 'general');
+              : canManageAssets
+                ? 'assets'
+                : 'general');
 
   const [tab, setTab] = useState<TabKey>(computedInitial);
 
@@ -195,6 +215,7 @@ export default function AdminSettingsHubPage() {
     if (canManageIncidents) return 'incidents';
     if (canManageAnnouncements) return 'announcements';
     if (canManageSociety) return 'sociedad';
+    if (canManageAssets) return 'assets';
     return 'general';
   };
 
@@ -234,6 +255,13 @@ export default function AdminSettingsHubPage() {
       return;
     }
 
+    if (tab === 'assets' && !canAssetsFull) {
+      const next = pickFirstAllowedTab();
+      setTab(next);
+      navigate(`/admin/settings?tab=${next}`, { replace: true });
+      return;
+    }
+
     // ✅ NO redirigimos "general": adentro se muestra lo que corresponda.
   }, [
     tab,
@@ -242,6 +270,7 @@ export default function AdminSettingsHubPage() {
     canManageIncidents,
     canManageAnnouncements,
     canManageSociety,
+    canAssetsFull,
     navigate,
   ]);
 
@@ -281,6 +310,7 @@ export default function AdminSettingsHubPage() {
               disabledIncidentsTab={!canManageIncidents}
               disabledAnnouncementsTab={!canManageAnnouncements}
               disabledSocietyTab={!canManageSociety}
+              disabledAssetsTab={!canAssetsFull}
             />
           </div>
         </header>
@@ -342,6 +372,18 @@ export default function AdminSettingsHubPage() {
                   branding general.
                 </p>
                 <SocietySettingsTable />
+              </div>
+            </Can>
+          )}
+
+          {tab === 'assets' && (
+            <Can perm="assets:full_access">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Activos</h2>
+                <p className="text-sm text-gray-500">
+                  Gestiona los activos de la plataforma.
+                </p>
+                <AssetsBoard />
               </div>
             </Can>
           )}
