@@ -1,4 +1,4 @@
-import AssetsBoard from '../../components/dashboard/assets/AssetsBoard';
+import AssetsBoard from '../../components/dashboard/admin/assets/AssetsBoard';
 import Sidebar from '../../components/layout/Sidebar';
 
 export default function AssetsHomePage() {

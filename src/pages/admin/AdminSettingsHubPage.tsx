@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
-import Navbar from '../../components/navigation/Navbar';
 import { Can, useCan } from '../../rbac/PermissionsContext';
 import { cn } from '../../utils/cn';
 import {
@@ -18,7 +17,7 @@ import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
-import AssetsBoard from '../../components/dashboard/assets/AssetsBoard';
+import AssetsBoard from '../../components/dashboard/admin/assets/AssetsBoard';
 
 type TabKey =
   | 'general'
@@ -179,8 +178,7 @@ export default function AdminSettingsHubPage() {
   const canManageAssets =
     canAssetsFull || canAssetsDisable || canAssetsDelete || canAssetsRead;
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [searchTerm] = useState('');
 
   const rawTab = q.get('tab') as TabKey | null;
 
@@ -284,14 +282,6 @@ export default function AdminSettingsHubPage() {
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <div className="w-full">
-          <Navbar
-            onSearch={setSearchTerm}
-            onFilterLocation={setSelectedLocation}
-            selectedLocation={selectedLocation}
-          />
-        </div>
-
         <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>

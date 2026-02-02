@@ -1,6 +1,6 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 
 export default function AdminSettingsPage() {
-  const { search } = useLocation();
-  return <Navigate to={`/admin/settings${search || '?tab=general'}`} replace />;
+  // const { search } = useLocation();
+  return <Navigate to={`/admin/settings${'?tab=general'}`} replace />;
 }
