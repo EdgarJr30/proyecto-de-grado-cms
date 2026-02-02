@@ -1,47 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type {
+  AssetStatus,
+  AssetView,
+  BigIntLike,
+} from '../../../../types/Asset';
+import { getAssets } from '../../../../services/assetsService';
+import AssetCreateForm from './AssetCreateForm';
+import AssetEditForm from './AssetEditForm';
 
-type AssetStatus = 'Operativo' | 'En Mantenimiento' | 'Fuera de Servicio';
-
-type Asset = {
-  id: number;
-  code: string;
-  name: string;
-  category: string;
-  locationLabel: string;
-  status: AssetStatus;
-  criticality: 1 | 2 | 3 | 4 | 5;
-  nextMaintenance: string;
-  costYTD: number;
-  responsibleInitials: string;
-};
-
-type LocationNode = {
-  id: string;
-  label: string;
-  children?: LocationNode[];
-};
-
-function cx(...classes: Array<string | false | null | undefined>) {
+function cx(...classes: Array<string | false | null | undefined | 0>) {
   return classes.filter(Boolean).join(' ');
 }
 
-function currency(value: number) {
-  try {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  } catch {
-    return `$${value.toLocaleString()}`;
-  }
+function labelStatus(v: AssetStatus) {
+  const map: Record<AssetStatus, string> = {
+    OPERATIVO: 'Operativo',
+    EN_MANTENIMIENTO: 'En mantenimiento',
+    FUERA_DE_SERVICIO: 'Fuera de servicio',
+    RETIRADO: 'Retirado',
+  };
+  return map[v];
 }
 
 function StatusBadge({ value }: { value: AssetStatus }) {
   const map: Record<AssetStatus, string> = {
-    Operativo: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-    'En Mantenimiento': 'bg-amber-100 text-amber-800 border-amber-200',
-    'Fuera de Servicio': 'bg-rose-100 text-rose-800 border-rose-200',
+    OPERATIVO: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    EN_MANTENIMIENTO: 'bg-amber-100 text-amber-800 border-amber-200',
+    FUERA_DE_SERVICIO: 'bg-rose-100 text-rose-800 border-rose-200',
+    RETIRADO: 'bg-gray-100 text-gray-800 border-gray-200',
   };
 
   return (
@@ -51,7 +37,7 @@ function StatusBadge({ value }: { value: AssetStatus }) {
         map[value]
       )}
     >
-      {value}
+      {labelStatus(value)}
     </span>
   );
 }
@@ -77,17 +63,7 @@ function Icon({
   name,
   className,
 }: {
-  name:
-    | 'plus'
-    | 'wrench'
-    | 'import'
-    | 'export'
-    | 'search'
-    | 'pin'
-    | 'close'
-    | 'chev'
-    | 'bell'
-    | 'upload';
+  name: 'plus' | 'search' | 'close' | 'pin' | 'edit';
   className?: string;
 }) {
   const cls = cx('h-5 w-5', className);
@@ -97,53 +73,6 @@ function Icon({
         <svg className={cls} viewBox="0 0 24 24" fill="none">
           <path
             d="M12 5v14M5 12h14"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'wrench':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M21 7.5a5.5 5.5 0 0 1-7.6 5.1L7 19l-2 2-2-2 2-2 6.4-6.4A5.5 5.5 0 0 1 16.5 3l-2.2 2.2 2.3 2.3L21 7.5Z"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case 'import':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 3v10m0 0 3-3m-3 3-3-3"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M4 14v5h16v-5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'export':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 21V11m0 0 3 3m-3-3-3 3"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M4 10V5h16v5"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
@@ -166,6 +95,17 @@ function Icon({
           />
         </svg>
       );
+    case 'close':
+      return (
+        <svg className={cls} viewBox="0 0 24 24" fill="none">
+          <path
+            d="M6 6l12 12M18 6 6 18"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </svg>
+      );
     case 'pin':
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none">
@@ -181,62 +121,14 @@ function Icon({
           />
         </svg>
       );
-    case 'close':
+    case 'edit':
       return (
         <svg className={cls} viewBox="0 0 24 24" fill="none">
           <path
-            d="M6 6l12 12M18 6 6 18"
+            d="M16.862 4.487 19.5 7.125M7.5 16.5l3.75-.75L19.5 7.5a1.06 1.06 0 0 0 0-1.5l-1.5-1.5a1.06 1.06 0 0 0-1.5 0L8.25 12.75 7.5 16.5Z"
             stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'chev':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M9 6l6 6-6 6"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
+            strokeWidth="1.8"
             strokeLinejoin="round"
-          />
-        </svg>
-      );
-    case 'bell':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M15 17H9m9-2V11a6 6 0 1 0-12 0v4l-2 2h16l-2-2Z"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M10 19a2 2 0 0 0 4 0"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case 'upload':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 16V4m0 0 4 4M12 4 8 8"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M4 20h16"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
           />
         </svg>
       );
@@ -245,261 +137,116 @@ function Icon({
   }
 }
 
-function KpiCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: 'neutral' | 'success' | 'info' | 'danger' | 'warning';
-}) {
-  const tones: Record<typeof tone, string> = {
-    neutral: 'bg-gray-50 border-gray-200',
-    success: 'bg-emerald-50 border-emerald-200',
-    info: 'bg-sky-50 border-sky-200',
-    danger: 'bg-rose-50 border-rose-200',
-    warning: 'bg-amber-50 border-amber-200',
-  };
-
-  return (
-    <div className={cx('rounded-lg border p-4', tones[tone])}>
-      <div className="text-xs font-medium text-gray-600">{label}</div>
-      <div className="mt-1 text-2xl font-bold text-gray-900">{value}</div>
-    </div>
-  );
-}
-
-function LocationTree({
-  nodes,
-  selectedId,
-  onSelect,
-}: {
-  nodes: LocationNode[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <div className="space-y-1">
-      {nodes.map((n) => (
-        <LocationTreeNode
-          key={n.id}
-          node={n}
-          depth={0}
-          selectedId={selectedId}
-          onSelect={onSelect}
-        />
-      ))}
-    </div>
-  );
-}
-
-function LocationTreeNode({
-  node,
-  depth,
-  selectedId,
-  onSelect,
-}: {
-  node: LocationNode;
-  depth: number;
-  selectedId: string;
-  onSelect: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const hasChildren = Boolean(node.children?.length);
-  const isSelected = selectedId === node.id;
-
-  return (
-    <div>
-      <button
-        type="button"
-        className={cx(
-          'w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-gray-800 hover:bg-gray-50',
-          isSelected && 'bg-indigo-50 text-indigo-700'
-        )}
-        style={{ paddingLeft: 10 + depth * 14 }}
-        onClick={() => onSelect(node.id)}
-      >
-        {hasChildren ? (
-          <span
-            className={cx(
-              'inline-flex h-6 w-6 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100',
-              isSelected && 'text-indigo-700'
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((v) => !v);
-            }}
-            title={open ? 'Colapsar' : 'Expandir'}
-          >
-            <span className={cx('transition', open ? 'rotate-90' : '')}>
-              <Icon name="chev" className="h-4 w-4" />
-            </span>
-          </span>
-        ) : (
-          <span className="inline-flex h-6 w-6" />
-        )}
-
-        <span className="truncate">{node.label}</span>
-      </button>
-
-      {hasChildren && open ? (
-        <div className="mt-1">
-          {node.children!.map((c) => (
-            <LocationTreeNode
-              key={c.id}
-              node={c}
-              depth={depth + 1}
-              selectedId={selectedId}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+type ViewMode = 'none' | 'create' | 'edit';
 
 export default function AssetsBoard() {
-  const locations: LocationNode[] = useMemo(
-    () => [
-      {
-        id: 'planta',
-        label: 'Planta Principal',
-        children: [
-          {
-            id: 'edif-a',
-            label: 'Edificio A',
-            children: [
-              { id: 'piso-1', label: 'Piso 1' },
-              { id: 'piso-2', label: 'Piso 2' },
-              { id: 'sala-bombas', label: 'Sala de Bombas' },
-            ],
-          },
-          { id: 'edif-b', label: 'Edificio B' },
-        ],
-      },
-      { id: 'almacen', label: 'Almacén Central' },
-      { id: 'oficina', label: 'Oficina Corporativa' },
-    ],
-    []
+  const [assets, setAssets] = useState<AssetView[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+
+  const [search, setSearch] = useState('');
+  const [selectedAssetId, setSelectedAssetId] = useState<BigIntLike | null>(
+    null
   );
 
-  const [selectedLocationId, setSelectedLocationId] = useState('planta');
-  const [selectedAssetId, setSelectedAssetId] = useState<number | null>(1);
+  const [modal, setModal] = useState<ViewMode>('none');
 
-  const assets: Asset[] = useMemo(
-    () => [
-      {
-        id: 1,
-        code: 'AC-102',
-        name: 'Unidad de Aire Acondicionado',
-        category: 'HVAC',
-        locationLabel: 'Edificio A - Piso 1',
-        status: 'Operativo',
-        criticality: 3,
-        nextMaintenance: '16/05/2024',
-        costYTD: 18500,
-        responsibleInitials: 'JG',
-      },
-      {
-        id: 2,
-        code: 'GEN-01',
-        name: 'Generador Diesel',
-        category: 'Energía',
-        locationLabel: 'Edificio A - Piso 1',
-        status: 'En Mantenimiento',
-        criticality: 4,
-        nextMaintenance: '13/05/2023',
-        costYTD: 49300,
-        responsibleInitials: 'AP',
-      },
-      {
-        id: 3,
-        code: 'BOM-05',
-        name: 'Bomba de Agua',
-        category: 'Hidráulica',
-        locationLabel: 'Piso 1',
-        status: 'Operativo',
-        criticality: 2,
-        nextMaintenance: '12/05/2024',
-        costYTD: 27500,
-        responsibleInitials: 'MR',
-      },
-      {
-        id: 4,
-        code: 'ELEC-07',
-        name: 'Tablero Eléctrico',
-        category: 'Eléctrico',
-        locationLabel: 'Piso 1',
-        status: 'En Mantenimiento',
-        criticality: 5,
-        nextMaintenance: '25/05/2024',
-        costYTD: 47000,
-        responsibleInitials: 'LC',
-      },
-      {
-        id: 5,
-        code: 'CCTV-03',
-        name: 'Cámara de Seguridad',
-        category: 'Seguridad',
-        locationLabel: 'Piso 1',
-        status: 'Fuera de Servicio',
-        criticality: 3,
-        nextMaintenance: '03/11/2024',
-        costYTD: 31500,
-        responsibleInitials: 'PT',
-      },
-    ],
-    []
-  );
+  async function reload() {
+    setError('');
+    setIsLoading(true);
+    try {
+      const list = await getAssets();
+      setAssets(list);
+      if (!selectedAssetId && list.length) setSelectedAssetId(list[0].id);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-  const selectedAsset = useMemo(
-    () => assets.find((a) => a.id === selectedAssetId) ?? assets[0],
-    [assets, selectedAssetId]
-  );
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const leftSummary = useMemo(
-    () => [
-      { label: 'Operativos', value: 12, tone: 'success' as const },
-      { label: 'En Mantenimiento', value: 4, tone: 'warning' as const },
-      { label: 'Fuera de Servicio', value: 2, tone: 'danger' as const },
-      { label: 'Con Alertas', value: 3, tone: 'info' as const },
-    ],
-    []
-  );
+  const filteredAssets = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return assets;
+
+    return assets.filter((a) => {
+      const hay = [
+        a.code,
+        a.name,
+        a.serial_number ?? '',
+        a.model ?? '',
+        a.asset_tag ?? '',
+        a.location_name ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return hay.includes(q);
+    });
+  }, [assets, search]);
+
+  const selectedAsset = useMemo(() => {
+    if (!selectedAssetId) return null;
+    return assets.find((a) => String(a.id) === String(selectedAssetId)) ?? null;
+  }, [assets, selectedAssetId]);
+
+  const kpis = useMemo(() => {
+    const total = assets.length;
+    const oper = assets.filter((a) => a.status === 'OPERATIVO').length;
+    const mant = assets.filter((a) => a.status === 'EN_MANTENIMIENTO').length;
+    const fuera = assets.filter((a) => a.status === 'FUERA_DE_SERVICIO').length;
+    const retir = assets.filter((a) => a.status === 'RETIRADO').length;
+
+    return { total, oper, mant, fuera, retir };
+  }, [assets]);
 
   return (
     <div className="h-full min-h-0">
+      {/* errores */}
+      {error ? (
+        <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid h-full min-h-0 grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
-        {/* Panel izquierdo: Ubicaciones */}
+        {/* Panel izquierdo (por ahora placeholder) */}
         <aside className="min-h-0 rounded-xl border bg-white p-4 shadow-sm">
           <div className="text-sm font-semibold text-gray-900">Ubicaciones</div>
-
-          <div className="mt-3">
-            <LocationTree
-              nodes={locations}
-              selectedId={selectedLocationId}
-              onSelect={(id) => setSelectedLocationId(id)}
-            />
+          <div className="mt-3 space-y-2">
+            <div className="h-9 rounded bg-gray-100" />
+            <div className="h-9 rounded bg-gray-100" />
+            <div className="h-9 rounded bg-gray-100" />
           </div>
 
           <div className="mt-6 space-y-2 border-t pt-4">
-            {leftSummary.map((s) => (
-              <div
-                key={s.label}
-                className="flex items-center justify-between rounded-lg px-2 py-2 text-sm"
-              >
-                <span className="text-gray-700">{s.label}</span>
-                <span className="font-semibold text-gray-900">{s.value}</span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between rounded-lg px-2 py-2 text-sm">
+              <span className="text-gray-700">Operativos</span>
+              <span className="font-semibold text-gray-900">{kpis.oper}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg px-2 py-2 text-sm">
+              <span className="text-gray-700">En Mantenimiento</span>
+              <span className="font-semibold text-gray-900">{kpis.mant}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg px-2 py-2 text-sm">
+              <span className="text-gray-700">Fuera de Servicio</span>
+              <span className="font-semibold text-gray-900">{kpis.fuera}</span>
+            </div>
+            <div className="flex items-center justify-between rounded-lg px-2 py-2 text-sm">
+              <span className="text-gray-700">Retirados</span>
+              <span className="font-semibold text-gray-900">{kpis.retir}</span>
+            </div>
           </div>
         </aside>
 
-        {/* Panel derecho: KPIs + acciones + tabla + drawer */}
+        {/* Panel derecho */}
         <section className="min-h-0 overflow-hidden rounded-xl border bg-white shadow-sm">
-          {/* Top bar: título + acciones */}
+          {/* Top bar */}
           <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
             <div className="text-sm font-semibold text-gray-900">
               Listado de Activos
@@ -508,45 +255,24 @@ export default function AssetsBoard() {
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <button
                 type="button"
+                onClick={() => setModal('create')}
                 className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
               >
                 <Icon name="plus" className="h-4 w-4" />
                 Nuevo Activo
               </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md bg-indigo-600/10 px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-600/15"
-              >
-                <Icon name="wrench" className="h-4 w-4" />
-                Registrar Mantenimiento
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                <Icon name="import" className="h-4 w-4" />
-                Importar
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-              >
-                <Icon name="export" className="h-4 w-4" />
-                Exportar
-              </button>
             </div>
           </div>
 
-          {/* Barra de búsqueda (mock) */}
+          {/* Search */}
           <div className="px-4 pt-4">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <Icon name="search" className="h-4 w-4" />
               </span>
               <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar código, nombre, serie..."
                 className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
               />
@@ -556,15 +282,48 @@ export default function AssetsBoard() {
           {/* KPIs */}
           <div className="px-4 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <KpiCard label="Total Activos" value="34" tone="neutral" />
-              <KpiCard label="Operativos" value="22" tone="success" />
-              <KpiCard label="En Mantenimiento" value="4" tone="warning" />
-              <KpiCard label="Fuera de Servicio" value="5" tone="danger" />
-              <KpiCard label="Próximos Vencimientos" value="3" tone="info" />
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs font-medium text-gray-600">Total</div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">
+                  {kpis.total}
+                </div>
+              </div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="text-xs font-medium text-gray-600">
+                  Operativos
+                </div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">
+                  {kpis.oper}
+                </div>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="text-xs font-medium text-gray-600">
+                  En mantenimiento
+                </div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">
+                  {kpis.mant}
+                </div>
+              </div>
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+                <div className="text-xs font-medium text-gray-600">
+                  Fuera de servicio
+                </div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">
+                  {kpis.fuera}
+                </div>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="text-xs font-medium text-gray-600">
+                  Retirado
+                </div>
+                <div className="mt-1 text-2xl font-bold text-gray-900">
+                  {kpis.retir}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Layout tabla + drawer */}
+          {/* Tabla + drawer */}
           <div className="px-4 pb-4 h-[calc(100%-250px)] min-h-0">
             <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[1fr_360px] gap-4">
               {/* Tabla */}
@@ -573,107 +332,94 @@ export default function AssetsBoard() {
                   <table className="min-w-full table-fixed divide-y divide-gray-200">
                     <thead className="bg-gray-50 sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-24">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-28">
                           Código
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
                           Nombre
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-36">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-44">
                           Categoría
                         </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-40">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-44">
                           Estado
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-28">
-                          Criticidad
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-32">
-                          Próximo Mantto.
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-28">
-                          Costo YTD
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 w-24">
-                          Resp.
+                          Crit.
                         </th>
                       </tr>
                     </thead>
 
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {assets.map((a) => {
-                        const selected = a.id === selectedAssetId;
-                        return (
-                          <tr
-                            key={a.id}
-                            className={cx(
-                              'hover:bg-gray-50 transition cursor-pointer',
-                              selected && 'bg-indigo-50'
-                            )}
-                            onClick={() => setSelectedAssetId(a.id)}
+                      {isLoading ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-10 text-center text-gray-400"
                           >
-                            <td className="px-4 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
-                              {a.code}
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="text-sm font-medium text-indigo-700 hover:text-indigo-600">
-                                {a.name}
-                              </div>
-                              <div className="text-xs text-gray-500 truncate">
-                                {a.locationLabel}
-                              </div>
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                              {a.category}
-                            </td>
-                            <td className="px-4 py-4 whitespace-nowrap">
-                              <StatusBadge value={a.status} />
-                            </td>
-                            <td className="px-4 py-4">
-                              <CriticalityDots value={a.criticality} />
-                            </td>
-                            <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                              {a.nextMaintenance}
-                            </td>
-                            <td className="px-4 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
-                              {currency(a.costYTD)}
-                            </td>
-                            <td className="px-4 py-4">
-                              <div className="flex items-center justify-end">
-                                <div className="h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-700">
-                                  {a.responsibleInitials}
+                            Cargando…
+                          </td>
+                        </tr>
+                      ) : filteredAssets.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            className="py-10 text-center text-gray-400"
+                          >
+                            No hay activos para mostrar.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAssets.map((a) => {
+                          const selected =
+                            selectedAssetId &&
+                            String(a.id) === String(selectedAssetId);
+
+                          return (
+                            <tr
+                              key={String(a.id)}
+                              className={cx(
+                                'hover:bg-gray-50 transition cursor-pointer',
+                                selected && 'bg-indigo-50'
+                              )}
+                              onClick={() => setSelectedAssetId(a.id)}
+                            >
+                              <td className="px-4 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                                {a.code}
+                              </td>
+                              <td className="px-4 py-4">
+                                <div className="text-sm font-medium text-indigo-700">
+                                  {a.name}
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                                <div className="text-xs text-gray-500 truncate">
+                                  {a.location_name}
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                                {a.category ?? '—'}
+                              </td>
+                              <td className="px-4 py-4 whitespace-nowrap">
+                                <StatusBadge value={a.status} />
+                              </td>
+                              <td className="px-4 py-4">
+                                <CriticalityDots value={a.criticality ?? 3} />
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
-
-                {/* Paginación (mock) */}
-                <div className="flex items-center justify-end gap-2 border-t bg-white px-4 py-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium hover:bg-gray-300"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded bg-indigo-600 text-white font-medium hover:bg-indigo-500"
-                  >
-                    Siguiente
-                  </button>
-                </div>
               </div>
 
-              {/* Drawer lateral (mock siempre visible en xl+) */}
+              {/* Drawer */}
               <aside className="hidden xl:flex min-h-0 flex-col rounded-lg border bg-white overflow-hidden">
                 <div className="flex items-center justify-between border-b px-4 py-3">
                   <div className="text-sm font-semibold text-gray-900 truncate">
-                    {selectedAsset?.code} {selectedAsset?.name}
+                    {selectedAsset
+                      ? `${selectedAsset.code} — ${selectedAsset.name}`
+                      : 'Detalle'}
                   </div>
                   <button
                     type="button"
@@ -685,92 +431,106 @@ export default function AssetsBoard() {
                   </button>
                 </div>
 
-                {/* Imagen placeholder */}
                 <div className="px-4 pt-4">
-                  <div className="h-40 w-full rounded-lg bg-gray-100 overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-br from-gray-100 to-gray-200" />
-                  </div>
+                  {selectedAsset?.image_url ? (
+                    <img
+                      src={selectedAsset.image_url}
+                      alt="Activo"
+                      className="h-40 w-full rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-40 w-full rounded-lg bg-gray-100" />
+                  )}
                 </div>
 
-                {/* Estado + ubicación */}
                 <div className="px-4 pt-4">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge value={selectedAsset?.status ?? 'Operativo'} />
-                    <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
-                      <Icon name="pin" className="h-4 w-4 text-gray-400" />
-                      {selectedAsset?.locationLabel}
-                    </span>
-                  </div>
+                  {selectedAsset ? (
+                    <div className="flex items-center gap-2">
+                      <StatusBadge value={selectedAsset.status} />
+                      <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
+                        <Icon name="pin" className="h-4 w-4 text-gray-400" />
+                        {selectedAsset.location_name}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Selecciona un activo.
+                    </div>
+                  )}
                 </div>
 
-                {/* Datos técnicos (mock) */}
                 <div className="px-4 pt-4">
                   <div className="rounded-lg border bg-gray-50 p-3">
                     <div className="text-xs font-semibold text-gray-700">
                       Datos técnicos
                     </div>
+
                     <div className="mt-2 space-y-1 text-sm text-gray-700">
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500">Modelo</span>
-                        <span className="font-medium">LG ZXS-24K</span>
+                        <span className="font-medium">
+                          {selectedAsset?.model ?? '—'}
+                        </span>
                       </div>
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500">No. Serie</span>
-                        <span className="font-medium">12345-AC102</span>
+                        <span className="font-medium">
+                          {selectedAsset?.serial_number ?? '—'}
+                        </span>
                       </div>
                       <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">Próximo Mantto</span>
+                        <span className="text-gray-500">Asset tag</span>
                         <span className="font-medium">
-                          {selectedAsset?.nextMaintenance}
+                          {selectedAsset?.asset_tag ?? '—'}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Tabs (mock) */}
-                <div className="px-4 pt-4">
-                  <div className="flex items-center gap-2">
-                    {['Técnico', 'Historial', 'Costos', 'Tickets'].map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className={cx(
-                          'rounded-md border px-3 py-1.5 text-sm font-medium',
-                          t === 'Técnico'
-                            ? 'bg-white text-gray-900'
-                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <div className="mt-auto border-t bg-white p-4">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={!selectedAsset}
+                      onClick={() => setModal('edit')}
+                      className={cx(
+                        'inline-flex w-full items-center justify-center gap-2 rounded-md border bg-white px-3 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50',
+                        !selectedAsset && 'opacity-40 cursor-not-allowed'
+                      )}
+                    >
+                      <Icon name="edit" className="h-4 w-4" />
+                      Editar
+                    </button>
 
-                {/* Contenido tab (mock) */}
-                <div className="px-4 pt-4 flex-1 min-h-0 overflow-auto">
-                  <div className="space-y-3">
-                    <div className="h-16 rounded-lg bg-gray-100" />
-                    <div className="h-16 rounded-lg bg-gray-100" />
-                    <div className="h-16 rounded-lg bg-gray-100" />
+                    <button
+                      type="button"
+                      onClick={() => void reload()}
+                      className="inline-flex w-full items-center justify-center rounded-md bg-indigo-600 px-3 py-3 text-sm font-semibold text-white hover:bg-indigo-500 shadow-sm"
+                    >
+                      Refrescar
+                    </button>
                   </div>
-                </div>
-
-                {/* CTA */}
-                <div className="border-t bg-white p-4">
-                  <button
-                    type="button"
-                    className="w-full rounded-md bg-indigo-600 px-3 py-3 text-sm font-semibold text-white hover:bg-indigo-500 shadow-sm"
-                  >
-                    Crear Ticket
-                  </button>
                 </div>
               </aside>
             </div>
           </div>
         </section>
       </div>
+
+      {/* Modal Create */}
+      {modal === 'create' && (
+        <AssetCreateForm onClose={() => setModal('none')} onCreated={reload} />
+      )}
+
+      {/* Modal Edit */}
+      {modal === 'edit' && selectedAsset && (
+        <AssetEditForm
+          asset={selectedAsset}
+          onClose={() => setModal('none')}
+          onUpdated={reload}
+        />
+      )}
     </div>
   );
 }
