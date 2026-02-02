@@ -14,7 +14,7 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 interface Props {
   searchTerm: string;
   // se mantiene por compatibilidad con Navbar
-  selectedLocation?: number;
+  selectedLocation?: string;
 }
 
 const PAGE_SIZE = 8;
@@ -829,8 +829,8 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
                         ? 'Guardando…'
                         : 'Creando…'
                       : isEditing
-                      ? 'Guardar cambios'
-                      : 'Crear'}
+                        ? 'Guardar cambios'
+                        : 'Crear'}
                   </button>
                 </div>
               </form>

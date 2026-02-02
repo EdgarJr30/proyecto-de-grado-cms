@@ -16,7 +16,7 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 interface Props {
   searchTerm: string;
   // `selectedLocation` no aplica para assignees; se ignora
-  selectedLocation?: number;
+  selectedLocation?: string;
 }
 
 const PAGE_SIZE = 8;
