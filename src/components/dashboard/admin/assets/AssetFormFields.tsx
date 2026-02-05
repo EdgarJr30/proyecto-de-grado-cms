@@ -21,8 +21,6 @@ export type AssetFormShape = {
 
   description?: string | null;
 
-  // OJO: si en tu proyecto location_id viene como BigIntLike (string/number/bigint),
-  // cambia esto a: string | number | bigint | null | undefined
   location_id?: number | null;
 
   category?: string | null;
@@ -38,9 +36,9 @@ export type AssetFormShape = {
   serial_number?: string | null;
   asset_tag?: string | null;
 
-  purchase_date?: string | null;
-  install_date?: string | null;
-  warranty_end_date?: string | null;
+  purchase_date?: string | null; // YYYY-MM-DD
+  install_date?: string | null; // YYYY-MM-DD
+  warranty_end_date?: string | null; // YYYY-MM-DD
 
   purchase_cost?: number | null;
   salvage_value?: number | null;
@@ -82,6 +80,11 @@ export default function AssetFormFields<T extends AssetFormShape>({
   const isFieldDisabled = (key: keyof AssetFormShape) =>
     disabled || isLocked(key);
 
+  const numToInput = (v: number | null | undefined) =>
+    typeof v === 'number' && Number.isFinite(v) ? String(v) : '';
+
+  const dateToInput = (v: string | null | undefined) => (v ? String(v) : '');
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       {/* ID readonly (opcional) */}
@@ -98,6 +101,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </div>
       ) : null}
 
+      {/* code */}
       <div>
         <label className="text-sm font-medium text-gray-700">Código</label>
         <input
@@ -121,6 +125,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         ) : null}
       </div>
 
+      {/* name */}
       <div>
         <label className="text-sm font-medium text-gray-700">Nombre</label>
         <input
@@ -139,6 +144,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         />
       </div>
 
+      {/* location_id temporal */}
       {showLocationId ? (
         <div>
           <label className="text-sm font-medium text-gray-700">
@@ -168,6 +174,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </div>
       ) : null}
 
+      {/* status */}
       <div>
         <label className="text-sm font-medium text-gray-700">Estado</label>
         <select
@@ -197,6 +204,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </select>
       </div>
 
+      {/* category */}
       <div>
         <label className="text-sm font-medium text-gray-700">Categoría</label>
         <input
@@ -221,6 +229,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         />
       </div>
 
+      {/* asset_type */}
       <div>
         <label className="text-sm font-medium text-gray-700">
           Tipo de activo
@@ -247,6 +256,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         />
       </div>
 
+      {/* criticality */}
       <div>
         <label className="text-sm font-medium text-gray-700">
           Criticidad (1-5)
@@ -278,7 +288,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </select>
       </div>
 
-      {/* is_active solo en edit (en create lo dejas fijo true sin UI) */}
+      {/* is_active solo en edit */}
       {mode === 'edit' ? (
         <div>
           <label className="text-sm font-medium text-gray-700">Activo</label>
@@ -307,7 +317,251 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </div>
       ) : null}
 
+      {/* manufacturer */}
       <div>
+        <label className="text-sm font-medium text-gray-700">Fabricante</label>
+        <input
+          value={form.manufacturer ?? ''}
+          onChange={(e) => {
+            if (isLocked('manufacturer')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  manufacturer: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('manufacturer')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('manufacturer') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="LG / Samsung / Trane..."
+        />
+      </div>
+
+      {/* model */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">Modelo</label>
+        <input
+          value={form.model ?? ''}
+          onChange={(e) => {
+            if (isLocked('model')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  model: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('model')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('model') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="ABC-123"
+        />
+      </div>
+
+      {/* serial_number */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Número de serie
+        </label>
+        <input
+          value={form.serial_number ?? ''}
+          onChange={(e) => {
+            if (isLocked('serial_number')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  serial_number: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('serial_number')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('serial_number') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="SN-0000001"
+        />
+      </div>
+
+      {/* asset_tag */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">Asset tag</label>
+        <input
+          value={form.asset_tag ?? ''}
+          onChange={(e) => {
+            if (isLocked('asset_tag')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  asset_tag: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('asset_tag')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('asset_tag') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="TAG-001 / INV-0001"
+        />
+      </div>
+
+      {/* purchase_date */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Fecha de compra
+        </label>
+        <input
+          type="date"
+          value={dateToInput(form.purchase_date)}
+          onChange={(e) => {
+            if (isLocked('purchase_date')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  purchase_date: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('purchase_date')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('purchase_date') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+        />
+      </div>
+
+      {/* install_date */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Fecha de instalación
+        </label>
+        <input
+          type="date"
+          value={dateToInput(form.install_date)}
+          onChange={(e) => {
+            if (isLocked('install_date')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  install_date: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('install_date')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('install_date') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+        />
+      </div>
+
+      {/* warranty_end_date */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Fin de garantía
+        </label>
+        <input
+          type="date"
+          value={dateToInput(form.warranty_end_date)}
+          onChange={(e) => {
+            if (isLocked('warranty_end_date')) return;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  warranty_end_date: e.target.value ? e.target.value : null,
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('warranty_end_date')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('warranty_end_date') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+        />
+      </div>
+
+      {/* purchase_cost */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Costo de compra
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={numToInput(form.purchase_cost)}
+          onChange={(e) => {
+            if (isLocked('purchase_cost')) return;
+            const v = e.target.value;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  purchase_cost: v === '' ? null : Number(v),
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('purchase_cost')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('purchase_cost') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="0.00"
+        />
+      </div>
+
+      {/* salvage_value */}
+      <div>
+        <label className="text-sm font-medium text-gray-700">
+          Valor de rescate
+        </label>
+        <input
+          type="number"
+          step="0.01"
+          value={numToInput(form.salvage_value)}
+          onChange={(e) => {
+            if (isLocked('salvage_value')) return;
+            const v = e.target.value;
+            setForm(
+              (p) =>
+                ({
+                  ...p,
+                  salvage_value: v === '' ? null : Number(v),
+                }) as T
+            );
+          }}
+          disabled={isFieldDisabled('salvage_value')}
+          className={cx(
+            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            isFieldDisabled('salvage_value') &&
+              'opacity-70 bg-gray-50 cursor-not-allowed'
+          )}
+          placeholder="0.00"
+        />
+      </div>
+
+      {/* image_url */}
+      <div className="md:col-span-2">
         <label className="text-sm font-medium text-gray-700">URL imagen</label>
         <input
           value={form.image_url ?? ''}
@@ -331,6 +585,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         />
       </div>
 
+      {/* description */}
       <div className="md:col-span-2">
         <label className="text-sm font-medium text-gray-700">Descripción</label>
         <textarea
