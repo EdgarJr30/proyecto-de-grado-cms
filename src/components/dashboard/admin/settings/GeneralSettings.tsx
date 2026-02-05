@@ -5,6 +5,7 @@ import {
   showToastError,
 } from '../../../../notifications/toast';
 import LocationsSettings from './LocationsSettings';
+import AssetCategoriesSettings from './AssetCategoriesSettings';
 import { useCan } from '../../../../rbac/PermissionsContext';
 
 export default function GeneralSettings() {
@@ -15,6 +16,11 @@ export default function GeneralSettings() {
   const canLocationsFull = useCan('locations:full_access');
   const canLocationsDisable = useCan('locations:disable');
   const canLocationsDelete = useCan('locations:delete');
+
+  const canAssetsRead = useCan('assets:read');
+  const canAssetsFull = useCan('assets:full_access');
+
+  const canManageCategories = canAssetsRead || canAssetsFull;
 
   const canManageLocations =
     canLocationsFull ||
@@ -110,8 +116,8 @@ export default function GeneralSettings() {
         </div>
       )}
 
-      {/* Ubicaciones */}
       {canManageLocations && <LocationsSettings />}
+      {canManageCategories && <AssetCategoriesSettings />}
     </div>
   );
 }

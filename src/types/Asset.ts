@@ -18,12 +18,12 @@ export type AssetStatus =
 
 // ============ TABLE: public.assets ============
 export interface Asset {
-  id: BigIntLike;
+  id: number;
   code: string;
   name: string;
   description: string | null;
-  location_id: BigIntLike;
-  category: string | null;
+  location_id: number | null;
+  category_id: number | null;
   asset_type: string | null;
   criticality: 1 | 2 | 3 | 4 | 5;
   status: AssetStatus;

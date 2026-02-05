@@ -176,12 +176,15 @@ export default function AssetsBoard() {
 
     return assets.filter((a) => {
       const hay = [
-        a.code,
-        a.name,
+        a.code ?? '',
+        a.name ?? '',
         a.serial_number ?? '',
         a.model ?? '',
         a.asset_tag ?? '',
         a.location_name ?? '',
+        // ✅ incluye nombre de categoría para buscar
+        (a as AssetView & { category_name?: string | null }).category_name ??
+          '',
       ]
         .join(' ')
         .toLowerCase();
@@ -204,6 +207,16 @@ export default function AssetsBoard() {
 
     return { total, oper, mant, fuera, retir };
   }, [assets]);
+
+  // ✅ helpers de visualización (evitar — por valores falsy raros)
+  const displayText = (v: unknown) => {
+    const s = String(v ?? '').trim();
+    return s ? s : '—';
+  };
+
+  const selectedCategoryName =
+    (selectedAsset as AssetView & { category_name?: string | null })
+      ?.category_name ?? null;
 
   return (
     <div className="h-full min-h-0">
@@ -273,7 +286,7 @@ export default function AssetsBoard() {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar código, nombre, serie..."
+                placeholder="Buscar código, nombre, serie, categoría..."
                 className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
               />
             </div>
@@ -375,6 +388,10 @@ export default function AssetsBoard() {
                             selectedAssetId &&
                             String(a.id) === String(selectedAssetId);
 
+                          const categoryName =
+                            (a as AssetView & { category_name?: string | null })
+                              .category_name ?? null;
+
                           return (
                             <tr
                               key={String(a.id)}
@@ -392,12 +409,15 @@ export default function AssetsBoard() {
                                   {a.name}
                                 </div>
                                 <div className="text-xs text-gray-500 truncate">
-                                  {a.location_name}
+                                  {a.location_name ?? '—'}
                                 </div>
                               </td>
+
+                              {/* ✅ nombre de categoría */}
                               <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                                {a.category ?? '—'}
+                                {categoryName ? categoryName : '—'}
                               </td>
+
                               <td className="px-4 py-4 whitespace-nowrap">
                                 <StatusBadge value={a.status} />
                               </td>
@@ -449,7 +469,7 @@ export default function AssetsBoard() {
                       <StatusBadge value={selectedAsset.status} />
                       <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
                         <Icon name="pin" className="h-4 w-4 text-gray-400" />
-                        {selectedAsset.location_name}
+                        {selectedAsset.location_name ?? '—'}
                       </span>
                     </div>
                   ) : (
@@ -457,6 +477,14 @@ export default function AssetsBoard() {
                       Selecciona un activo.
                     </div>
                   )}
+                </div>
+
+                {/* ✅ categoría visible en drawer */}
+                <div className="px-4 pt-3">
+                  <div className="text-xs text-gray-500">Categoría</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {selectedCategoryName ?? '—'}
+                  </div>
                 </div>
 
                 <div className="px-4 pt-4">
@@ -469,19 +497,19 @@ export default function AssetsBoard() {
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500">Modelo</span>
                         <span className="font-medium">
-                          {selectedAsset?.model ?? '—'}
+                          {displayText(selectedAsset?.model)}
                         </span>
                       </div>
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500">No. Serie</span>
                         <span className="font-medium">
-                          {selectedAsset?.serial_number ?? '—'}
+                          {displayText(selectedAsset?.serial_number)}
                         </span>
                       </div>
                       <div className="flex justify-between gap-3">
                         <span className="text-gray-500">Asset tag</span>
                         <span className="font-medium">
-                          {selectedAsset?.asset_tag ?? '—'}
+                          {displayText(selectedAsset?.asset_tag)}
                         </span>
                       </div>
                     </div>

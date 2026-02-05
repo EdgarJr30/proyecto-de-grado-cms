@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { AssetStatus } from '../../../../types/Asset';
+import { listActiveAssetCategories } from '../../../../services/assetCategoryService';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -13,36 +15,28 @@ export const STATUS_OPTIONS: Array<{ value: AssetStatus; label: string }> = [
 ];
 
 type Criticality = 1 | 2 | 3 | 4 | 5;
+type CategoryOption = { id: number; name: string; is_active: boolean };
 
 // Forma mínima que ambos (insert y update) comparten para pintar campos
 export type AssetFormShape = {
   code?: string | null;
   name?: string | null;
-
   description?: string | null;
-
   location_id?: number | null;
-
-  category?: string | null;
+  category_id?: number | null;
   asset_type?: string | null;
-
   criticality?: Criticality | null;
   status?: AssetStatus | null;
-
   is_active?: boolean | null;
-
   manufacturer?: string | null;
   model?: string | null;
   serial_number?: string | null;
   asset_tag?: string | null;
-
   purchase_date?: string | null; // YYYY-MM-DD
   install_date?: string | null; // YYYY-MM-DD
   warranty_end_date?: string | null; // YYYY-MM-DD
-
   purchase_cost?: number | null;
   salvage_value?: number | null;
-
   image_url?: string | null;
 };
 
@@ -84,6 +78,32 @@ export default function AssetFormFields<T extends AssetFormShape>({
     typeof v === 'number' && Number.isFinite(v) ? String(v) : '';
 
   const dateToInput = (v: string | null | undefined) => (v ? String(v) : '');
+
+  // =========================
+  // Categories (select)
+  // =========================
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [catsLoading, setCatsLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    const load = async () => {
+      try {
+        setCatsLoading(true);
+        const data = await listActiveAssetCategories();
+        if (!alive) return;
+        setCategories(data);
+      } finally {
+        if (alive) setCatsLoading(false);
+      }
+    };
+
+    void load();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -204,29 +224,36 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </select>
       </div>
 
-      {/* category */}
+      {/* ✅ category_id (select) */}
       <div>
         <label className="text-sm font-medium text-gray-700">Categoría</label>
-        <input
-          value={form.category ?? ''}
+        <select
+          value={Number(form.category_id ?? 0)}
           onChange={(e) => {
-            if (isLocked('category')) return;
-            setForm(
-              (p) =>
-                ({
-                  ...p,
-                  category: e.target.value ? e.target.value : null,
-                }) as T
-            );
+            if (isLocked('category_id')) return;
+            const id = Number(e.target.value);
+            setForm((p) => ({ ...p, category_id: id > 0 ? id : null }) as T);
           }}
-          disabled={isFieldDisabled('category')}
+          disabled={isFieldDisabled('category_id') || catsLoading}
           className={cx(
-            'mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
-            isFieldDisabled('category') &&
+            'mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200',
+            (isFieldDisabled('category_id') || catsLoading) &&
               'opacity-70 bg-gray-50 cursor-not-allowed'
           )}
-          placeholder="HVAC / Eléctrico / Cocina..."
-        />
+        >
+          <option value={0}>
+            {catsLoading ? 'Cargando categorías…' : 'Selecciona una categoría'}
+          </option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+
+        <div className="mt-1 text-xs text-gray-500">
+          Gestiona las categorías en Configuración → General.
+        </div>
       </div>
 
       {/* asset_type */}

@@ -23,7 +23,7 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
     name: asset.name || undefined,
     description: asset.description || undefined,
     location_id: asset.location_id ? Number(asset.location_id) : undefined,
-    category: asset.category || undefined,
+    category_id: asset.category_id || undefined,
     asset_type: asset.asset_type || undefined,
     criticality: asset.criticality || undefined,
     status: asset.status || undefined,

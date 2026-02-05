@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type React from 'react';
 import type { AssetInsert } from '../../../../types/Asset';
 import { createAsset } from '../../../../services/assetsService';
 import AssetFormFields from './AssetFormFields';
@@ -12,18 +13,22 @@ type Props = {
   onCreated: () => Promise<void> | void;
 };
 
+// UI state: number para selects
+type AssetCreateFormState = Omit<AssetInsert, 'location_id' | 'category_id'> & {
+  location_id: number | null;
+  category_id: number | null;
+};
+
 export default function AssetCreateForm({ onClose, onCreated }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string>('');
 
-  const [form, setForm] = useState<
-    Omit<AssetInsert, 'location_id'> & { location_id: number | null }
-  >({
+  const [form, setForm] = useState<AssetCreateFormState>({
     code: '',
     name: '',
     description: null,
     location_id: null,
-    category: null,
+    category_id: null,
     asset_type: null,
     criticality: 3,
     status: 'OPERATIVO',
@@ -62,9 +67,14 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
       await createAsset({
         ...form,
         location_id: loc,
+        // Si tu backend acepta number, deja así:
+        category_id: form.category_id,
+        // Si tu backend exige bigint como string, usa:
+        // category_id: form.category_id ? String(form.category_id) : null,
         code: form.code.trim(),
         name: form.name.trim(),
       });
+
       await onCreated();
       onClose();
     } catch (err: unknown) {
