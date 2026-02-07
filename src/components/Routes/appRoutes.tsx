@@ -17,13 +17,6 @@ import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
 import SocietiesManagementPage from '../../pages/admin/SocietiesManagementPage';
-import InventoryHomePage from '../../pages/osalm/inventory/home/InventoryHomePage';
-import InventoryWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryWarehousePage';
-import InventoryAuditWarehousePage from '../../pages/osalm/inventory/admin/InventoryAuditWarehousePage';
-import InventoryAuditWarehouseReviewPage from '../../pages/osalm/inventory/admin/InventoryAuditWarehouseReviewPage';
-import WarehouseItemCountPage from '../../pages/osalm/inventory/audits/WarehouseItemCountPage';
-import InventoryMasterItemsPage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemsPage';
-import InventoryMasterItemCountSelectWarehousePage from '../../pages/osalm/inventory/warehouses/InventoryMasterItemCountSelectWarehousePage';
 import AssetsHomePage from '../../pages/admin/AssetsHomePage';
 
 // Tipado de la ruta
@@ -190,23 +183,6 @@ const IconPermissions = (
       strokeLinecap="round"
       strokeLinejoin="round"
       d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-    />
-  </svg>
-);
-
-const IconInventory = (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth="1.5"
-    stroke="currentColor"
-    className="w-5 h-5 mr-2"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .414.336.75.75.75Z"
     />
   </svg>
 );
@@ -400,113 +376,6 @@ export const APP_ROUTES: AppRoute[] = [
     path: '/admin/settings-old',
     element: <AdminSettingsPage />, // redirige a /admin/settings
     allowPerms: ['rbac:manage_roles', 'rbac:manage_permissions'],
-    showInSidebar: false,
-  },
-
-  // Inventario - Conteos de inventario HOME
-  {
-    path: '/osalm/conteos_inventario',
-    element: <InventoryHomePage />,
-    allowPerms: [
-      'inventory_counts:read',
-      'inventory_counts:create',
-      'inventory_counts:update',
-      'inventory_counts:cancel',
-      'inventory_counts:delete',
-      'inventory_counts:full_access',
-    ],
-    name: 'OSALM',
-    icon: IconInventory,
-    showInSidebar: true,
-  },
-
-  // Almacenes
-  {
-    path: '/osalm/conteos_inventario/almacen/:warehouseId',
-    element: <InventoryWarehousePage />,
-    allowPerms: [
-      'inventory_warehouses:read',
-      'inventory_warehouses:create',
-      'inventory_warehouses:update',
-      'inventory_warehouses:cancel',
-      'inventory_warehouses:delete',
-      'inventory_warehouses:full_access',
-    ],
-    name: 'Almacenes',
-    showInSidebar: false,
-  },
-
-  {
-    path: '/osalm/conteos_inventario/maestra',
-    element: <InventoryMasterItemsPage />,
-    allowPerms: [
-      'inventory_adjustments:read',
-      'inventory_adjustments:create',
-      'inventory_adjustments:export',
-      'inventory_adjustments:approve',
-      'inventory_adjustments:full_access',
-    ],
-    name: 'Data Maestra',
-    showInSidebar: false,
-  },
-
-  {
-    path: '/osalm/conteos_inventario/maestra/articulos/:itemId/conteo',
-    element: <InventoryMasterItemCountSelectWarehousePage />,
-    allowPerms: [
-      'inventory_adjustments:read',
-      'inventory_adjustments:create',
-      'inventory_adjustments:export',
-      'inventory_adjustments:approve',
-      'inventory_adjustments:full_access',
-    ],
-    name: 'Data Maestra',
-    showInSidebar: false,
-  },
-
-  // Conteo de artículo en almacén
-  {
-    path: '/osalm/conteos_inventario/almacen/:warehouseId/articulo/:warehouseItemId/:areaId?',
-    element: <WarehouseItemCountPage />,
-    allowPerms: [
-      'inventory_counts:read',
-      'inventory_counts:create',
-      'inventory_counts:delete',
-      'inventory_counts:update',
-      'inventory_counts:cancel',
-      'inventory_counts:full_access',
-    ],
-    name: 'Ajustes de Inventario',
-    showInSidebar: false,
-  },
-
-  // Historial de auditorías por almacén
-  {
-    path: '/osalm/conteos_inventario/auditoria/almacenes',
-    element: <InventoryAuditWarehousePage />,
-    allowPerms: [
-      'inventory_adjustments:read',
-      'inventory_adjustments:create',
-      'inventory_adjustments:export',
-      'inventory_adjustments:approve',
-      'inventory_adjustments:full_access',
-    ],
-    name: 'Historial de Auditorías por Almacén',
-    showInSidebar: false,
-  },
-
-  // Ajustes de inventario por almacén
-  {
-    path: '/osalm/conteos_inventario/auditoria/almacenes/:inventoryCountId',
-    element: <InventoryAuditWarehouseReviewPage />,
-    allowPerms: [
-      'inventory_adjustments:read',
-      'inventory_adjustments:create',
-      'inventory_adjustments:export',
-      'inventory_adjustments:approve',
-      'inventory_adjustments:full_access',
-    ],
-    name: 'Ajustes de Inventario',
     showInSidebar: false,
   },
 ];

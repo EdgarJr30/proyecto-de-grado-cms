@@ -49,15 +49,6 @@ export const RESOURCES = {
   society: 'society',
   locations: 'locations',
   assets: 'assets',
-
-  // === Inventario ===
-  inventory_items: 'inventory_items',
-  inventory_warehouses: 'inventory_warehouses',
-  inventory_uoms: 'inventory_uoms',
-  inventory_baskets: 'inventory_baskets',
-  inventory_counts: 'inventory_counts',
-  inventory_operations: 'inventory_operations',
-  inventory_adjustments: 'inventory_adjustments',
 } as const;
 
 type Resource = (typeof RESOURCES)[keyof typeof RESOURCES];
@@ -170,90 +161,5 @@ export const PERMISSIONS: PermissionDef[] = [
     RESOURCES.assets,
     'full_access',
     'Acceso total activos (crear/modificar/eliminar/asignar a tickets)'
-  ),
-
-  // === Inventario: Catálogo de artículos ===
-  p(RESOURCES.inventory_items, 'read', 'Ver catálogo de artículos'),
-  p(RESOURCES.inventory_items, 'create', 'Crear artículos'),
-  p(RESOURCES.inventory_items, 'update', 'Editar artículos'),
-  p(RESOURCES.inventory_items, 'delete', 'Eliminar artículos'),
-  p(
-    RESOURCES.inventory_items,
-    'full_access',
-    'Acceso total catálogo de artículos (crear/modificar/eliminar)'
-  ),
-
-  // === Inventario: Almacenes ===
-  p(RESOURCES.inventory_warehouses, 'read', 'Ver almacenes'),
-  p(RESOURCES.inventory_warehouses, 'create', 'Crear almacenes'),
-  p(RESOURCES.inventory_warehouses, 'update', 'Editar almacenes'),
-  p(RESOURCES.inventory_warehouses, 'delete', 'Eliminar almacenes'),
-  p(
-    RESOURCES.inventory_warehouses,
-    'full_access',
-    'Acceso total almacenes (crear/modificar/eliminar)'
-  ),
-
-  // === Inventario: UoMs ===
-  p(RESOURCES.inventory_uoms, 'read', 'Ver unidades de medida'),
-  p(RESOURCES.inventory_uoms, 'create', 'Crear unidades de medida'),
-  p(RESOURCES.inventory_uoms, 'update', 'Editar unidades de medida'),
-  p(RESOURCES.inventory_uoms, 'delete', 'Eliminar unidades de medida'),
-  p(
-    RESOURCES.inventory_uoms,
-    'full_access',
-    'Acceso total unidades de medida (crear/modificar/eliminar)'
-  ),
-
-  // === Inventario: Baskets (canastos) ===
-  p(RESOURCES.inventory_baskets, 'read', 'Ver canastos de pesaje'),
-  p(RESOURCES.inventory_baskets, 'create', 'Crear canastos de pesaje'),
-  p(RESOURCES.inventory_baskets, 'update', 'Editar canastos de pesaje'),
-  p(RESOURCES.inventory_baskets, 'delete', 'Eliminar canastos de pesaje'),
-  p(
-    RESOURCES.inventory_baskets,
-    'full_access',
-    'Acceso total canastos de pesaje (crear/modificar/eliminar)'
-  ),
-
-  // === Inventario: Conteos físicos (cabecera) ===
-  p(RESOURCES.inventory_counts, 'read', 'Ver jornadas de conteo'),
-  p(RESOURCES.inventory_counts, 'create', 'Crear jornadas de conteo'),
-  p(RESOURCES.inventory_counts, 'update', 'Editar jornadas de conteo'),
-  p(RESOURCES.inventory_counts, 'cancel', 'Cancelar/cerrar jornadas de conteo'),
-  p(RESOURCES.inventory_counts, 'delete', 'Eliminar jornadas de conteo'),
-  p(
-    RESOURCES.inventory_counts,
-    'full_access',
-    'Acceso total jornadas de conteo (crear/modificar/cerrar/eliminar)'
-  ),
-
-  // === Inventario: Operaciones de conteo (disparos desde dispositivos) ===
-  p(RESOURCES.inventory_operations, 'read', 'Ver operaciones crudas de conteo'),
-  p(RESOURCES.inventory_operations, 'work', 'Registrar conteos (operaciones)'),
-  p(RESOURCES.inventory_operations, 'delete', 'Eliminar operaciones de conteo'),
-  p(
-    RESOURCES.inventory_operations,
-    'full_access',
-    'Acceso total operaciones de conteo (leer/registrar/eliminar)'
-  ),
-
-  // === Inventario: Ajustes calculados ===
-  p(RESOURCES.inventory_adjustments, 'read', 'Ver ajustes de inventario'),
-  p(RESOURCES.inventory_adjustments, 'create', 'Crear ajustes de inventario'),
-  p(
-    RESOURCES.inventory_adjustments,
-    'export',
-    'Exportar ajustes de inventario'
-  ),
-  p(
-    RESOURCES.inventory_adjustments,
-    'approve',
-    'Aprobar ajustes de inventario'
-  ),
-  p(
-    RESOURCES.inventory_adjustments,
-    'full_access',
-    'Acceso total ajustes de inventario (crear/aprobar/eliminar)'
   ),
 ];
