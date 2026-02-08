@@ -19,6 +19,9 @@ import AnnouncementsManagmentPage from '../pages/admin/AnnouncementsManagementPa
 import SocietiesManagementPage from '../pages/admin/SocietiesManagementPage';
 import AssetsHomePage from '../pages/admin/AssetsHomePage';
 import InventoryHomePage from '../pages/inventory/InventoryHomePage';
+import UomsPage from '../pages/inventory/UomsPage';
+import PartCategoriesPage from '../pages/inventory/PartCategoriesPage';
+import PartsPage from '../pages/inventory/PartsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -352,6 +355,24 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Inventario',
     icon: IconInventory,
     showInSidebar: true,
+  },
+  {
+    path: '/inventory/uoms',
+    element: <UomsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/part-categories',
+    element: <PartCategoriesPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/parts',
+    element: <PartsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
   },
 
   // Administración de permisos y roles
