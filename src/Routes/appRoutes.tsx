@@ -25,6 +25,8 @@ import PartsPage from '../pages/inventory/PartsPage';
 import WarehousesPage from '../pages/inventory/WarehousesPage';
 import WarehouseBinsPage from '../pages/inventory/WarehouseBinsPage';
 import StockOverviewPage from '../pages/inventory/StockOverviewPage';
+import InventoryDocsPage from '../pages/inventory/InventoryDocsPage';
+import InventoryDocEditorPage from '../pages/inventory/InventoryDocEditorPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -392,6 +394,18 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/availability',
     element: <StockOverviewPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/docs',
+    element: <InventoryDocsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/docs/:docId',
+    element: <InventoryDocEditorPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },
