@@ -1,10 +1,10 @@
 // src/components/Routes/RequireRole.tsx
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { usePermissions } from '../../rbac/PermissionsContext';
-import type { RoleName } from '../../services/userService';
+import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../rbac/PermissionsContext';
+import type { RoleName } from '../services/userService';
 import type { JSX } from 'react';
-import Spinner from '../ui/Spinner';
+import Spinner from '../components/ui/Spinner';
 
 type RequireRoleProps = {
   allow: RoleName[];

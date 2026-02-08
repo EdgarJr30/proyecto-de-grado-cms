@@ -1,8 +1,8 @@
 // src/components/Routes/RequirePerm.tsx
 import { Navigate } from 'react-router-dom';
 import type { JSX } from 'react';
-import { usePermissions } from '../../rbac/PermissionsContext';
-import Spinner from '../ui/Spinner';
+import { usePermissions } from '../rbac/PermissionsContext';
+import Spinner from '../components/ui/Spinner';
 
 export default function RequirePerm({
   allow,

@@ -1,23 +1,23 @@
 import type { JSX } from 'react';
 import { Navigate } from 'react-router-dom';
-import CreateTicketPage from '../../pages/CreateTicketPage';
-import LoginPage from '../../pages/LoginPage';
-import WorkOrdersPage from '../../pages/WorkOrdersPage';
-import WorkRequestsPage from '../../pages/WorkRequestsPage';
-import UserManagementPage from '../../pages/UserManagementPage';
-import MyTicketsPage from '../../pages/MyTicketsPage';
-import ForbiddenPage from '../../pages/ForbiddenPage';
-import ReportsPage from '../../pages/ReportsPage';
-import AssigneeManagementPage from '../../pages/admin/AssigneePage';
-import RoleManagementPage from '../../pages/admin/RoleManagementPage';
-import RoleEditPage from '../../pages/admin/RoleEditPage';
-import DashboardPage from '../../pages/DashboardPage';
-import AdminSettingsPage from '../../pages/admin/AdminSettingsPage';
-import AdminSettingsHubPage from '../../pages/admin/AdminSettingsHubPage';
-import SpecialIncidentsManagementPage from '../../pages/admin/SpecialIncidentsPage';
-import AnnouncementsManagmentPage from '../../pages/admin/AnnouncementsManagementPage';
-import SocietiesManagementPage from '../../pages/admin/SocietiesManagementPage';
-import AssetsHomePage from '../../pages/admin/AssetsHomePage';
+import CreateTicketPage from '../pages/CreateTicketPage';
+import LoginPage from '../pages/LoginPage';
+import WorkOrdersPage from '../pages/WorkOrdersPage';
+import WorkRequestsPage from '../pages/WorkRequestsPage';
+import UserManagementPage from '../pages/UserManagementPage';
+import MyTicketsPage from '../pages/MyTicketsPage';
+import ForbiddenPage from '../pages/ForbiddenPage';
+import ReportsPage from '../pages/ReportsPage';
+import AssigneeManagementPage from '../pages/admin/AssigneePage';
+import RoleManagementPage from '../pages/admin/RoleManagementPage';
+import RoleEditPage from '../pages/admin/RoleEditPage';
+import DashboardPage from '../pages/DashboardPage';
+import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
+import AdminSettingsHubPage from '../pages/admin/AdminSettingsHubPage';
+import SpecialIncidentsManagementPage from '../pages/admin/SpecialIncidentsPage';
+import AnnouncementsManagmentPage from '../pages/admin/AnnouncementsManagementPage';
+import SocietiesManagementPage from '../pages/admin/SocietiesManagementPage';
+import AssetsHomePage from '../pages/admin/AssetsHomePage';
 
 // Tipado de la ruta
 export type AppRoute = {

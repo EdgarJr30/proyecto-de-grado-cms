@@ -4,7 +4,7 @@ import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
 import { useAuth } from '../../context/AuthContext';
 import { useUser } from '../../context/UserContext';
-import { APP_ROUTES } from '../Routes/appRoutes';
+import { APP_ROUTES } from '../../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useBranding } from '../../context/BrandingContext';
 import Footer from '../ui/Footer';
