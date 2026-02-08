@@ -35,7 +35,7 @@ const p = (
   description,
 });
 
-//Helpers tipados para recursos y códigos de permiso
+// Helpers tipados para recursos y códigos de permiso
 export const RESOURCES = {
   home: 'home',
   work_orders: 'work_orders',
@@ -49,6 +49,7 @@ export const RESOURCES = {
   society: 'society',
   locations: 'locations',
   assets: 'assets',
+  inventory: 'inventory',
 } as const;
 
 type Resource = (typeof RESOURCES)[keyof typeof RESOURCES];
@@ -161,5 +162,19 @@ export const PERMISSIONS: PermissionDef[] = [
     RESOURCES.assets,
     'full_access',
     'Acceso total activos (crear/modificar/eliminar/asignar a tickets)'
+  ),
+
+  // Inventory (Stock / Parts / Docs / Kardex / Reorder / Requests)
+  p(RESOURCES.inventory, 'read', 'Ver inventario (stock, kardex, docs, etc.)'),
+  p(RESOURCES.inventory, 'create', 'Crear documentos de inventario (DRAFT)'),
+  p(RESOURCES.inventory, 'update', 'Editar documentos de inventario (DRAFT)'),
+  p(RESOURCES.inventory, 'delete', 'Eliminar documentos/líneas de inventario'),
+  p(RESOURCES.inventory, 'approve', 'Postear documentos de inventario'),
+  p(RESOURCES.inventory, 'cancel', 'Cancelar documentos de inventario'),
+  p(RESOURCES.inventory, 'work', 'Reservar repuestos para OT (WO)'),
+  p(
+    RESOURCES.inventory,
+    'full_access',
+    'Acceso total inventario (maestros + movimientos)'
   ),
 ];
