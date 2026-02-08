@@ -22,6 +22,9 @@ import InventoryHomePage from '../pages/inventory/InventoryHomePage';
 import UomsPage from '../pages/inventory/UomsPage';
 import PartCategoriesPage from '../pages/inventory/PartCategoriesPage';
 import PartsPage from '../pages/inventory/PartsPage';
+import WarehousesPage from '../pages/inventory/WarehousesPage';
+import WarehouseBinsPage from '../pages/inventory/WarehouseBinsPage';
+import StockOverviewPage from '../pages/inventory/StockOverviewPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -371,6 +374,24 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/parts',
     element: <PartsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/warehouses',
+    element: <WarehousesPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/warehouses/:warehouseId/bins',
+    element: <WarehouseBinsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/availability',
+    element: <StockOverviewPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },
