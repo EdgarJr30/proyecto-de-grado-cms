@@ -23,6 +23,7 @@ import {
   showToastError,
   confirmArchiveWorkOrder,
 } from '../../../notifications/index';
+import TicketPartsPanel from '../../../pages/inventory/TicketPartsPanel';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -600,6 +601,23 @@ export default function EditWorkOrdersModal({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ✅ Repuestos (solo si is_accepted=true) */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-gray-900">Repuestos</h3>
+          {!edited.is_accepted && (
+            <span className="text-xs text-gray-500">
+              Disponible al aceptar (WO)
+            </span>
+          )}
+        </div>
+
+        <TicketPartsPanel
+          ticketId={Number(ticket.id)}
+          isAccepted={Boolean(edited.is_accepted)}
+        />
       </div>
 
       {/* Lightbox imágenes */}
