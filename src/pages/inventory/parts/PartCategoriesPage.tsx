@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
-import { usePermissions } from '../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../notifications';
+import Sidebar from '../../../components/layout/Sidebar';
+import { usePermissions } from '../../../rbac/PermissionsContext';
+import { showToastError, showToastSuccess } from '../../../notifications';
 import type {
   PartCategoryInsert,
   PartCategoryRow,
   PartCategoryUpdate,
-} from '../../types/inventory';
+} from '../../../types/inventory';
 import {
   listPartCategories,
   createPartCategory,
   updatePartCategory,
   deletePartCategory,
-} from '../../services/inventory';
+} from '../../../services/inventory';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');

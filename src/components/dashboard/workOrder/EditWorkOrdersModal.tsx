@@ -23,7 +23,7 @@ import {
   showToastError,
   confirmArchiveWorkOrder,
 } from '../../../notifications/index';
-import TicketPartsPanel from '../../../pages/inventory/TicketPartsPanel';
+import TicketPartsPanel from '../../../pages/inventory/parts/TicketPartsPanel';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;

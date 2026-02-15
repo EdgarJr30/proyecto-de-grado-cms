@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { showToastError, showToastSuccess } from '../../notifications';
+import { showToastError, showToastSuccess } from '../../../notifications';
 import type {
   AvailableStockRow,
   PartPick,
   TicketPartRequestRow,
   WarehousePick,
-} from '../../types/inventory/inventoryRequests';
+} from '../../../types/inventory/inventoryRequests';
 import {
   getAvailableStock,
   listPartsPick,
   listTicketPartRequests,
   listWarehousesPick,
   reserveTicketPart,
-} from '../../services/inventory/inventoryRequests';
+} from '../../../services/inventory/inventoryRequests';
 
 type Props = {
   ticketId: number;
