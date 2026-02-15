@@ -29,6 +29,8 @@ import InventoryDocsPage from '../pages/inventory/InventoryDocsPage';
 import InventoryDocEditorPage from '../pages/inventory/InventoryDocEditorPage';
 import VendorsPage from '../pages/inventory/VendorsPage';
 import PartVendorsPage from '../pages/inventory/PartVendorsPage';
+import ReorderPoliciesPage from '../pages/inventory/ReorderPoliciesPage';
+import ReorderSuggestionsPage from '../pages/inventory/ReorderSuggestionsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -420,6 +422,18 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/part_vendors',
     element: <PartVendorsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/reorder',
+    element: <ReorderPoliciesPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/reorder_suggestions',
+    element: <ReorderSuggestionsPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },

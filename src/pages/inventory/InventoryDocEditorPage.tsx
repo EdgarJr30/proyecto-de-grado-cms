@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
@@ -30,11 +30,62 @@ import {
 
 import { inv } from '../../services/inventory/inventoryClient';
 
+import DocLinesTableDesktop from './DocLinesTableDesktop';
+import DocLineCardMobile from './DocLineCardMobile';
+
+import {
+  confirmCancelDoc,
+  confirmDeleteDoc,
+  confirmDeleteLine,
+  confirmPostDoc,
+} from '../../notifications/inventoryAlerts';
+
+import {
+  ChevronRight,
+  ArrowLeft,
+  Save,
+  Send,
+  XCircle,
+  Trash2,
+  Plus,
+  FileText,
+  Warehouse as WarehouseIcon,
+  Truck,
+  Hash,
+  Link2,
+  MessageSquare,
+  AlertTriangle,
+  Boxes,
+  Info,
+  CircleDot,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ArrowRightLeft,
+  SlidersHorizontal,
+  RotateCcw,
+} from 'lucide-react';
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-/** ===== Lookups mínimos ===== */
+function SeparatorLite(props: {
+  className?: string;
+  orientation?: 'horizontal' | 'vertical';
+}) {
+  const o = props.orientation ?? 'horizontal';
+  return (
+    <div
+      className={cx(
+        o === 'horizontal' ? 'h-px w-full' : 'w-px h-full',
+        'bg-slate-200',
+        props.className
+      )}
+    />
+  );
+}
+
+/** ===== Lookups ===== */
 type Option = { id: UUID; label: string };
 type Warehouse = { id: UUID; code: string; name: string; is_active: boolean };
 type Vendor = { id: UUID; name: string; is_active: boolean };
@@ -93,7 +144,9 @@ async function listBinsByWarehouse(warehouseId: UUID): Promise<Bin[]> {
   if (error) throw error;
   return (data ?? []) as Bin[];
 }
-/** ========================================================= */
+
+/** ===== helpers ===== */
+type DocStatus = InventoryDocRow['status'];
 
 function labelType(t: InventoryDocType) {
   switch (t) {
@@ -110,22 +163,55 @@ function labelType(t: InventoryDocType) {
   }
 }
 
-function statusBadge(status: InventoryDocRow['status']) {
+function docTypeIcon(t: InventoryDocType) {
+  switch (t) {
+    case 'RECEIPT':
+      return ArrowDownToLine;
+    case 'ISSUE':
+      return ArrowUpFromLine;
+    case 'TRANSFER':
+      return ArrowRightLeft;
+    case 'ADJUSTMENT':
+      return SlidersHorizontal;
+    case 'RETURN':
+      return RotateCcw;
+  }
+}
+
+function docTypeBadgeClass(t: InventoryDocType) {
+  switch (t) {
+    case 'RECEIPT':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'ISSUE':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'TRANSFER':
+      return 'bg-sky-50 text-sky-700 border-sky-200';
+    case 'ADJUSTMENT':
+      return 'bg-violet-50 text-violet-700 border-violet-200';
+    case 'RETURN':
+      return 'bg-rose-50 text-rose-700 border-rose-200';
+  }
+}
+
+function statusConfig(status: DocStatus) {
   switch (status) {
     case 'DRAFT':
       return {
-        text: 'DRAFT',
-        cls: 'bg-amber-50 text-amber-800 border-amber-200',
+        text: 'BORRADOR',
+        className: 'bg-amber-50 text-amber-700 border-amber-200',
+        dot: 'bg-amber-500',
       };
     case 'POSTED':
       return {
-        text: 'POSTED',
-        cls: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+        text: 'POSTEADO',
+        className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        dot: 'bg-emerald-500',
       };
     case 'CANCELLED':
       return {
-        text: 'CANCELLED',
-        cls: 'bg-rose-50 text-rose-800 border-rose-200',
+        text: 'CANCELADO',
+        className: 'bg-rose-50 text-rose-700 border-rose-200',
+        dot: 'bg-rose-500',
       };
   }
 }
@@ -162,44 +248,81 @@ type DocHeaderPatch = Partial<
   >
 >;
 
-function SectionTitle(props: {
-  title: string;
-  subtitle?: string;
-  right?: React.ReactNode;
-}) {
+function StatusTimeline({ status }: { status: DocStatus }) {
+  const steps = [
+    { key: 'DRAFT' as const, label: 'Borrador' },
+    { key: 'POSTED' as const, label: 'Posteado' },
+  ];
+  const currentIdx =
+    status === 'CANCELLED' ? -1 : steps.findIndex((s) => s.key === status);
+
   return (
-    <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="text-sm font-semibold text-gray-900">{props.title}</div>
-        {props.subtitle ? (
-          <div className="mt-0.5 text-xs text-gray-500">{props.subtitle}</div>
-        ) : null}
+    <div className="flex items-center gap-2">
+      {steps.map((s, i) => {
+        const isActive = i <= currentIdx;
+        const isCurrent = s.key === status;
+        return (
+          <div key={s.key} className="flex items-center gap-2">
+            {i > 0 ? (
+              <div
+                className={cx(
+                  'h-[2px] w-8 rounded-full',
+                  isActive ? 'bg-blue-600' : 'bg-slate-200'
+                )}
+              />
+            ) : null}
+            <div className="flex items-center gap-2">
+              <div
+                className={cx(
+                  'h-2.5 w-2.5 rounded-full',
+                  isCurrent
+                    ? 'bg-blue-600 ring-2 ring-blue-600/20'
+                    : isActive
+                      ? 'bg-blue-600'
+                      : 'bg-slate-200'
+                )}
+              />
+              <span
+                className={cx(
+                  'text-xs',
+                  isActive ? 'text-slate-700' : 'text-slate-400'
+                )}
+              >
+                {s.label}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      <div className="h-4 w-32 bg-slate-200 rounded" />
+      <div className="h-10 w-full bg-slate-200 rounded" />
+      <div className="h-4 w-24 bg-slate-200 rounded" />
+      <div className="h-10 w-full bg-slate-200 rounded" />
+      <div className="h-4 w-28 bg-slate-200 rounded" />
+      <div className="h-24 w-full bg-slate-200 rounded" />
+    </div>
+  );
+}
+
+function EmptyLines() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4">
+      <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-slate-100 mb-4">
+        <Boxes className="h-7 w-7 text-slate-400" />
       </div>
-      {props.right ? <div className="shrink-0">{props.right}</div> : null}
+      <h3 className="text-sm font-semibold text-slate-900">Sin líneas</h3>
+      <p className="mt-1 text-xs text-slate-500 text-center max-w-xs">
+        Este documento no tiene líneas. Agrega al menos 1 para poder postear.
+      </p>
     </div>
   );
-}
-
-function Field(props: {
-  label: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-700">
-        {props.label}
-      </label>
-      <div className="mt-1">{props.children}</div>
-      {props.hint ? (
-        <p className="mt-1 text-[11px] text-gray-500">{props.hint}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function Divider() {
-  return <div className="h-px bg-gray-100" />;
 }
 
 export default function InventoryDocEditorPage() {
@@ -217,7 +340,6 @@ export default function InventoryDocEditorPage() {
   const [doc, setDoc] = useState<InventoryDocRow | null>(null);
   const [lines, setLines] = useState<InventoryDocLineRow[]>([]);
 
-  // Draft (edición local)
   const [draftDoc, setDraftDoc] = useState<InventoryDocRow | null>(null);
   const [draftLines, setDraftLines] = useState<InventoryDocLineRow[]>([]);
   const [isDirtyHeader, setIsDirtyHeader] = useState(false);
@@ -275,10 +397,8 @@ export default function InventoryDocEditorPage() {
       if (!prev) return prev;
       const next = { ...prev, ...patch } as InventoryDocRow;
 
-      // lookups bins (solo UI)
-      if (needsSingleWarehouse(next.doc_type)) {
+      if (needsSingleWarehouse(next.doc_type))
         void ensureBinsLoaded(next.warehouse_id ?? undefined);
-      }
       if (needsTransferWarehouses(next.doc_type)) {
         void ensureBinsLoaded(next.from_warehouse_id ?? undefined);
         void ensureBinsLoaded(next.to_warehouse_id ?? undefined);
@@ -286,6 +406,7 @@ export default function InventoryDocEditorPage() {
 
       return next;
     });
+
     setIsDirtyHeader(true);
   }
 
@@ -305,6 +426,7 @@ export default function InventoryDocEditorPage() {
   async function loadAll() {
     if (!docId) return;
     setLoading(true);
+
     try {
       const [d, ls, whs, vs, ps] = await Promise.all([
         getInventoryDoc(docId as UUID),
@@ -317,7 +439,6 @@ export default function InventoryDocEditorPage() {
       setDoc(d);
       setLines(ls);
 
-      // drafts
       setDraftDoc(d);
       setDraftLines(ls);
       setIsDirtyHeader(false);
@@ -335,7 +456,7 @@ export default function InventoryDocEditorPage() {
       }
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] loadAll error raw:', error);
     } finally {
       setLoading(false);
     }
@@ -354,7 +475,6 @@ export default function InventoryDocEditorPage() {
 
     setIsSavingDraft(true);
     try {
-      // 1) Header
       if (isDirtyHeader) {
         const patch: DocHeaderPatch = {
           warehouse_id: draftDoc.warehouse_id ?? null,
@@ -368,7 +488,6 @@ export default function InventoryDocEditorPage() {
         await updateInventoryDoc(doc.id, patch);
       }
 
-      // 2) Lines (solo dirty)
       if (dirtyLineIds.size > 0) {
         const dirtyIds = Array.from(dirtyLineIds);
 
@@ -377,11 +496,9 @@ export default function InventoryDocEditorPage() {
             const l = draftLines.find((x) => x.id === id);
             if (!l) return;
 
-            // validación mínima
             const qty = Number(l.qty);
-            if (!Number.isFinite(qty)) {
+            if (!Number.isFinite(qty))
               throw new Error(`Qty inválido en línea #${l.line_no}`);
-            }
 
             const unitCost = l.unit_cost === null ? null : Number(l.unit_cost);
             if (unitCost !== null && !Number.isFinite(unitCost)) {
@@ -405,7 +522,7 @@ export default function InventoryDocEditorPage() {
       await loadAll();
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onSaveDraft error raw:', error);
     } finally {
       setIsSavingDraft(false);
     }
@@ -452,7 +569,6 @@ export default function InventoryDocEditorPage() {
 
     try {
       const inserted = await addInventoryDocLines([payload]);
-
       const merged = (prev: InventoryDocLineRow[]) =>
         [...prev, ...inserted].sort((a, b) => a.line_no - b.line_no);
 
@@ -462,17 +578,22 @@ export default function InventoryDocEditorPage() {
       showToastSuccess('Línea agregada.');
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onAddLine error raw:', error);
     }
   }
 
   async function onDeleteLine(lineId: UUID) {
     if (!editable || !canWrite) return;
+
+    const l = draftLines.find((x) => x.id === lineId);
+    const ok = await confirmDeleteLine(l?.line_no);
+    if (!ok) return;
+
     try {
       await deleteInventoryDocLine(lineId);
 
-      setLines((prev) => prev.filter((l) => l.id !== lineId));
-      setDraftLines((prev) => prev.filter((l) => l.id !== lineId));
+      setLines((prev) => prev.filter((x) => x.id !== lineId));
+      setDraftLines((prev) => prev.filter((x) => x.id !== lineId));
       setDirtyLineIds((prev) => {
         const next = new Set(prev);
         next.delete(lineId);
@@ -482,7 +603,7 @@ export default function InventoryDocEditorPage() {
       showToastSuccess('Línea eliminada.');
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onDeleteLine error raw:', error);
     }
   }
 
@@ -490,13 +611,16 @@ export default function InventoryDocEditorPage() {
     if (!doc) return;
     if (!editable) return;
 
+    const ok = await confirmPostDoc(doc.doc_no ?? null);
+    if (!ok) return;
+
     try {
       await postInventoryDoc(doc.id);
       showToastSuccess('Documento posteado.');
       await loadAll();
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onPost error raw:', error);
     }
   }
 
@@ -504,13 +628,16 @@ export default function InventoryDocEditorPage() {
     if (!doc) return;
     if (doc.status !== 'POSTED') return;
 
+    const ok = await confirmCancelDoc(doc.doc_no ?? null);
+    if (!ok) return;
+
     try {
       const revId = await cancelInventoryDoc(doc.id);
       showToastSuccess('Documento cancelado. Reversa generada.');
       nav(`/inventory/docs/${revId}`);
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onCancel error raw:', error);
     }
   }
 
@@ -518,9 +645,7 @@ export default function InventoryDocEditorPage() {
     if (!doc) return;
     if (!editable || !canWrite) return;
 
-    const ok = window.confirm(
-      '¿Eliminar este documento DRAFT? (no se puede deshacer)'
-    );
+    const ok = await confirmDeleteDoc(doc.doc_no ?? null);
     if (!ok) return;
 
     try {
@@ -529,17 +654,17 @@ export default function InventoryDocEditorPage() {
       nav('/inventory/docs');
     } catch (error: unknown) {
       showToastError(formatError(error));
-      console.error('[InventoryDocEditorPage] error raw:', error);
+      console.error('[InventoryDocEditorPage] onDeleteDoc error raw:', error);
     }
   }
 
   if (!canRead) {
     return (
-      <div className="h-screen flex bg-gray-100">
+      <div className="h-screen flex bg-slate-50">
         <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
-            <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
               No tienes permisos para acceder a este módulo.
             </div>
           </div>
@@ -548,855 +673,557 @@ export default function InventoryDocEditorPage() {
     );
   }
 
-  const badge = doc ? statusBadge(doc.status) : null;
-
-  // Para UI editable usamos draft, pero el estado real (POSTED/CANCELLED) viene de doc
   const uiDoc = draftDoc ?? doc;
-
-  // Bloquea POST si hay cambios sin guardar (flujo simple)
   const postDisabled =
     !canWrite || draftLines.length === 0 || hasUnsavedChanges;
 
+  const badge = doc ? statusConfig(doc.status) : null;
+  const TypeIcon = doc ? docTypeIcon(doc.doc_type) : FileText;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const totalQty = useMemo(
+    () => draftLines.reduce((acc, l) => acc + (Number(l.qty) || 0), 0),
+    [draftLines]
+  );
+
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="h-screen flex bg-slate-50 text-slate-900">
       <Sidebar />
 
-      <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        {/* Top bar */}
-        <header className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6">
-          <div className="rounded-2xl border bg-white shadow-sm px-4 py-3 md:px-5 md:py-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                  <Link to="/inventory" className="hover:underline">
-                    Inventario
-                  </Link>
-                  <span>/</span>
-                  <Link to="/inventory/docs" className="hover:underline">
-                    Documentos
-                  </Link>
-                  <span>/</span>
-                  <span className="text-gray-700">Editor</span>
+      <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
+        {/* Header */}
+        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
+          <div className="px-4 md:px-6 lg:px-8 py-4">
+            <div className="flex flex-col gap-3">
+              <nav className="flex items-center gap-1.5 text-xs text-slate-500">
+                <Link to="/inventario" className="hover:text-slate-900">
+                  Inventario
+                </Link>
+                <ChevronRight className="h-3 w-3" />
+                <Link to="/inventory/docs" className="hover:text-slate-900">
+                  Documentos
+                </Link>
+                <ChevronRight className="h-3 w-3" />
+                <span className="text-slate-900 font-medium">Editor</span>
+              </nav>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-blue-50">
+                    <TypeIcon className="h-5 w-5 text-blue-700" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">
+                        {doc?.doc_no ?? (loading ? 'Cargando…' : 'Documento')}
+                      </h1>
+
+                      {badge ? (
+                        <span
+                          className={cx(
+                            'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px] font-semibold',
+                            badge.className
+                          )}
+                        >
+                          <span
+                            className={cx(
+                              'h-1.5 w-1.5 rounded-full',
+                              badge.dot
+                            )}
+                          />
+                          {badge.text}
+                        </span>
+                      ) : null}
+
+                      {doc ? (
+                        <span
+                          className={cx(
+                            'inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-medium',
+                            docTypeBadgeClass(doc.doc_type)
+                          )}
+                        >
+                          {labelType(doc.doc_type)}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="flex items-center gap-3 mt-1">
+                      {doc ? <StatusTimeline status={doc.status} /> : null}
+
+                      {doc?.status === 'DRAFT' && hasUnsavedChanges ? (
+                        <span className="flex items-center gap-1 text-xs text-amber-700">
+                          <CircleDot className="h-3 w-3" />
+                          Cambios sin guardar
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900">
-                    {doc?.doc_no ? `Documento ${doc.doc_no}` : 'Documento'}
-                  </h2>
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <Link
+                    to="/inventory/docs"
+                    className="inline-flex items-center h-9 px-3 rounded-md border border-slate-200 bg-white text-sm font-semibold hover:bg-slate-50"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Volver
+                  </Link>
 
-                  {badge ? (
-                    <span
+                  {doc?.reversal_doc_id ? (
+                    <Link
+                      to={`/inventory/docs/${doc.reversal_doc_id}`}
+                      className="inline-flex items-center h-9 px-3 rounded-md border border-slate-200 bg-white text-sm font-semibold hover:bg-slate-50"
+                    >
+                      Ver reversa →
+                    </Link>
+                  ) : null}
+
+                  {doc?.status === 'DRAFT' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void onSaveDraft()}
+                        disabled={
+                          !canWrite || !hasUnsavedChanges || isSavingDraft
+                        }
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md border text-sm font-semibold',
+                          !canWrite || !hasUnsavedChanges || isSavingDraft
+                            ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        )}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        {isSavingDraft ? 'Guardando…' : 'Guardar'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void onPost()}
+                        disabled={postDisabled}
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                          postDisabled
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        )}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Postear
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => void onDeleteDoc()}
+                        disabled={!canWrite}
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md border text-sm font-semibold',
+                          !canWrite
+                            ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                            : 'border-rose-200 text-rose-700 bg-white hover:bg-rose-50'
+                        )}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </button>
+                    </>
+                  ) : null}
+
+                  {doc?.status === 'POSTED' ? (
+                    <button
+                      type="button"
+                      onClick={() => void onCancel()}
+                      disabled={!canWrite}
                       className={cx(
-                        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium',
-                        badge.cls
+                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                        !canWrite
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                          : 'bg-rose-600 hover:bg-rose-700 text-white'
                       )}
                     >
-                      {badge.text}
-                    </span>
-                  ) : null}
-
-                  {doc ? (
-                    <span className="text-sm text-gray-600">
-                      • {labelType(doc.doc_type)}
-                    </span>
-                  ) : null}
-
-                  {doc?.status === 'DRAFT' && hasUnsavedChanges ? (
-                    <span className="text-xs text-amber-700">
-                      • Cambios sin guardar
-                    </span>
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </button>
                   ) : null}
                 </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  to="/inventory/docs"
-                  className="h-9 inline-flex items-center rounded-xl border bg-white px-3 text-sm hover:bg-gray-50"
-                >
-                  ← Volver
-                </Link>
-
-                {doc?.reversal_doc_id ? (
-                  <Link
-                    to={`/inventory/docs/${doc.reversal_doc_id}`}
-                    className="h-9 inline-flex items-center rounded-xl border bg-white px-3 text-sm hover:bg-gray-50"
-                  >
-                    Ver reversa →
-                  </Link>
-                ) : null}
-
-                {doc?.status === 'DRAFT' ? (
-                  <button
-                    type="button"
-                    onClick={() => void onSaveDraft()}
-                    disabled={!canWrite || !hasUnsavedChanges || isSavingDraft}
-                    className={cx(
-                      'h-9 rounded-xl px-4 text-sm font-medium transition',
-                      'bg-gray-900 text-white hover:bg-gray-800',
-                      (!canWrite || !hasUnsavedChanges || isSavingDraft) &&
-                        'opacity-50 cursor-not-allowed'
-                    )}
-                    title={
-                      !hasUnsavedChanges
-                        ? 'No hay cambios por guardar'
-                        : 'Guardar borrador'
-                    }
-                  >
-                    {isSavingDraft ? 'Guardando…' : 'Guardar borrador'}
-                  </button>
-                ) : null}
-
-                {doc?.status === 'DRAFT' ? (
-                  <button
-                    type="button"
-                    onClick={() => void onPost()}
-                    disabled={postDisabled}
-                    className={cx(
-                      'h-9 rounded-xl px-4 text-sm font-medium transition',
-                      'bg-emerald-600 text-white hover:bg-emerald-700',
-                      postDisabled && 'opacity-50 cursor-not-allowed'
-                    )}
-                    title={
-                      hasUnsavedChanges
-                        ? 'Guarda el borrador antes de postear'
-                        : draftLines.length === 0
-                          ? 'Agrega líneas antes de postear'
-                          : 'Post'
-                    }
-                  >
-                    Post
-                  </button>
-                ) : null}
-
-                {doc?.status === 'POSTED' ? (
-                  <button
-                    type="button"
-                    onClick={() => void onCancel()}
-                    disabled={!canWrite}
-                    className={cx(
-                      'h-9 rounded-xl px-4 text-sm font-medium transition',
-                      'bg-rose-600 text-white hover:bg-rose-700',
-                      !canWrite && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    Cancelar
-                  </button>
-                ) : null}
-
-                {doc?.status === 'DRAFT' ? (
-                  <button
-                    type="button"
-                    onClick={() => void onDeleteDoc()}
-                    disabled={!canWrite}
-                    className={cx(
-                      'h-9 rounded-xl border bg-white px-4 text-sm hover:bg-gray-50',
-                      !canWrite && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    Eliminar
-                  </button>
-                ) : null}
               </div>
             </div>
           </div>
         </header>
 
-        <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto">
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-            {/* Header card */}
-            <div className="xl:col-span-4">
-              <div className="rounded-2xl border bg-white shadow-sm">
-                <div className="p-4 md:p-5">
-                  <SectionTitle
-                    title="Header"
-                    subtitle={doc ? `Estado: ${doc.status}` : 'Cargando…'}
-                  />
-                </div>
-                <Divider />
-                <div className="p-4 md:p-5 space-y-4">
-                  {loading && (
-                    <div className="text-sm text-gray-500">Cargando…</div>
-                  )}
-
-                  {!loading && uiDoc && (
-                    <>
-                      <Field label="Tipo">
-                        <div className="h-10 flex items-center rounded-xl border bg-gray-50 px-3 text-sm font-medium text-gray-900">
-                          {labelType(uiDoc.doc_type)}
+        {/* Body */}
+        <section className="flex-1 min-h-0 overflow-auto">
+          <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+              {/* LEFT */}
+              <div className="xl:col-span-4 space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-blue-700" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">
+                          Header del documento
                         </div>
-                      </Field>
+                        <div className="text-[11px] text-slate-500">
+                          {doc ? `Estado: ${doc.status}` : 'Cargando…'}
+                        </div>
+                      </div>
+                    </div>
 
-                      {needsSingleWarehouse(uiDoc.doc_type) ? (
-                        <Field
-                          label="Warehouse"
-                          hint={`Requerido para ${uiDoc.doc_type} (según tu SQL).`}
-                        >
-                          <select
-                            className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
-                            disabled={!editable}
-                            value={uiDoc.warehouse_id ?? ''}
-                            onChange={(e) =>
-                              patchDraftDoc({
-                                warehouse_id: (e.target.value ||
-                                  null) as UUID | null,
-                              })
-                            }
-                          >
-                            <option value="">— Seleccionar —</option>
-                            {whOptions.map((o) => (
-                              <option key={o.id} value={o.id}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
-                      ) : null}
+                    {!editable && doc ? (
+                      <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                        Solo lectura
+                      </span>
+                    ) : null}
+                  </div>
 
-                      {needsTransferWarehouses(uiDoc.doc_type) ? (
-                        <div className="grid grid-cols-1 gap-3">
-                          <Field label="From warehouse">
+                  <div className="p-5 space-y-4">
+                    {loading ? (
+                      <LoadingSkeleton />
+                    ) : uiDoc ? (
+                      <>
+                        <div>
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <FileText className="h-3.5 w-3.5" />
+                            Tipo de documento
+                          </label>
+                          <div className="mt-1 h-10 flex items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm font-semibold">
+                            {labelType(uiDoc.doc_type)}
+                          </div>
+                        </div>
+
+                        {needsSingleWarehouse(uiDoc.doc_type) ? (
+                          <div>
+                            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                              <WarehouseIcon className="h-3.5 w-3.5" />
+                              Warehouse
+                            </label>
                             <select
-                              className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
+                              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                               disabled={!editable}
-                              value={uiDoc.from_warehouse_id ?? ''}
+                              value={uiDoc.warehouse_id ?? ''}
                               onChange={(e) =>
                                 patchDraftDoc({
-                                  from_warehouse_id: (e.target.value ||
+                                  warehouse_id: (e.target.value ||
                                     null) as UUID | null,
                                 })
                               }
                             >
-                              <option value="">— Seleccionar —</option>
+                              <option value="">-- Seleccionar --</option>
                               {whOptions.map((o) => (
                                 <option key={o.id} value={o.id}>
                                   {o.label}
                                 </option>
                               ))}
                             </select>
-                          </Field>
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              Requerido para {uiDoc.doc_type}.
+                            </p>
+                          </div>
+                        ) : null}
 
-                          <Field label="To warehouse">
+                        {needsTransferWarehouses(uiDoc.doc_type) ? (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                <WarehouseIcon className="h-3.5 w-3.5" />
+                                From warehouse
+                              </label>
+                              <select
+                                className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                disabled={!editable}
+                                value={uiDoc.from_warehouse_id ?? ''}
+                                onChange={(e) =>
+                                  patchDraftDoc({
+                                    from_warehouse_id: (e.target.value ||
+                                      null) as UUID | null,
+                                  })
+                                }
+                              >
+                                <option value="">-- Seleccionar --</option>
+                                {whOptions.map((o) => (
+                                  <option key={o.id} value={o.id}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                <WarehouseIcon className="h-3.5 w-3.5" />
+                                To warehouse
+                              </label>
+                              <select
+                                className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                                disabled={!editable}
+                                value={uiDoc.to_warehouse_id ?? ''}
+                                onChange={(e) =>
+                                  patchDraftDoc({
+                                    to_warehouse_id: (e.target.value ||
+                                      null) as UUID | null,
+                                  })
+                                }
+                              >
+                                <option value="">-- Seleccionar --</option>
+                                {whOptions.map((o) => (
+                                  <option key={o.id} value={o.id}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {needsVendor(uiDoc.doc_type) ? (
+                          <div>
+                            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                              <Truck className="h-3.5 w-3.5" />
+                              Proveedor
+                            </label>
                             <select
-                              className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
+                              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                               disabled={!editable}
-                              value={uiDoc.to_warehouse_id ?? ''}
+                              value={uiDoc.vendor_id ?? ''}
                               onChange={(e) =>
                                 patchDraftDoc({
-                                  to_warehouse_id: (e.target.value ||
+                                  vendor_id: (e.target.value ||
                                     null) as UUID | null,
                                 })
                               }
                             >
-                              <option value="">— Seleccionar —</option>
-                              {whOptions.map((o) => (
+                              <option value="">-- Opcional --</option>
+                              {vendorOptions.map((o) => (
                                 <option key={o.id} value={o.id}>
                                   {o.label}
                                 </option>
                               ))}
                             </select>
-                          </Field>
-                        </div>
-                      ) : null}
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              Recomendado para RECEIPT.
+                            </p>
+                          </div>
+                        ) : null}
 
-                      {needsVendor(uiDoc.doc_type) ? (
-                        <Field
-                          label="Proveedor"
-                          hint="Recomendado para RECEIPT."
-                        >
-                          <select
-                            className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
-                            disabled={!editable}
-                            value={uiDoc.vendor_id ?? ''}
-                            onChange={(e) =>
-                              patchDraftDoc({
-                                vendor_id: (e.target.value ||
-                                  null) as UUID | null,
-                              })
-                            }
-                          >
-                            <option value="">— Opcional —</option>
-                            {vendorOptions.map((o) => (
-                              <option key={o.id} value={o.id}>
-                                {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
-                      ) : null}
+                        {needsTicket(uiDoc.doc_type) ? (
+                          <div>
+                            <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                              <Hash className="h-3.5 w-3.5" />
+                              Ticket (WO)
+                            </label>
+                            <input
+                              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                              disabled={!editable}
+                              value={uiDoc.ticket_id ?? ''}
+                              onChange={(e) => {
+                                const v = e.target.value.trim();
+                                const n = v.length ? Number(v) : null;
+                                patchDraftDoc({
+                                  ticket_id: Number.isFinite(n) ? n : null,
+                                });
+                              }}
+                              placeholder="Ej: 12345"
+                            />
+                            <p className="mt-1 text-[11px] text-slate-500">
+                              El trigger exige ticket aceptado.
+                            </p>
+                          </div>
+                        ) : null}
 
-                      {needsTicket(uiDoc.doc_type) ? (
-                        <Field
-                          label="Ticket (WO)"
-                          hint="En ISSUE/RETURN tu trigger exige que el ticket esté aceptado."
-                        >
+                        <SeparatorLite className="my-2" />
+
+                        <div>
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <Link2 className="h-3.5 w-3.5" />
+                            Referencia
+                          </label>
                           <input
-                            className="h-10 w-full rounded-xl border px-3 text-sm"
+                            className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                             disabled={!editable}
-                            value={uiDoc.ticket_id ?? ''}
-                            onChange={(e) => {
-                              const v = e.target.value.trim();
-                              const n = v.length ? Number(v) : null;
-                              patchDraftDoc({
-                                ticket_id: Number.isFinite(n) ? n : null,
-                              });
-                            }}
-                            placeholder="Ej: 12345"
+                            value={uiDoc.reference ?? ''}
+                            onChange={(e) =>
+                              patchDraftDoc({ reference: e.target.value })
+                            }
+                            placeholder="Factura, nota, motivo…"
                           />
-                        </Field>
-                      ) : null}
+                        </div>
 
-                      <Field label="Referencia">
-                        <input
-                          className="h-10 w-full rounded-xl border px-3 text-sm"
-                          disabled={!editable}
-                          value={uiDoc.reference ?? ''}
-                          onChange={(e) =>
-                            patchDraftDoc({ reference: e.target.value })
-                          }
-                          placeholder="Factura, nota, motivo…"
-                        />
-                      </Field>
+                        <div>
+                          <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            Notas
+                          </label>
+                          <textarea
+                            className="mt-1 min-h-[110px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
+                            disabled={!editable}
+                            value={uiDoc.notes ?? ''}
+                            onChange={(e) =>
+                              patchDraftDoc({ notes: e.target.value })
+                            }
+                            placeholder="Observaciones…"
+                          />
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
 
-                      <Field label="Notas">
-                        <textarea
-                          className="min-h-[120px] w-full rounded-xl border px-3 py-2 text-sm"
-                          disabled={!editable}
-                          value={uiDoc.notes ?? ''}
-                          onChange={(e) =>
-                            patchDraftDoc({ notes: e.target.value })
-                          }
-                          placeholder="Observaciones…"
+                <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Info className="h-4 w-4 text-blue-700" />
+                    Reglas del documento
+                  </div>
+                  <ul className="mt-2 text-xs text-slate-500 space-y-1.5 list-disc pl-5">
+                    <li>ISSUE/TRANSFER validan stock al postear.</li>
+                    <li>ADJUSTMENT permite qty +/- (distinto de 0).</li>
+                    <li>
+                      Guarda el borrador antes de postear si hay cambios
+                      pendientes.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* RIGHT */}
+              <div className="xl:col-span-8 space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                        <Boxes className="h-4 w-4 text-blue-700" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">
+                          Líneas del documento
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Repuesto / Qty / Bins / Unit cost
+                        </div>
+                      </div>
+
+                      <SeparatorLite
+                        orientation="vertical"
+                        className="h-6 mx-1 hidden sm:block"
+                      />
+
+                      <span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                        {draftLines.length}{' '}
+                        {draftLines.length === 1 ? 'línea' : 'líneas'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => void onAddLine()}
+                      disabled={!editable || !canWrite || !doc}
+                      className={cx(
+                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                        !editable || !canWrite || !doc
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      )}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Agregar línea
+                    </button>
+                  </div>
+
+                  {loading ? (
+                    <div className="p-5 animate-pulse space-y-3">
+                      <div className="h-10 bg-slate-200 rounded" />
+                      <div className="h-10 bg-slate-200 rounded" />
+                      <div className="h-10 bg-slate-200 rounded" />
+                    </div>
+                  ) : !uiDoc ? (
+                    <div className="p-5 text-sm text-slate-500">Cargando…</div>
+                  ) : draftLines.length === 0 ? (
+                    <EmptyLines />
+                  ) : (
+                    <>
+                      <div className="hidden lg:block">
+                        <DocLinesTableDesktop
+                          doc={uiDoc}
+                          editable={editable && canWrite}
+                          lines={draftLines}
+                          partOptions={partOptions}
+                          binsForWarehouse={getBinsForWarehouse(
+                            uiDoc.warehouse_id
+                          )}
+                          binsForFromWarehouse={getBinsForWarehouse(
+                            uiDoc.from_warehouse_id
+                          )}
+                          binsForToWarehouse={getBinsForWarehouse(
+                            uiDoc.to_warehouse_id
+                          )}
+                          onChangeLine={patchDraftLine}
+                          onRequestDeleteLine={(id) => void onDeleteLine(id)}
                         />
-                      </Field>
+                      </div>
+
+                      <div className="block lg:hidden p-4 space-y-3">
+                        {draftLines.map((l) => (
+                          <DocLineCardMobile
+                            key={l.id}
+                            doc={uiDoc}
+                            editable={editable && canWrite}
+                            line={l}
+                            partOptions={partOptions}
+                            binsForWarehouse={getBinsForWarehouse(
+                              uiDoc.warehouse_id
+                            )}
+                            binsForFromWarehouse={getBinsForWarehouse(
+                              uiDoc.from_warehouse_id
+                            )}
+                            binsForToWarehouse={getBinsForWarehouse(
+                              uiDoc.to_warehouse_id
+                            )}
+                            onChangeLine={patchDraftLine}
+                            onRequestDeleteLine={(id) => void onDeleteLine(id)}
+                          />
+                        ))}
+                      </div>
                     </>
                   )}
-                </div>
-              </div>
-            </div>
 
-            {/* Lines card */}
-            <div className="xl:col-span-8">
-              <div className="rounded-2xl border bg-white shadow-sm">
-                <div className="p-4 md:p-5">
-                  <SectionTitle
-                    title="Líneas"
-                    subtitle="Repuesto / Qty / Bins / Unit cost (según tipo)"
-                    right={
-                      <button
-                        type="button"
-                        onClick={() => void onAddLine()}
-                        disabled={!editable || !canWrite || !doc}
-                        className={cx(
-                          'h-9 rounded-xl px-3 text-sm font-medium transition',
-                          'bg-gray-900 text-white hover:bg-gray-800',
-                          (!editable || !canWrite || !doc) &&
-                            'opacity-50 cursor-not-allowed'
-                        )}
-                      >
-                        + Agregar
-                      </button>
-                    }
-                  />
-                </div>
-                <Divider />
+                  {draftLines.length > 0 ? (
+                    <div className="px-5 py-3 border-t border-slate-100 bg-white flex items-center justify-between gap-2 text-xs text-slate-500">
+                      <p>
+                        Total líneas:{' '}
+                        <span className="font-semibold text-slate-900">
+                          {draftLines.length}
+                        </span>
+                        {' | '}
+                        Qty total:{' '}
+                        <span className="font-semibold text-slate-900 tabular-nums">
+                          {totalQty.toLocaleString()}
+                        </span>
+                      </p>
 
-                <div className="p-4 md:p-5">
-                  {!doc ? (
-                    <div className="text-sm text-gray-500">Cargando…</div>
-                  ) : null}
-
-                  {doc && draftLines.length === 0 ? (
-                    <div className="rounded-xl border bg-gray-50 p-4 text-sm text-gray-700">
-                      Este documento no tiene líneas. Agrega al menos 1 para
-                      poder postear.
+                      {hasUnsavedChanges ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-amber-200 bg-amber-50 text-amber-700 text-[10px] font-semibold">
+                          <AlertTriangle className="h-3 w-3" />
+                          Cambios pendientes
+                        </span>
+                      ) : null}
                     </div>
                   ) : null}
-
-                  {uiDoc ? (
-                    <LinesResponsive
-                      doc={uiDoc}
-                      editable={editable && canWrite}
-                      lines={draftLines}
-                      partOptions={partOptions}
-                      binsForSingleWarehouse={getBinsForWarehouse(
-                        uiDoc.warehouse_id
-                      )}
-                      binsForFromWarehouse={getBinsForWarehouse(
-                        uiDoc.from_warehouse_id
-                      )}
-                      binsForToWarehouse={getBinsForWarehouse(
-                        uiDoc.to_warehouse_id
-                      )}
-                      onChangeLine={patchDraftLine}
-                      onDeleteLine={onDeleteLine}
-                    />
-                  ) : null}
                 </div>
-              </div>
 
-              <div className="mt-3 text-xs text-gray-500">
-                Regla SQL: ISSUE/TRANSFER validan stock suficiente al postear.
-                ADJUSTMENT permite qty +/- (≠0).
+                <div className="text-xs text-slate-500">
+                  Regla SQL: ISSUE/TRANSFER validan stock suficiente al postear.
+                  ADJUSTMENT permite qty +/- (≠0).
+                </div>
               </div>
             </div>
           </div>
         </section>
       </main>
     </div>
-  );
-}
-
-/** =========================
- *  Lines: Mobile cards + Desktop table
- *  ========================= */
-function LinesResponsive(props: {
-  doc: InventoryDocRow;
-  editable: boolean;
-  lines: InventoryDocLineRow[];
-  partOptions: Array<Option & { uom_id: UUID }>;
-  binsForSingleWarehouse: Option[];
-  binsForFromWarehouse: Option[];
-  binsForToWarehouse: Option[];
-  onChangeLine: (
-    lineId: UUID,
-    patch: Partial<InventoryDocLineRow>
-  ) => Promise<void> | void;
-  onDeleteLine: (lineId: UUID) => Promise<void> | void;
-}) {
-  return (
-    <>
-      {/* Mobile (cards) */}
-      <div className="block lg:hidden space-y-3">
-        {props.lines.map((l) => (
-          <LineCard key={l.id} {...props} line={l} />
-        ))}
-      </div>
-
-      {/* Desktop (table) */}
-      <div className="hidden lg:block overflow-x-auto">
-        <LinesTablePro {...props} />
-      </div>
-    </>
-  );
-}
-
-function LineCard(props: {
-  doc: InventoryDocRow;
-  editable: boolean;
-  lines: InventoryDocLineRow[];
-  line: InventoryDocLineRow;
-  partOptions: Array<Option & { uom_id: UUID }>;
-  binsForSingleWarehouse: Option[];
-  binsForFromWarehouse: Option[];
-  binsForToWarehouse: Option[];
-  onChangeLine: (
-    lineId: UUID,
-    patch: Partial<InventoryDocLineRow>
-  ) => Promise<void> | void;
-  onDeleteLine: (lineId: UUID) => Promise<void> | void;
-}) {
-  const {
-    doc,
-    editable,
-    line: l,
-    partOptions,
-    onChangeLine,
-    onDeleteLine,
-  } = props;
-
-  const showFromBin = doc.doc_type === 'ISSUE' || doc.doc_type === 'TRANSFER';
-  const showToBin =
-    doc.doc_type === 'RECEIPT' ||
-    doc.doc_type === 'RETURN' ||
-    doc.doc_type === 'TRANSFER' ||
-    doc.doc_type === 'ADJUSTMENT';
-  const showUnitCost = true;
-
-  const binsFrom =
-    doc.doc_type === 'TRANSFER'
-      ? props.binsForFromWarehouse
-      : doc.doc_type === 'ISSUE'
-        ? props.binsForSingleWarehouse
-        : [];
-
-  const binsTo =
-    doc.doc_type === 'TRANSFER'
-      ? props.binsForToWarehouse
-      : doc.doc_type === 'RECEIPT' ||
-          doc.doc_type === 'RETURN' ||
-          doc.doc_type === 'ADJUSTMENT'
-        ? props.binsForSingleWarehouse
-        : [];
-
-  const qtyHint =
-    doc.doc_type === 'ADJUSTMENT' ? 'Puede ser +/- (≠0)' : 'Debe ser > 0';
-
-  return (
-    <div className="rounded-2xl border bg-white p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <div className="text-sm font-semibold text-gray-900">
-          Línea #{l.line_no}
-        </div>
-        <button
-          type="button"
-          disabled={!editable}
-          onClick={() => void onDeleteLine(l.id)}
-          className={cx(
-            'h-9 rounded-xl border px-3 text-sm bg-white hover:bg-gray-50',
-            !editable && 'opacity-50 cursor-not-allowed'
-          )}
-        >
-          Quitar
-        </button>
-      </div>
-
-      <div className="mt-3 grid grid-cols-1 gap-3">
-        <div>
-          <label className="block text-xs font-medium text-gray-700">
-            Repuesto
-          </label>
-          <select
-            className="mt-1 h-10 w-full rounded-xl border px-3 text-sm bg-white"
-            disabled={!editable}
-            value={l.part_id}
-            onChange={(e) => {
-              const partId = e.target.value as UUID;
-              const p = partOptions.find((x) => x.id === partId);
-              void onChangeLine(l.id, {
-                part_id: partId,
-                uom_id: p?.uom_id ?? l.uom_id,
-              });
-            }}
-          >
-            {partOptions.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700">
-              Qty
-            </label>
-            <input
-              className="mt-1 h-10 w-full rounded-xl border px-3 text-sm text-right"
-              disabled={!editable}
-              type="number"
-              step="0.001"
-              value={Number.isFinite(l.qty) ? l.qty : 0}
-              onChange={(e) =>
-                void onChangeLine(l.id, { qty: Number(e.target.value) })
-              }
-            />
-            <div className="mt-1 text-[11px] text-gray-500">{qtyHint}</div>
-          </div>
-
-          {showUnitCost ? (
-            <div>
-              <label className="block text-xs font-medium text-gray-700">
-                Unit cost
-              </label>
-              <input
-                className="mt-1 h-10 w-full rounded-xl border px-3 text-sm text-right"
-                disabled={!editable}
-                type="number"
-                step="0.0001"
-                value={l.unit_cost ?? ''}
-                onChange={(e) => {
-                  const raw = e.target.value.trim();
-                  const v = raw.length ? Number(raw) : null;
-                  void onChangeLine(l.id, { unit_cost: v });
-                }}
-                placeholder="auto / avg"
-              />
-              <div className="mt-1 text-[11px] text-gray-500">
-                Si viene null, el post completa.
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        {showFromBin ? (
-          <div>
-            <label className="block text-xs font-medium text-gray-700">
-              From bin
-            </label>
-            <select
-              className="mt-1 h-10 w-full rounded-xl border px-3 text-sm bg-white"
-              disabled={!editable}
-              value={l.from_bin_id ?? ''}
-              onChange={(e) =>
-                void onChangeLine(l.id, {
-                  from_bin_id: (e.target.value || null) as UUID | null,
-                })
-              }
-            >
-              <option value="">— (null) —</option>
-              {binsFrom.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        {showToBin ? (
-          <div>
-            <label className="block text-xs font-medium text-gray-700">
-              To bin
-            </label>
-            <select
-              className="mt-1 h-10 w-full rounded-xl border px-3 text-sm bg-white"
-              disabled={!editable}
-              value={l.to_bin_id ?? ''}
-              onChange={(e) =>
-                void onChangeLine(l.id, {
-                  to_bin_id: (e.target.value || null) as UUID | null,
-                })
-              }
-            >
-              <option value="">— (null) —</option>
-              {binsTo.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700">
-            Notas
-          </label>
-          <input
-            className="mt-1 h-10 w-full rounded-xl border px-3 text-sm"
-            disabled={!editable}
-            value={l.notes ?? ''}
-            onChange={(e) => void onChangeLine(l.id, { notes: e.target.value })}
-            placeholder="Opcional…"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LinesTablePro(props: {
-  doc: InventoryDocRow;
-  editable: boolean;
-  lines: InventoryDocLineRow[];
-  partOptions: Array<Option & { uom_id: UUID }>;
-  binsForSingleWarehouse: Option[];
-  binsForFromWarehouse: Option[];
-  binsForToWarehouse: Option[];
-  onChangeLine: (
-    lineId: UUID,
-    patch: Partial<InventoryDocLineRow>
-  ) => Promise<void> | void;
-  onDeleteLine: (lineId: UUID) => Promise<void> | void;
-}) {
-  const { doc, editable, lines, partOptions, onChangeLine, onDeleteLine } =
-    props;
-
-  const showFromBin = doc.doc_type === 'ISSUE' || doc.doc_type === 'TRANSFER';
-  const showToBin =
-    doc.doc_type === 'RECEIPT' ||
-    doc.doc_type === 'RETURN' ||
-    doc.doc_type === 'TRANSFER' ||
-    doc.doc_type === 'ADJUSTMENT';
-
-  const binsFrom =
-    doc.doc_type === 'TRANSFER'
-      ? props.binsForFromWarehouse
-      : doc.doc_type === 'ISSUE'
-        ? props.binsForSingleWarehouse
-        : [];
-
-  const binsTo =
-    doc.doc_type === 'TRANSFER'
-      ? props.binsForToWarehouse
-      : doc.doc_type === 'RECEIPT' ||
-          doc.doc_type === 'RETURN' ||
-          doc.doc_type === 'ADJUSTMENT'
-        ? props.binsForSingleWarehouse
-        : [];
-
-  const qtyHint =
-    doc.doc_type === 'ADJUSTMENT' ? 'Puede ser +/- (≠0)' : 'Debe ser > 0';
-
-  return (
-    <table className="min-w-full text-sm">
-      <thead className="bg-gray-50 text-gray-600">
-        <tr>
-          <th className="text-left font-medium px-3 py-2 w-[72px]">#</th>
-          <th className="text-left font-medium px-3 py-2 min-w-[360px]">
-            Repuesto
-          </th>
-          <th className="text-left font-medium px-3 py-2 w-[170px]">Qty</th>
-          {showFromBin ? (
-            <th className="text-left font-medium px-3 py-2 min-w-[240px]">
-              From bin
-            </th>
-          ) : null}
-          {showToBin ? (
-            <th className="text-left font-medium px-3 py-2 min-w-[240px]">
-              To bin
-            </th>
-          ) : null}
-          <th className="text-left font-medium px-3 py-2 w-[180px]">
-            Unit cost
-          </th>
-          <th className="text-left font-medium px-3 py-2 min-w-[260px]">
-            Notas
-          </th>
-          <th className="px-3 py-2 w-[120px]"></th>
-        </tr>
-      </thead>
-
-      <tbody className="divide-y bg-white">
-        {lines.map((l) => (
-          <tr key={l.id} className="align-top hover:bg-gray-50/60">
-            <td className="px-3 py-3 text-gray-600">{l.line_no}</td>
-
-            <td className="px-3 py-3">
-              <select
-                className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
-                disabled={!editable}
-                value={l.part_id}
-                onChange={(e) => {
-                  const partId = e.target.value as UUID;
-                  const p = partOptions.find((x) => x.id === partId);
-                  void onChangeLine(l.id, {
-                    part_id: partId,
-                    uom_id: p?.uom_id ?? l.uom_id,
-                  });
-                }}
-              >
-                {partOptions.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </td>
-
-            <td className="px-3 py-3">
-              <div className="flex flex-col gap-1">
-                <input
-                  className="h-10 w-full rounded-xl border px-3 text-sm text-right"
-                  disabled={!editable}
-                  type="number"
-                  step="0.001"
-                  value={Number.isFinite(l.qty) ? l.qty : 0}
-                  onChange={(e) =>
-                    void onChangeLine(l.id, { qty: Number(e.target.value) })
-                  }
-                />
-                <div className="text-[11px] text-gray-500 leading-4">
-                  {qtyHint}
-                </div>
-              </div>
-            </td>
-
-            {showFromBin ? (
-              <td className="px-3 py-3">
-                <select
-                  className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
-                  disabled={!editable}
-                  value={l.from_bin_id ?? ''}
-                  onChange={(e) =>
-                    void onChangeLine(l.id, {
-                      from_bin_id: (e.target.value || null) as UUID | null,
-                    })
-                  }
-                >
-                  <option value="">— (null) —</option>
-                  {binsFrom.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </td>
-            ) : null}
-
-            {showToBin ? (
-              <td className="px-3 py-3">
-                <select
-                  className="h-10 w-full rounded-xl border px-3 text-sm bg-white"
-                  disabled={!editable}
-                  value={l.to_bin_id ?? ''}
-                  onChange={(e) =>
-                    void onChangeLine(l.id, {
-                      to_bin_id: (e.target.value || null) as UUID | null,
-                    })
-                  }
-                >
-                  <option value="">— (null) —</option>
-                  {binsTo.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label}
-                    </option>
-                  ))}
-                </select>
-              </td>
-            ) : null}
-
-            <td className="px-3 py-3">
-              <div className="flex flex-col gap-1">
-                <input
-                  className="h-10 w-full rounded-xl border px-3 text-sm text-right"
-                  disabled={!editable}
-                  type="number"
-                  step="0.0001"
-                  value={l.unit_cost ?? ''}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim();
-                    const v = raw.length ? Number(raw) : null;
-                    void onChangeLine(l.id, { unit_cost: v });
-                  }}
-                  placeholder="auto / avg"
-                />
-                <div className="text-[11px] text-gray-500 leading-4">
-                  Si viene null, el post completa.
-                </div>
-              </div>
-            </td>
-
-            <td className="px-3 py-3">
-              <input
-                className="h-10 w-full rounded-xl border px-3 text-sm"
-                disabled={!editable}
-                value={l.notes ?? ''}
-                onChange={(e) =>
-                  void onChangeLine(l.id, { notes: e.target.value })
-                }
-                placeholder="Opcional…"
-              />
-            </td>
-
-            <td className="px-3 py-3 text-right">
-              <button
-                type="button"
-                disabled={!editable}
-                onClick={() => void onDeleteLine(l.id)}
-                className={cx(
-                  'h-10 rounded-xl border px-3 text-sm bg-white hover:bg-gray-50',
-                  !editable && 'opacity-50 cursor-not-allowed'
-                )}
-              >
-                Quitar
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
