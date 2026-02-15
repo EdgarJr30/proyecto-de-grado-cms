@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
