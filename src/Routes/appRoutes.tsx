@@ -31,6 +31,7 @@ import VendorsPage from '../pages/inventory/VendorsPage';
 import PartVendorsPage from '../pages/inventory/PartVendorsPage';
 import ReorderPoliciesPage from '../pages/inventory/ReorderPoliciesPage';
 import ReorderSuggestionsPage from '../pages/inventory/ReorderSuggestionsPage';
+import KardexPage from '../pages/inventory/kardex_audit/KardexPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -434,6 +435,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/reorder_suggestions',
     element: <ReorderSuggestionsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/kardex',
+    element: <KardexPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },
