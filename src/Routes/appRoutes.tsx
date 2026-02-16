@@ -19,7 +19,7 @@ import AnnouncementsManagmentPage from '../pages/admin/AnnouncementsManagementPa
 import SocietiesManagementPage from '../pages/admin/SocietiesManagementPage';
 import AssetsHomePage from '../pages/admin/AssetsHomePage';
 import InventoryHomePage from '../pages/inventory/InventoryHomePage';
-import UomsPage from '../pages/inventory/UomsPage';
+import UomsPage from '../pages/inventory/uoms/UomsPage';
 import PartCategoriesPage from '../pages/inventory/parts/part_categories/PartCategoriesPage';
 import PartsPage from '../pages/inventory/parts/PartsPage';
 import WarehousesPage from '../pages/inventory/WarehousesPage';
