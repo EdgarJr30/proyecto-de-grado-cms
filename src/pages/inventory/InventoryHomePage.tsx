@@ -36,21 +36,29 @@ function cx(...classes: Array<string | false | null | undefined>) {
 function toneStyles(tone: 'default' | 'warning') {
   if (tone === 'warning') {
     return {
-      border: 'border-amber-200',
-      bg: 'bg-amber-50/40',
-      iconWrap: 'bg-amber-100/60',
+      border: 'border-amber-200/90',
+      surface: 'bg-gradient-to-br from-amber-50/75 via-white to-white',
+      iconWrap: 'bg-amber-100/80',
       icon: 'text-amber-700',
-      chip: 'bg-amber-50 text-amber-700 border-amber-200',
-      hover: 'hover:bg-amber-50/70',
+      chip: 'bg-amber-100/70 text-amber-800 border-amber-300/70',
+      accent: 'from-amber-400 via-amber-500 to-orange-500',
+      focusRing: 'focus:ring-amber-500/30',
+      arrow:
+        'bg-amber-100/80 text-amber-700 border-amber-300/70 hover:bg-amber-200/80',
+      footer: 'border-amber-200/80 text-amber-700',
     };
   }
   return {
-    border: 'border-slate-200',
-    bg: 'bg-white',
+    border: 'border-slate-200/90',
+    surface: 'bg-gradient-to-br from-slate-50/80 via-white to-white',
     iconWrap: 'bg-blue-50',
     icon: 'text-blue-700',
-    chip: 'bg-slate-50 text-slate-600 border-slate-200',
-    hover: 'hover:bg-slate-50/60',
+    chip: 'bg-slate-100 text-slate-700 border-slate-200',
+    accent: 'from-blue-500 via-indigo-500 to-sky-500',
+    focusRing: 'focus:ring-blue-500/30',
+    arrow:
+      'bg-slate-100 text-slate-600 border-slate-200 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200',
+    footer: 'border-slate-200 text-slate-600',
   };
 }
 
@@ -73,29 +81,27 @@ function Card({
     <Link
       to={to}
       className={cx(
-        'group relative block rounded-xl border shadow-sm transition',
-        'bg-white',
+        'group relative block overflow-hidden rounded-2xl border shadow-sm transition-all duration-200',
+        s.surface,
         s.border,
-        'hover:shadow-md hover:-translate-y-[1px]',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500/30'
+        'hover:-translate-y-0.5 hover:shadow-lg',
+        'focus:outline-none focus:ring-2',
+        s.focusRing
       )}
     >
-      {/* subtle pastel header band */}
       <div
         className={cx(
-          'h-10 rounded-t-xl border-b',
-          s.border,
-          s.bg,
-          'transition-colors'
+          'pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
+          s.accent
         )}
       />
 
-      <div className="p-5 -mt-5">
+      <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-3 min-w-0">
             <div
               className={cx(
-                'shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center',
+                'shrink-0 h-10 w-10 rounded-xl border flex items-center justify-center shadow-sm',
                 s.border,
                 s.iconWrap
               )}
@@ -132,22 +138,35 @@ function Card({
                   s.chip
                 )}
               >
-                Abrir
+                Módulo
               </span>
             )}
 
             <span
               className={cx(
-                'inline-flex items-center justify-center h-8 w-8 rounded-lg border transition',
+                'inline-flex items-center justify-center h-8 w-8 rounded-lg border transition-colors',
                 s.border,
-                s.bg,
-                s.hover
+                s.arrow
               )}
               aria-hidden="true"
             >
-              <ArrowRight className="h-4 w-4 text-slate-500 group-hover:text-slate-700" />
+              <ArrowRight className="h-4 w-4" />
             </span>
           </div>
+        </div>
+
+        <div
+          className={cx(
+            'mt-4 border-t pt-3 flex items-center justify-between',
+            s.footer
+          )}
+        >
+          <span className="text-[11px] font-semibold tracking-wide uppercase">
+            Acceso directo
+          </span>
+          <span className="text-xs font-medium group-hover:text-slate-900 transition-colors">
+            Abrir sección
+          </span>
         </div>
       </div>
     </Link>
@@ -311,21 +330,30 @@ export default function InventoryHomePage() {
         </header>
 
         {/* Body */}
-        <section className="flex-1 min-h-0 overflow-auto">
+        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60">
           <div className="px-4 md:px-6 lg:px-8 py-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {cards
-                .filter((c) => (c.perm ? has(c.perm) : true))
-                .map((c) => (
-                  <Card
-                    key={c.to}
-                    title={c.title}
-                    description={c.description}
-                    to={c.to}
-                    tone={c.tone}
-                    Icon={c.icon ?? Boxes}
-                  />
-                ))}
+            <div className="rounded-3xl border border-slate-200/90 bg-white p-4 md:p-5 shadow-sm">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs md:text-sm text-slate-500">
+                  Módulos operativos y maestros para gestión integral de
+                  inventario.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {cards
+                  .filter((c) => (c.perm ? has(c.perm) : true))
+                  .map((c) => (
+                    <Card
+                      key={c.to}
+                      title={c.title}
+                      description={c.description}
+                      to={c.to}
+                      tone={c.tone}
+                      Icon={c.icon ?? Boxes}
+                    />
+                  ))}
+              </div>
             </div>
           </div>
         </section>
