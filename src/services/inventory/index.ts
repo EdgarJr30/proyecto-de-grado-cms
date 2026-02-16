@@ -9,5 +9,5 @@ export * from './docsService';
 export * from './ledgerService';
 export * from './ticketPartRequestsService';
 export * from './reorderPoliciesService';
-export * from './costingService';
+export * from './partCostsService';
 export * from './viewsService';

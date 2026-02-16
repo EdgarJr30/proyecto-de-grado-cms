@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   ArrowRight,
   ShieldAlert,
+  DollarSign,
 } from 'lucide-react';
 
 type InventoryNavCard = {
@@ -235,6 +236,13 @@ export default function InventoryHomePage() {
       to: '/inventory/reorder',
       perm: 'inventory:read',
       icon: Repeat,
+    },
+    {
+      title: 'Costo',
+      description: 'Control costo de consumo y reposición.',
+      to: '/inventory/costos',
+      perm: 'inventory:read',
+      icon: DollarSign,
     },
     {
       title: 'Reservas por WO (tickets)',
