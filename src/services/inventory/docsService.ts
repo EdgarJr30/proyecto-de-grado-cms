@@ -15,6 +15,8 @@ export type ListDocsFilters = {
   status?: InventoryDocStatus;
   ticket_id?: BigIntLike;
   warehouse_id?: UUID;
+  created_from?: string; // ISO string
+  created_to?: string; // ISO string
   q?: string; // doc_no/reference (ilike)
 };
 
@@ -28,7 +30,13 @@ export async function listInventoryDocs(
   if (filters.status) q = q.eq('status', filters.status);
   if (typeof filters.ticket_id === 'number')
     q = q.eq('ticket_id', filters.ticket_id);
-  if (filters.warehouse_id) q = q.eq('warehouse_id', filters.warehouse_id);
+  if (filters.warehouse_id) {
+    q = q.or(
+      `warehouse_id.eq.${filters.warehouse_id},from_warehouse_id.eq.${filters.warehouse_id},to_warehouse_id.eq.${filters.warehouse_id}`
+    );
+  }
+  if (filters.created_from) q = q.gte('created_at', filters.created_from);
+  if (filters.created_to) q = q.lte('created_at', filters.created_to);
 
   if (filters.q && filters.q.trim().length > 0) {
     const s = filters.q.trim();
@@ -50,6 +58,20 @@ export async function getInventoryDoc(docId: UUID) {
     .single();
   if (error) throw error;
   return data as InventoryDocRow;
+}
+
+export async function findInventoryDocIdByDocNo(docNo: string) {
+  const normalized = docNo.trim();
+  if (!normalized) return null;
+
+  const { data, error } = await inv()
+    .from('inventory_docs')
+    .select('id')
+    .eq('doc_no', normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.id ?? null) as UUID | null;
 }
 
 export async function createInventoryDoc(payload: InventoryDocInsert) {

@@ -1,6 +1,7 @@
 import type {
   InventoryDocStatus,
   InventoryDocType,
+  UUID,
 } from '../../../../types/inventory';
 
 import { FileText, Filter, Plus, RefreshCw, RotateCcw, Search } from 'lucide-react';
@@ -22,9 +23,18 @@ export function InventoryDocsToolbar({
   isLoading,
   docType,
   status,
+  warehouseId,
+  ticketId,
+  createdFrom,
+  createdTo,
   q,
+  warehouseOptions,
   onDocTypeChange,
   onStatusChange,
+  onWarehouseIdChange,
+  onTicketIdChange,
+  onCreatedFromChange,
+  onCreatedToChange,
   onQChange,
   onCreate,
   onRefresh,
@@ -34,9 +44,18 @@ export function InventoryDocsToolbar({
   isLoading: boolean;
   docType: InventoryDocType | '';
   status: InventoryDocStatus | '';
+  warehouseId: UUID | '';
+  ticketId: string;
+  createdFrom: string;
+  createdTo: string;
   q: string;
+  warehouseOptions: Array<{ id: UUID; label: string }>;
   onDocTypeChange: (value: InventoryDocType | '') => void;
   onStatusChange: (value: InventoryDocStatus | '') => void;
+  onWarehouseIdChange: (value: UUID | '') => void;
+  onTicketIdChange: (value: string) => void;
+  onCreatedFromChange: (value: string) => void;
+  onCreatedToChange: (value: string) => void;
   onQChange: (value: string) => void;
   onCreate: (type: InventoryDocType) => void;
   onRefresh: () => void;
@@ -83,7 +102,7 @@ export function InventoryDocsToolbar({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <label className="text-[11px] font-semibold text-slate-700">
                 Tipo
               </label>
@@ -103,7 +122,7 @@ export function InventoryDocsToolbar({
               </select>
             </div>
 
-            <div className="md:col-span-3">
+            <div className="md:col-span-2">
               <label className="text-[11px] font-semibold text-slate-700">
                 Estado
               </label>
@@ -123,7 +142,38 @@ export function InventoryDocsToolbar({
               </select>
             </div>
 
-            <div className="md:col-span-6">
+            <div className="md:col-span-3">
+              <label className="text-[11px] font-semibold text-slate-700">
+                Warehouse
+              </label>
+              <select
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                value={warehouseId}
+                onChange={(e) => onWarehouseIdChange((e.target.value as UUID) || '')}
+              >
+                <option value="">Todos</option>
+                {warehouseOptions.map((warehouse) => (
+                  <option key={warehouse.id} value={warehouse.id}>
+                    {warehouse.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-[11px] font-semibold text-slate-700">
+                Ticket ID
+              </label>
+              <input
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                placeholder="Ej: 10234"
+                inputMode="numeric"
+                value={ticketId}
+                onChange={(e) => onTicketIdChange(e.target.value)}
+              />
+            </div>
+
+            <div className="md:col-span-3">
               <label className="text-[11px] font-semibold text-slate-700">
                 Búsqueda
               </label>
@@ -136,6 +186,30 @@ export function InventoryDocsToolbar({
                   onChange={(e) => onQChange(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-[11px] font-semibold text-slate-700">
+                Desde
+              </label>
+              <input
+                type="date"
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                value={createdFrom}
+                onChange={(e) => onCreatedFromChange(e.target.value)}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="text-[11px] font-semibold text-slate-700">
+                Hasta
+              </label>
+              <input
+                type="date"
+                className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                value={createdTo}
+                onChange={(e) => onCreatedToChange(e.target.value)}
+              />
             </div>
           </div>
 

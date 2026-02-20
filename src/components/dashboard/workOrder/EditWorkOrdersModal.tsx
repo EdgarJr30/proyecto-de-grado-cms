@@ -54,6 +54,13 @@ export default function EditWorkOrdersModal({
 
   const canFullAccess = useCan('work_orders:full_access');
   const isReadOnly = !canFullAccess;
+  const canInventoryRead = useCan('inventory:read');
+  const canInventoryOperate = useCan([
+    'inventory:work',
+    'inventory:create',
+    'inventory:full_access',
+  ]);
+  const canUseTicketPartsPanel = canInventoryRead && canInventoryOperate;
   const addDisabledCls = (base = '') =>
     base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
 
@@ -616,10 +623,30 @@ export default function EditWorkOrdersModal({
           )}
         </div>
 
-        <TicketPartsPanel
-          ticketId={Number(ticket.id)}
-          isAccepted={Boolean(edited.is_accepted)}
-        />
+        {edited.is_accepted && !canUseTicketPartsPanel ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {canInventoryRead ? (
+              <>
+                Tienes lectura de inventario, pero no permiso de operación para
+                repuestos de WO (
+                <span className="font-mono">inventory:work</span> /{' '}
+                <span className="font-mono">inventory:create</span> /{' '}
+                <span className="font-mono">inventory:full_access</span>).
+              </>
+            ) : (
+              <>
+                No tienes permisos de inventario para operar repuestos de WO (
+                <span className="font-mono">inventory:read</span> + permisos de
+                trabajo).
+              </>
+            )}
+          </div>
+        ) : (
+          <TicketPartsPanel
+            ticketId={Number(ticket.id)}
+            isAccepted={Boolean(edited.is_accepted)}
+          />
+        )}
       </div>
 
       {/* Lightbox imágenes */}

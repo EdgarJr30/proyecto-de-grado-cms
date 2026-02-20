@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
@@ -13,6 +14,7 @@ import type {
 import type { UUID } from '../../../types/inventory/common';
 
 import { listKardex } from '../../../services/inventory/kardexService';
+import { findInventoryDocIdByDocNo } from '../../../services/inventory/docsService';
 
 // lookups (usa tus mismos endpoints de opciones)
 import type { OptionRow } from '../../../services/inventory/lookupsService';
@@ -90,6 +92,21 @@ function dateOnlyToISOEnd(dateOnly: string): string {
   return dt.toISOString();
 }
 
+function formatQty(value: number) {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  });
+}
+
+function formatMoney(value: number | null) {
+  if (value == null) return '—';
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  });
+}
+
 export default function KardexPage() {
   const { has } = usePermissions();
   const canRead = has('inventory:read');
@@ -103,6 +120,10 @@ export default function KardexPage() {
   const [rows, setRows] = useState<VInventoryKardexRow[]>([]);
   const [count, setCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [detailRow, setDetailRow] = useState<VInventoryKardexRow | null>(null);
+  const [detailDocId, setDetailDocId] = useState<UUID | null>(null);
+  const [detailDocLoading, setDetailDocLoading] = useState(false);
+  const detailLookupRef = useRef(0);
 
   // ===== selection (para bulk actions futuras, export, etc.)
   const checkboxRef = useRef<HTMLInputElement>(null);
@@ -290,6 +311,34 @@ export default function KardexPage() {
     void reload(clamped);
   }
 
+  async function openMovementDetail(row: VInventoryKardexRow) {
+    setDetailRow(row);
+    setDetailDocId(null);
+
+    if (!row.doc_no) return;
+
+    const lookupId = detailLookupRef.current + 1;
+    detailLookupRef.current = lookupId;
+    setDetailDocLoading(true);
+
+    try {
+      const docId = await findInventoryDocIdByDocNo(row.doc_no);
+      if (detailLookupRef.current !== lookupId) return;
+      setDetailDocId(docId);
+    } catch (error: unknown) {
+      if (detailLookupRef.current !== lookupId) return;
+      showToastError(
+        error instanceof Error
+          ? error.message
+          : 'No se pudo resolver el documento del movimiento.'
+      );
+    } finally {
+      if (detailLookupRef.current === lookupId) {
+        setDetailDocLoading(false);
+      }
+    }
+  }
+
   useEffect(() => {
     void loadOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -375,12 +424,7 @@ export default function KardexPage() {
             isLoading={isLoading}
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
-            onRowClick={(r) => {
-              // placeholder: luego abrimos un drawer con detalle del movimiento/doc
-              showToastSuccess(
-                `Movimiento: ${r.doc_no ?? 'SIN-NO'} · ${r.part_code} · ${r.qty_delta}`
-              );
-            }}
+            onRowClick={(r) => void openMovementDetail(r)}
           />
 
           <KardexTable
@@ -392,12 +436,7 @@ export default function KardexPage() {
             indeterminate={indeterminate}
             onToggleAll={toggleAll}
             checkboxRef={checkboxRef}
-            onRowClick={(r) => {
-              // placeholder: luego abrimos un drawer con detalle del movimiento/doc
-              showToastSuccess(
-                `Movimiento: ${r.doc_no ?? 'SIN-NO'} · ${r.part_code} · ${r.qty_delta}`
-              );
-            }}
+            onRowClick={(r) => void openMovementDetail(r)}
           />
         </section>
 
@@ -456,6 +495,133 @@ export default function KardexPage() {
           </div>
         </div>
       </main>
+
+      {detailRow ? (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-slate-900/45"
+            onClick={() => setDetailRow(null)}
+          />
+
+          <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-auto border-l border-slate-200 bg-white shadow-2xl">
+            <header className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    Detalle de movimiento
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {detailRow.doc_no ?? 'SIN-NO'} · {detailRow.doc_type} ·{' '}
+                    {new Date(detailRow.occurred_at).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailRow(null)}
+                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </header>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Documento
+                </div>
+                <div className="mt-1 text-sm text-slate-800">
+                  <div>
+                    <span className="font-medium">No:</span>{' '}
+                    {detailRow.doc_no ?? 'SIN-NO'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Tipo:</span>{' '}
+                    {detailRow.doc_type}
+                  </div>
+                  <div>
+                    <span className="font-medium">Estado:</span>{' '}
+                    {detailRow.status}
+                  </div>
+                  <div>
+                    <span className="font-medium">Referencia:</span>{' '}
+                    {detailRow.reference ?? '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Movimiento
+                </div>
+                <div className="mt-1 text-sm text-slate-800">
+                  <div>
+                    <span className="font-medium">Fecha:</span>{' '}
+                    {new Date(detailRow.occurred_at).toLocaleString()}
+                  </div>
+                  <div>
+                    <span className="font-medium">Lado:</span>{' '}
+                    {detailRow.movement_side ?? '—'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Cantidad:</span>{' '}
+                    {formatQty(detailRow.qty_delta)}
+                  </div>
+                  <div>
+                    <span className="font-medium">Costo unitario:</span>{' '}
+                    {formatMoney(detailRow.unit_cost)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Contexto
+                </div>
+                <div className="mt-1 text-sm text-slate-800">
+                  <div>
+                    <span className="font-medium">Repuesto:</span>{' '}
+                    {detailRow.part_code} — {detailRow.part_name}
+                  </div>
+                  <div>
+                    <span className="font-medium">Almacén:</span>{' '}
+                    {detailRow.warehouse_code} — {detailRow.warehouse_name}
+                  </div>
+                  <div>
+                    <span className="font-medium">Bin:</span>{' '}
+                    {detailRow.bin_code ?? '—'}
+                  </div>
+                  <div>
+                    <span className="font-medium">Ticket:</span>{' '}
+                    {typeof detailRow.ticket_id === 'number'
+                      ? `#${detailRow.ticket_id}`
+                      : '—'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {detailDocLoading ? (
+                  <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">
+                    Buscando documento…
+                  </span>
+                ) : detailDocId ? (
+                  <Link
+                    to={`/inventory/docs/${detailDocId}`}
+                    className="inline-flex items-center rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                  >
+                    Abrir documento
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                    No se encontró un documento navegable para este movimiento.
+                  </span>
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      ) : null}
     </PageShell>
   );
 }

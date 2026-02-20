@@ -7,11 +7,13 @@ import type {
   InventoryDocRow,
   InventoryDocStatus,
   InventoryDocType,
+  UUID,
 } from '../../../types/inventory';
 
 import {
   createInventoryDoc,
   listInventoryDocs,
+  listWarehouses,
   type ListDocsFilters,
 } from '../../../services/inventory';
 import { useNavigate } from 'react-router-dom';
@@ -60,6 +62,18 @@ function EmptyAccessState() {
   );
 }
 
+function dateOnlyToISOStart(dateOnly: string): string {
+  const [y, m, d] = dateOnly.split('-').map((x) => Number(x));
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1, 0, 0, 0, 0);
+  return dt.toISOString();
+}
+
+function dateOnlyToISOEnd(dateOnly: string): string {
+  const [y, m, d] = dateOnly.split('-').map((x) => Number(x));
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1, 23, 59, 59, 999);
+  return dt.toISOString();
+}
+
 export default function InventoryDocsPage() {
   const navigate = useNavigate();
   const { has } = usePermissions();
@@ -69,24 +83,62 @@ export default function InventoryDocsPage() {
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<InventoryDocRow[]>([]);
+  const [warehouseOptions, setWarehouseOptions] = useState<
+    Array<{ id: UUID; label: string }>
+  >([]);
 
   const [docType, setDocType] = useState<InventoryDocType | ''>('');
   const [status, setStatus] = useState<InventoryDocStatus | ''>('');
+  const [warehouseId, setWarehouseId] = useState<UUID | ''>('');
+  const [ticketId, setTicketId] = useState('');
+  const [createdFrom, setCreatedFrom] = useState('');
+  const [createdTo, setCreatedTo] = useState('');
   const [q, setQ] = useState('');
 
   const filters: ListDocsFilters = useMemo(() => {
     const next: ListDocsFilters = {};
+    const parsedTicketId = ticketId.trim() ? Number(ticketId.trim()) : NaN;
 
     if (docType) next.doc_type = docType;
     if (status) next.status = status;
+    if (warehouseId) next.warehouse_id = warehouseId;
+    if (Number.isFinite(parsedTicketId) && parsedTicketId > 0)
+      next.ticket_id = parsedTicketId;
+    if (createdFrom) next.created_from = dateOnlyToISOStart(createdFrom);
+    if (createdTo) next.created_to = dateOnlyToISOEnd(createdTo);
     if (q.trim().length > 0) next.q = q.trim();
 
     return next;
-  }, [docType, status, q]);
+  }, [createdFrom, createdTo, docType, q, status, ticketId, warehouseId]);
+
+  async function loadWarehouses() {
+    try {
+      const data = await listWarehouses({
+        limit: 500,
+        orderBy: 'code',
+        ascending: true,
+        is_active: true,
+      });
+
+      setWarehouseOptions(
+        data.map((warehouse) => ({
+          id: warehouse.id,
+          label: `${warehouse.code} — ${warehouse.name}`,
+        }))
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) showToastError(error.message);
+      else showToastError('No se pudieron cargar los almacenes.');
+    }
+  }
 
   function resetFilters() {
     setDocType('');
     setStatus('');
+    setWarehouseId('');
+    setTicketId('');
+    setCreatedFrom('');
+    setCreatedTo('');
     setQ('');
   }
 
@@ -105,16 +157,21 @@ export default function InventoryDocsPage() {
 
   useEffect(() => {
     if (!canRead) return;
+    void loadWarehouses();
+  }, [canRead]);
+
+  useEffect(() => {
+    if (!canRead) return;
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canRead, docType, status]);
+  }, [canRead, createdFrom, createdTo, docType, status, warehouseId]);
 
   useEffect(() => {
     if (!canRead) return;
     const timeout = window.setTimeout(() => void refresh(), 350);
     return () => window.clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
+  }, [q, ticketId]);
 
   async function onCreate(type: InventoryDocType) {
     if (!canWrite) return;
@@ -156,9 +213,18 @@ export default function InventoryDocsPage() {
           isLoading={loading}
           docType={docType}
           status={status}
+          warehouseId={warehouseId}
+          ticketId={ticketId}
+          createdFrom={createdFrom}
+          createdTo={createdTo}
           q={q}
+          warehouseOptions={warehouseOptions}
           onDocTypeChange={setDocType}
           onStatusChange={setStatus}
+          onWarehouseIdChange={setWarehouseId}
+          onTicketIdChange={setTicketId}
+          onCreatedFromChange={setCreatedFrom}
+          onCreatedToChange={setCreatedTo}
           onQChange={setQ}
           onCreate={(type) => void onCreate(type)}
           onRefresh={() => void refresh()}
