@@ -35,16 +35,16 @@ function cx(...classes: Array<string | false | undefined>) {
 
 function PriorityChip({ value }: { value: string }) {
   const map: Record<string, string> = {
-    Baja: 'bg-emerald-100 text-emerald-800',
-    Media: 'bg-amber-100 text-amber-800',
-    Alta: 'bg-orange-100 text-orange-800',
-    Crítica: 'bg-rose-100 text-rose-800',
+    Baja: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    Media: 'bg-amber-50 text-amber-700 border-amber-200',
+    Alta: 'bg-orange-50 text-orange-700 border-orange-200',
+    Crítica: 'bg-rose-50 text-rose-700 border-rose-200',
   };
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-        map[value] || 'bg-gray-100 text-gray-700'
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        map[value] || 'bg-gray-100 text-gray-700 border-gray-200'
       )}
     >
       {value}
@@ -54,16 +54,16 @@ function PriorityChip({ value }: { value: string }) {
 
 function StatusChip({ value }: { value: string }) {
   const map: Record<string, string> = {
-    Nueva: 'bg-gray-100 text-gray-800',
-    'En Revisión': 'bg-yellow-100 text-yellow-800',
-    Aprobada: 'bg-emerald-100 text-emerald-800',
-    Rechazada: 'bg-rose-100 text-rose-800',
+    Nueva: 'bg-gray-100 text-gray-800 border-gray-200',
+    'En Revisión': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+    Aprobada: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+    Rechazada: 'bg-rose-50 text-rose-800 border-rose-200',
   };
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-        map[value] || 'bg-gray-100 text-gray-700'
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        map[value] || 'bg-gray-100 text-gray-700 border-gray-200'
       )}
     >
       {value}
@@ -260,10 +260,10 @@ export default function WorkRequestsBoard({ filters }: Props) {
     cond ? ' disabled:opacity-40 disabled:cursor-not-allowed' : '';
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="wr-board flex flex-col flex-1 min-h-0">
       {/* Barra superior */}
-      <div className="flex items-center gap-3">
-        <p className="text-sm text-gray-700">
+      <div className="wr-requests-toolbar flex items-center gap-3 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 shadow-sm">
+        <p className="text-sm font-medium text-gray-700">
           Solicitudes pendientes de aprobación — Página {page + 1} de{' '}
           {Math.ceil(totalCount / PAGE_SIZE) || 1}
         </p>
@@ -282,7 +282,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                     : undefined
             }
             className={
-              'inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500' +
+              'inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500' +
               disabledCtlCls(!canMassAccept || isLoading)
             }
           >
@@ -292,7 +292,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
       </div>
 
       {/* Contenido scrollable */}
-      <div className="mt-3 flex-1 min-h-0">
+      <div className="mt-2 flex-1 min-h-0">
         {/* ===== Móvil: tarjetas ===== */}
         <div className="md:hidden space-y-3 overflow-y-auto">
           {isLoading ? (
@@ -311,7 +311,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
               return (
                 <div
                   key={t.id}
-                  className={`rounded-xl border bg-white p-4 shadow-sm ${
+                  className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${
                     selected ? 'ring-1 ring-indigo-300' : ''
                   }`}
                   onClick={() => setDetailTicket(t)}
@@ -476,9 +476,9 @@ export default function WorkRequestsBoard({ filters }: Props) {
         {/* ===== md+: tabla ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
-            <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
-              <table className="min-w-full table-fixed divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+            <div className="wr-table-shell overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+              <table className="wr-table min-w-full table-fixed border-separate border-spacing-0">
+                <thead className="wr-table-head bg-white sticky top-0 z-10">
                   <tr>
                     <th className="px-6 w-12">
                       <input
@@ -501,44 +501,44 @@ export default function WorkRequestsBoard({ filters }: Props) {
                         }}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       ID
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Solicitud
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Solicitante
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Prioridad
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Ubicación
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Adjuntos
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Responsable
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Fecha
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="bg-white">
                   {isLoading ? (
                     <tr>
                       <td
                         colSpan={11}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         Cargando…
                       </td>
@@ -547,7 +547,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                     <tr>
                       <td
                         colSpan={11}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         No hay tickets pendientes.
                       </td>
@@ -563,13 +563,13 @@ export default function WorkRequestsBoard({ filters }: Props) {
                         <tr
                           key={t.id}
                           className={cx(
-                            'hover:bg-gray-50 transition cursor-pointer',
-                            selected && 'bg-indigo-50'
+                            'wr-table-row hover:bg-indigo-50/40 transition cursor-pointer',
+                            selected && 'bg-indigo-50/70'
                           )}
                           onClick={() => setDetailTicket(t)}
                         >
                           <td
-                            className="relative px-6 w-12"
+                            className="relative px-6 w-12 border-b border-gray-100"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {selected && (
@@ -600,7 +600,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-900 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span>#{t.id}</span>
 
@@ -624,7 +624,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                             </div>
                           </td>
 
-                          <td className="px-4 py-4">
+                          <td className="px-4 py-3 border-b border-gray-100">
                             <div className="text-sm font-medium text-gray-900 wrap-anywhere line-clamp-1">
                               {t.title}
                             </div>
@@ -632,24 +632,24 @@ export default function WorkRequestsBoard({ filters }: Props) {
                               {t.description}
                             </div>
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {t.requester}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             <PriorityChip value={t.priority ?? 'Media'} />
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             <StatusChip value={t.status ?? 'Nueva'} />
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {t.location_id}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             {firstAsset ? (
                               <img
                                 src={getPublicImageUrl(firstAsset)}
                                 alt="Activo"
-                                className="h-10 w-20 object-cover rounded"
+                                className="h-9 w-16 object-cover rounded-md border border-gray-200"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDetailTicket(t);
@@ -660,12 +660,12 @@ export default function WorkRequestsBoard({ filters }: Props) {
                             )}
                           </td>
                           <td
-                            className="px-4 py-4 text-sm text-gray-700"
+                            className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <select
                               className={
-                                'w-full rounded border-gray-300' +
+                                'w-full rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm' +
                                 (!canFullWR
                                   ? ' opacity-50 cursor-not-allowed bg-gray-100'
                                   : '')
@@ -696,11 +696,11 @@ export default function WorkRequestsBoard({ filters }: Props) {
                               ))}
                             </select>
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {formatDateInTimezone(t.created_at)}
                           </td>
                           <td
-                            className="px-4 py-4 whitespace-nowrap"
+                            className="px-4 py-3 border-b border-gray-100 whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center gap-3">
@@ -750,11 +750,11 @@ export default function WorkRequestsBoard({ filters }: Props) {
       </div>
 
       {/* Paginación */}
-      <div className="flex justify-end gap-2 mt-4">
+      <div className="wr-pagination mt-3 flex justify-end gap-2">
         <button
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
-          className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+          className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-100 disabled:hover:bg-white"
         >
           Anterior
         </button>
@@ -765,7 +765,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
             )
           }
           disabled={page + 1 >= Math.ceil(totalCount / PAGE_SIZE)}
-          className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+          className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
         >
           Siguiente
         </button>

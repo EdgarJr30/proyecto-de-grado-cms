@@ -1,0 +1,112 @@
+.wr-asana {
+  --wr-bg: #f3f5fb;
+  --wr-surface: #ffffff;
+  --wr-surface-soft: #f7f9fd;
+  --wr-border: #d9e2ef;
+  --wr-border-strong: #c6d3e8;
+  --wr-text: #0f172a;
+  --wr-subtext: #5f6b81;
+  --wr-accent: #4f46e5;
+  --wr-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --wr-shadow-md:
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+  color: var(--wr-text);
+  font-family:
+    'Manrope',
+    'Nunito Sans',
+    'Segoe UI',
+    sans-serif;
+}
+
+.wr-asana .wr-page-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    var(--wr-bg);
+}
+
+.wr-asana .wr-page-header h2 {
+  color: var(--wr-text);
+}
+
+.wr-asana .wr-header-row {
+  min-height: 48px;
+}
+
+.wr-asana .wr-filters {
+  background: transparent;
+}
+
+.wr-asana .wr-filter-shell > div > div {
+  border-radius: 0.9rem;
+  border-color: var(--wr-border);
+  background: rgba(247, 249, 253, 0.9);
+  box-shadow: var(--wr-shadow-sm);
+  padding: 0.6rem 0.75rem;
+}
+
+.wr-asana .wr-filter-shell button {
+  min-height: 2.2rem;
+  border-radius: 0.7rem;
+  font-size: 0.86rem;
+}
+
+.wr-asana .wr-filter-shell .h-11 {
+  height: 2.2rem;
+}
+
+.wr-asana .wr-filter-shell input,
+.wr-asana .wr-filter-shell select {
+  font-size: 0.9rem;
+}
+
+.wr-asana .wr-filter-shell .mb-2 {
+  margin-bottom: 0.45rem;
+}
+
+.wr-asana .wr-filter-shell .mt-3 {
+  margin-top: 0.45rem;
+}
+
+.wr-asana .wr-content {
+  background: linear-gradient(180deg, var(--wr-bg) 0%, #eef2f9 100%);
+}
+
+.wr-asana .wr-requests-toolbar {
+  border-color: var(--wr-border);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--wr-shadow-sm);
+}
+
+.wr-asana .wr-table-shell {
+  border-color: var(--wr-border);
+}
+
+.wr-asana .wr-table-head th {
+  border-bottom: 1px solid var(--wr-border);
+}
+
+.wr-asana .wr-table-row td {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.wr-asana .wr-table-row td:first-child {
+  border-left: 2px solid transparent;
+}
+
+.wr-asana .wr-table-row:hover td:first-child {
+  border-left-color: var(--wr-accent);
+}
+
+.wr-asana .wr-pagination {
+  padding-top: 0.25rem;
+}
+
+@media (max-width: 1024px) {
+  .wr-asana .wr-page-header h2 {
+    font-size: 1.75rem;
+  }
+}
