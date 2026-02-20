@@ -15,18 +15,11 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 
 interface Props {
   searchTerm: string;
-  // `selectedLocation` no aplica para assignees; se ignora
-  selectedLocation?: string;
+  sectionFilter: AssigneeSection | 'TODOS';
+  includeInactive: boolean;
 }
 
 const PAGE_SIZE = 8;
-const SECTIONS: (AssigneeSection | 'TODOS')[] = [
-  'TODOS',
-  'SIN ASIGNAR',
-  'Internos',
-  'TERCEROS',
-  'OTROS',
-];
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -34,15 +27,15 @@ function cx(...classes: Array<string | false | undefined>) {
 
 function SectionChip({ value }: { value: AssigneeSection }) {
   const map: Record<AssigneeSection, string> = {
-    'SIN ASIGNAR': 'bg-gray-100 text-gray-800',
-    Internos: 'bg-indigo-100 text-indigo-800',
-    TERCEROS: 'bg-amber-100 text-amber-800',
-    OTROS: 'bg-slate-100 text-slate-700',
+    'SIN ASIGNAR': 'bg-gray-100 text-gray-800 border-gray-200',
+    Internos: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    TERCEROS: 'bg-amber-50 text-amber-700 border-amber-200',
+    OTROS: 'bg-slate-100 text-slate-700 border-slate-200',
   };
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
         map[value]
       )}
     >
@@ -55,8 +48,10 @@ function ActiveChip({ active }: { active: boolean }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-        active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        active
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          : 'bg-rose-50 text-rose-700 border-rose-200'
       )}
     >
       {active ? 'Activo' : 'Inactivo'}
@@ -85,11 +80,12 @@ const EMPTY_FORM: FormState = {
   is_active: true,
 };
 
-export default function AssigneesTable({ searchTerm }: Props) {
+export default function AssigneesTable({
+  searchTerm,
+  sectionFilter,
+  includeInactive,
+}: Props) {
   const checkbox = useRef<HTMLInputElement>(null);
-
-  const [section, setSection] = useState<AssigneeSection | 'TODOS'>('TODOS');
-  const [includeInactive, setIncludeInactive] = useState(false);
 
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [selectedRows, setSelectedRows] = useState<Assignee[]>([]);
@@ -137,7 +133,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
         page: p,
         pageSize: PAGE_SIZE,
         search: isSearching ? searchTerm : undefined,
-        section,
+        section: sectionFilter,
         includeInactive,
       });
       setAssignees(data);
@@ -156,7 +152,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
   useEffect(() => {
     void reload(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section, includeInactive, isSearching, searchTerm]);
+  }, [sectionFilter, includeInactive, isSearching, searchTerm]);
 
   useEffect(() => {
     if (isSearching) return; // cuando hay búsqueda, reset de página ya se hace en el efecto anterior
@@ -309,38 +305,19 @@ export default function AssigneesTable({ searchTerm }: Props) {
   }
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="people-board flex flex-col flex-1 min-h-0">
       {/* Toolbar superior */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Tabs por sección */}
-        <div className="flex flex-wrap items-center gap-1">
-          {SECTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSection(s)}
-              className={cx(
-                'px-3 py-1.5 rounded-full text-sm border cursor-pointer',
-                section === s
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-              )}
-            >
-              {s}
-            </button>
-          ))}
+      <div className="people-table-toolbar flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
+        <div className="text-sm text-gray-700 font-medium">
+          <span className="mr-2">Sección:</span>
+          <strong>{sectionFilter}</strong>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              className="h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
-            />
-            Mostrar inactivos
-          </label>
+        <span className="rounded-full border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-600">
+          {includeInactive ? 'Incluye inactivos' : 'Solo activos'}
+        </span>
 
+        <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             onClick={openCreate}
@@ -350,7 +327,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
                 ? 'No tienes permiso para crear/editar técnicos'
                 : undefined
             }
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Nuevo responsable
           </button>
@@ -364,7 +341,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
                 ? 'No tienes permiso para activar/desactivar técnicos'
                 : undefined
             }
-            className="inline-flex items-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center rounded-xl bg-rose-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Desactivar selección
           </button>
@@ -386,7 +363,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
       </div>
 
       {/* CONTENEDOR SCROLLABLE */}
-      <div className="mt-3 flex-1 min-h-0">
+      <div className="mt-2 flex-1 min-h-0">
         {/* ===== Vista Móvil: tarjetas ===== */}
         <div className="md:hidden space-y-3 overflow-y-auto">
           {isLoading ? (
@@ -402,7 +379,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
                 <div
                   key={a.id}
                   className={cx(
-                    'rounded-xl border bg-white p-4 shadow-sm',
+                    'rounded-xl border border-gray-200 bg-white p-4 shadow-sm',
                     selected && 'ring-1 ring-indigo-300'
                   )}
                   onClick={() => setDetail(a)}
@@ -508,9 +485,9 @@ export default function AssigneesTable({ searchTerm }: Props) {
         {/* ===== Vista md+: tabla sticky ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
-            <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+            <div className="people-table-shell overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+              <table className="people-table min-w-full border-separate border-spacing-0">
+                <thead className="people-table-head bg-white sticky top-0 z-10">
                   <tr>
                     <th className="px-6 w-12">
                       <input
@@ -530,35 +507,35 @@ export default function AssigneesTable({ searchTerm }: Props) {
                         }}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       ID
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Nombre
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Sección
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Email
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Teléfono
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Acciones
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="bg-white">
                   {isLoading ? (
                     <tr>
                       <td
                         colSpan={8}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         Cargando…
                       </td>
@@ -567,7 +544,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
                     <tr>
                       <td
                         colSpan={8}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         Sin responsables.
                       </td>
@@ -579,13 +556,13 @@ export default function AssigneesTable({ searchTerm }: Props) {
                         <tr
                           key={a.id}
                           className={cx(
-                            'hover:bg-gray-50 transition cursor-pointer',
-                            selected && 'bg-indigo-50'
+                            'people-table-row hover:bg-indigo-50/40 transition cursor-pointer',
+                            selected && 'bg-indigo-50/70'
                           )}
                           onClick={() => setDetail(a)}
                         >
                           <td
-                            className="relative px-6 w-12"
+                            className="relative px-6 w-12 border-b border-gray-100"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {selected && (
@@ -605,10 +582,10 @@ export default function AssigneesTable({ searchTerm }: Props) {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-900 whitespace-nowrap">
                             #{a.id}
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-4 py-3 border-b border-gray-100">
                             <div className="text-sm font-medium text-gray-900 line-clamp-1">
                               {formatAssigneeFullName(a)}
                             </div>
@@ -618,20 +595,20 @@ export default function AssigneesTable({ searchTerm }: Props) {
                                 : '—'}
                             </div>
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             <SectionChip value={a.section} />
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             <ActiveChip active={a.is_active} />
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {a.email ?? '—'}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {a.phone ?? '—'}
                           </td>
                           <td
-                            className="px-4 py-4 whitespace-nowrap"
+                            className="px-4 py-3 border-b border-gray-100 whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center gap-3">
@@ -695,11 +672,11 @@ export default function AssigneesTable({ searchTerm }: Props) {
 
       {/* Paginación (solo cuando NO hay búsqueda) */}
       {!isSearching && (
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="people-pagination mt-3 flex justify-end gap-2">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+            className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-100 disabled:hover:bg-white"
           >
             Anterior
           </button>
@@ -708,7 +685,7 @@ export default function AssigneesTable({ searchTerm }: Props) {
               setPage((p) => (p + 1 < Math.ceil(count / PAGE_SIZE) ? p + 1 : p))
             }
             disabled={page + 1 >= Math.ceil(count / PAGE_SIZE)}
-            className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+            className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
           >
             Siguiente
           </button>

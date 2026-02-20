@@ -1,33 +1,68 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
-import Navbar from '../../components/navigation/Navbar';
 import TechniciansTable from '../../components/dashboard/assignee/AssigneeTable';
+import AssigneeFiltersBar from '../../components/dashboard/assignee/AssigneeFiltersBar';
+import type { FilterState } from '../../types/filters';
+import type { TechniciansFilterKey } from '../../features/management/techniciansFilters';
+import type { AssigneeSection } from '../../types/Assignee';
+import '../../styles/peopleAsana.css';
+
+const VALID_SECTIONS = new Set<AssigneeSection | 'TODOS'>([
+  'TODOS',
+  'SIN ASIGNAR',
+  'Internos',
+  'TERCEROS',
+  'OTROS',
+]);
 
 export default function AssigneeManagementPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState('');
+  const [filters, setFilters] = useState<Record<TechniciansFilterKey, unknown>>(
+    {} as Record<TechniciansFilterKey, unknown>
+  );
+
+  const mergedFilters = useMemo<FilterState<TechniciansFilterKey>>(
+    () => filters as FilterState<TechniciansFilterKey>,
+    [filters]
+  );
+
+  const searchTerm =
+    typeof mergedFilters.q === 'string' ? mergedFilters.q : '';
+  const sectionCandidate =
+    typeof mergedFilters.section === 'string' ? mergedFilters.section : 'TODOS';
+  const sectionFilter: AssigneeSection | 'TODOS' = VALID_SECTIONS.has(
+    sectionCandidate as AssigneeSection | 'TODOS'
+  )
+    ? (sectionCandidate as AssigneeSection | 'TODOS')
+    : 'TODOS';
+  const includeInactive = Boolean(mergedFilters.include_inactive);
 
   return (
-    <div className="h-screen flex bg-gray-100">
+    <div className="people-asana h-screen flex bg-[#f3f4f8]">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <div className="w-full">
-          {/* Navbar con búsqueda y filtro */}
-          <Navbar
-            onSearch={setSearchTerm}
-            onFilterLocation={setSelectedLocation}
-            selectedLocation={selectedLocation}
+        <header className="people-page-header px-4 md:px-6 lg:px-8 py-3 md:py-4">
+          <div className="people-header-row flex items-center justify-between gap-3">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+              Técnicos
+            </h2>
+          </div>
+        </header>
+
+        <div className="people-filters px-4 md:px-6 lg:px-8 pt-2">
+          <AssigneeFiltersBar
+            onApply={(vals) => {
+              setFilters((prev) =>
+                JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
+              );
+            }}
           />
         </div>
 
-        <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6">
-          <h2 className="text-3xl font-bold">Técnicos</h2>
-        </header>
-
-        <section className="flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
+        <section className="people-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-2 pb-6">
           <TechniciansTable
             searchTerm={searchTerm}
-            selectedLocation={selectedLocation}
+            sectionFilter={sectionFilter}
+            includeInactive={includeInactive}
           />
         </section>
       </main>

@@ -1,0 +1,105 @@
+.people-asana {
+  --people-bg: #f3f5fb;
+  --people-surface: #ffffff;
+  --people-surface-soft: #f7f9fd;
+  --people-border: #d9e2ef;
+  --people-border-strong: #c6d3e8;
+  --people-text: #0f172a;
+  --people-subtext: #5f6b81;
+  --people-accent: #4f46e5;
+  --people-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+  color: var(--people-text);
+  font-family:
+    'Manrope',
+    'Nunito Sans',
+    'Segoe UI',
+    sans-serif;
+}
+
+.people-asana .people-page-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    var(--people-bg);
+}
+
+.people-asana .people-header-row {
+  min-height: 48px;
+}
+
+.people-asana .people-filters {
+  background: transparent;
+}
+
+.people-asana .people-filter-shell > div > div {
+  border-radius: 0.9rem;
+  border-color: var(--people-border);
+  background: rgba(247, 249, 253, 0.9);
+  box-shadow: var(--people-shadow-sm);
+  padding: 0.6rem 0.75rem;
+}
+
+.people-asana .people-filter-shell button {
+  min-height: 2.2rem;
+  border-radius: 0.7rem;
+  font-size: 0.86rem;
+}
+
+.people-asana .people-filter-shell .h-11 {
+  height: 2.2rem;
+}
+
+.people-asana .people-filter-shell input,
+.people-asana .people-filter-shell select {
+  font-size: 0.9rem;
+}
+
+.people-asana .people-filter-shell .mb-2 {
+  margin-bottom: 0.45rem;
+}
+
+.people-asana .people-filter-shell .mt-3 {
+  margin-top: 0.45rem;
+}
+
+.people-asana .people-content {
+  background: linear-gradient(180deg, var(--people-bg) 0%, #eef2f9 100%);
+}
+
+.people-asana .people-table-toolbar {
+  border-color: var(--people-border);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--people-shadow-sm);
+}
+
+.people-asana .people-table-shell {
+  border-color: var(--people-border);
+}
+
+.people-asana .people-table-head th {
+  border-bottom: 1px solid var(--people-border);
+}
+
+.people-asana .people-table-row td {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.people-asana .people-table-row td:first-child {
+  border-left: 2px solid transparent;
+}
+
+.people-asana .people-table-row:hover td:first-child {
+  border-left-color: var(--people-accent);
+}
+
+.people-asana .people-pagination {
+  padding-top: 0.25rem;
+}
+
+@media (max-width: 1024px) {
+  .people-asana .people-page-header h2 {
+    font-size: 1.75rem;
+  }
+}

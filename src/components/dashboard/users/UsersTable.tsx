@@ -24,6 +24,7 @@ interface Role {
 interface Props {
   searchTerm: string;
   selectedLocation: string; // viene del filtro (string)
+  includeInactive: boolean;
 }
 
 const PAGE_SIZE = 8;
@@ -36,8 +37,10 @@ function ActiveChip({ active }: { active: boolean }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full px-2 py-1 text-xs font-medium',
-        active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
+        active
+          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+          : 'bg-rose-50 text-rose-700 border-rose-200'
       )}
     >
       {active ? 'Activo' : 'Inactivo'}
@@ -74,10 +77,13 @@ type DbLocation = {
   is_active: boolean;
 };
 
-export default function UsersTable({ searchTerm, selectedLocation }: Props) {
+export default function UsersTable({
+  searchTerm,
+  selectedLocation,
+  includeInactive,
+}: Props) {
   const checkbox = useRef<HTMLInputElement>(null);
 
-  const [includeInactive, setIncludeInactive] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
 
   const [rows, setRows] = useState<DbUser[]>([]);
@@ -131,6 +137,20 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     for (const l of locations) m.set(l.id, l.name);
     return m;
   }, [locations]);
+
+  const selectedLocationId = useMemo(() => {
+    const raw = selectedLocation?.trim() ?? '';
+    if (!raw) return null;
+    const numeric = toIntOrNull(raw);
+    if (numeric != null) return numeric;
+    const lower = raw.toLowerCase();
+    const byNameOrCode = locations.find(
+      (l) =>
+        l.name.trim().toLowerCase() === lower ||
+        l.code.trim().toLowerCase() === lower
+    );
+    return byNameOrCode?.id ?? null;
+  }, [selectedLocation, locations]);
 
   useLayoutEffect(() => {
     const isIndet =
@@ -196,13 +216,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
     try {
       const p = resetPage ? 0 : page;
 
-      const locationFilter = toIntOrNull(selectedLocation);
-
       const { data, count: total } = await getUsersPaginated({
         page: p,
         pageSize: PAGE_SIZE,
         search: isSearching ? searchTerm : undefined,
-        location_id: locationFilter,
+        location_id: selectedLocationId,
         includeInactive,
       });
 
@@ -243,7 +261,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   useEffect(() => {
     void reload(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeInactive, selectedLocation, isSearching, searchTerm]);
+  }, [includeInactive, selectedLocationId, isSearching, searchTerm]);
 
   // paginación (solo si NO está buscando)
   useEffect(() => {
@@ -468,25 +486,19 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="people-board flex flex-col flex-1 min-h-0">
       {/* Toolbar superior */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="text-sm text-gray-700">
+      <div className="people-table-toolbar flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
+        <div className="text-sm text-gray-700 font-medium">
           <span className="mr-2">Ubicación:</span>
           <strong>{selectedLocation || 'TODAS'}</strong>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              className="h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-600 cursor-pointer"
-              checked={includeInactive}
-              onChange={(e) => setIncludeInactive(e.target.checked)}
-            />
-            Mostrar inactivos
-          </label>
+        <span className="rounded-full border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-600">
+          {includeInactive ? 'Incluye inactivos' : 'Solo activos'}
+        </span>
 
+        <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
             onClick={() => setOpenCreate(true)}
@@ -498,7 +510,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                   ? 'No tienes permiso para asignar rol (rbac:manage_roles)'
                   : undefined
             }
-            className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Nuevo usuario
           </button>
@@ -512,7 +524,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                 ? 'No tienes permiso para activar/desactivar'
                 : undefined
             }
-            className="inline-flex items-center rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center rounded-xl bg-rose-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-400 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           >
             Desactivar selección
           </button>
@@ -534,7 +546,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
       </div>
 
       {/* Lista / Tabla */}
-      <div className="mt-3 flex-1 min-h-0">
+      <div className="mt-2 flex-1 min-h-0">
         {/* ===== Vista Móvil: tarjetas ===== */}
         <div className="md:hidden space-y-3 overflow-y-auto">
           {isLoading ? (
@@ -551,7 +563,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                 <div
                   key={u.id}
                   className={cx(
-                    'rounded-xl border bg-white p-4 shadow-sm cursor-pointer',
+                    'rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer',
                     selected && 'ring-1 ring-indigo-300'
                   )}
                   onClick={() => setDetail(u)}
@@ -680,9 +692,9 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
         {/* ===== Vista md+: tabla sticky ===== */}
         <div className="hidden md:block h-full min-h-0 overflow-auto">
           <div className="inline-block min-w-full align-middle">
-            <div className="overflow-auto rounded-lg ring-1 ring-gray-200">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+            <div className="people-table-shell overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+              <table className="people-table min-w-full border-separate border-spacing-0">
+                <thead className="people-table-head bg-white sticky top-0 z-10">
                   <tr>
                     <th className="px-6 w-12">
                       <input
@@ -702,39 +714,39 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                         }}
                       />
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Nombre
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Apellido
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Email
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Ubicación
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Rol
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Estado
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Creado
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Acciones
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-200 bg-white">
+                <tbody className="bg-white">
                   {isLoading ? (
                     <tr>
                       <td
                         colSpan={9}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         Cargando…
                       </td>
@@ -743,7 +755,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                     <tr>
                       <td
                         colSpan={9}
-                        className="py-8 text-center text-gray-400"
+                        className="py-10 text-center text-gray-400"
                       >
                         Sin usuarios.
                       </td>
@@ -758,13 +770,13 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                         <tr
                           key={u.id}
                           className={cx(
-                            'hover:bg-gray-50 transition cursor-pointer',
-                            selected && 'bg-indigo-50'
+                            'people-table-row hover:bg-indigo-50/40 transition cursor-pointer',
+                            selected && 'bg-indigo-50/70'
                           )}
                           onClick={() => setDetail(u)}
                         >
                           <td
-                            className="relative px-6 w-12"
+                            className="relative px-6 w-12 border-b border-gray-100"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {selected && (
@@ -787,25 +799,25 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                             />
                           </td>
 
-                          <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-900 whitespace-nowrap">
                             {u.name ?? '—'}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-900 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-900 whitespace-nowrap">
                             {u.last_name ?? '—'}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {u.email}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {renderLocation(u)}
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                             {roleName}
                           </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             <ActiveChip active={u.is_active} />
                           </td>
-                          <td className="px-4 py-4 text-sm text-gray-500 whitespace-nowrap">
+                          <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-500 whitespace-nowrap">
                             {formatDateInTimezone(
                               u.created_at,
                               'America/Santo_Domingo',
@@ -814,7 +826,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
                           </td>
 
                           <td
-                            className="px-4 py-4 whitespace-nowrap"
+                            className="px-4 py-3 border-b border-gray-100 whitespace-nowrap"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="flex items-center gap-3">
@@ -871,11 +883,11 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
 
       {/* Paginación */}
       {!isSearching && (
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="people-pagination mt-3 flex justify-end gap-2">
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
-            className="px-4 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+            className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-100 disabled:hover:bg-white"
           >
             Anterior
           </button>
@@ -884,7 +896,7 @@ export default function UsersTable({ searchTerm, selectedLocation }: Props) {
               setPage((p) => (p + 1 < Math.ceil(count / PAGE_SIZE) ? p + 1 : p))
             }
             disabled={page + 1 >= Math.ceil(count / PAGE_SIZE)}
-            className="px-4 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+            className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
           >
             Siguiente
           </button>
