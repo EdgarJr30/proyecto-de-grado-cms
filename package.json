@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:qa": "vite build --mode qa",
     "build:prod": "vite build --mode production",
+    "admin:create-first": "node scripts/create-first-admin.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "release:patch": "npm version patch -m \"chore(release): %s\"",
