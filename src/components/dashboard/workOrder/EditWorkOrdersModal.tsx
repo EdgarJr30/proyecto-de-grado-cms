@@ -604,11 +604,13 @@ export default function EditWorkOrdersModal({
       </div>
 
       {/* ✅ Repuestos (solo si is_accepted=true) */}
-      <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Repuestos</h3>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-slate-900">
+            Repuestos y reservas
+          </h3>
           {!edited.is_accepted && (
-            <span className="text-xs text-gray-500">
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
               Disponible al aceptar (WO)
             </span>
           )}
