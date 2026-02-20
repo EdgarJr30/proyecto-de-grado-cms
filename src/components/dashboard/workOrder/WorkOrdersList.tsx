@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Ticket, WorkOrder, WorkOrderExtras } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
@@ -8,6 +8,7 @@ import {
 } from '../../../services/storageService';
 import { getTicketsByWorkOrdersFiltersPaginated } from '../../../services/ticketService';
 import AssigneeBadge from '../../common/AssigneeBadge';
+import { supabase } from '../../../lib/supabaseClient';
 
 type Props = {
   filters?: FilterState<WorkOrdersFilterKey>;
@@ -53,10 +54,13 @@ export default function WorkOrdersList({
   const [page, setPage] = useState(0);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const realtimeRefreshTimeout = useRef<number | null>(null);
 
   const fkey = useMemo(() => JSON.stringify(filters ?? {}), [filters]);
+  const toId = (value: string | number | undefined | null) =>
+    Number(value ?? 0);
 
-  async function reload(p = 0) {
+  const reload = useCallback(async (p = 0) => {
     setLoading(true);
     const { data, count: total } = await getTicketsByWorkOrdersFiltersPaginated(
       (filters ?? {}) as FilterState<string>,
@@ -66,7 +70,7 @@ export default function WorkOrdersList({
     setRows(data);
     setCount(total);
     setLoading(false);
-  }
+  }, [filters]);
 
   useEffect(() => {
     setPage(0);
@@ -74,37 +78,18 @@ export default function WorkOrdersList({
 
   useEffect(() => {
     void reload(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, fkey]);
+  }, [page, fkey, reload]);
 
   // 👇 Mezcla local optimista cuando llega un patch desde el modal
   useEffect(() => {
     if (!lastUpdatedTicket?.id) return;
-
-    setRows((prev) => {
-      let touched = false;
-      const next = prev.map((r) => {
-        if (r.id === lastUpdatedTicket.id) {
-          touched = true;
-          return withEffective({
-            ...r,
-            ...(lastUpdatedTicket as WorkOrder),
-          } as WorkOrder);
-        }
-        return r;
-      });
-      // Si la fila no está en la página actual, no hacemos nada (paginación)
-      return touched ? next : prev;
-    });
-  }, [lastUpdatedTicket]);
-
-  useEffect(() => {
-    if (!lastUpdatedTicket?.id) return;
+    const lastId = toId(lastUpdatedTicket.id as string | number | undefined);
+    if (!lastId) return;
 
     let touched = false;
     setRows((prev) => {
       const next = prev.map((r) => {
-        if (r.id === lastUpdatedTicket.id) {
+        if (toId(r.id) === lastId) {
           touched = true;
           return withEffective({
             ...r,
@@ -120,7 +105,50 @@ export default function WorkOrdersList({
       // 👇 recarga solo la página actual (puede ser costoso si haces muchos guardados seguidos)
       void reload(page);
     }
-  }, [lastUpdatedTicket]);
+  }, [lastUpdatedTicket, page, reload]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('tickets-changes-WorkOrdersList')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'tickets' },
+        (payload) => {
+          const oldRow = payload.old as Partial<Ticket>;
+          const newRow = payload.new as Partial<Ticket>;
+          const relevantChange =
+            oldRow.status !== newRow.status ||
+            oldRow.priority !== newRow.priority ||
+            oldRow.assignee_id !== newRow.assignee_id ||
+            oldRow.location_id !== newRow.location_id ||
+            oldRow.title !== newRow.title ||
+            oldRow.incident_date !== newRow.incident_date ||
+            oldRow.is_archived !== newRow.is_archived ||
+            oldRow.is_accepted !== newRow.is_accepted;
+          if (!relevantChange) return;
+
+          if (realtimeRefreshTimeout.current) {
+            window.clearTimeout(realtimeRefreshTimeout.current);
+          }
+          realtimeRefreshTimeout.current = window.setTimeout(() => {
+            void reload(page);
+            realtimeRefreshTimeout.current = null;
+          }, 450);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (realtimeRefreshTimeout.current) {
+        window.clearTimeout(realtimeRefreshTimeout.current);
+      }
+      try {
+        void channel.unsubscribe();
+      } catch {
+        // noop
+      }
+    };
+  }, [page, reload]);
 
   return (
     <div className="overflow-auto rounded-lg ring-1 ring-gray-200 bg-white">

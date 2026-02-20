@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, useCallback, type JSX } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type DragEvent,
+  type JSX,
+} from 'react';
 import type { Ticket, WorkOrderExtras } from '../../../types/Ticket';
 import { getTicketsByStatusPaginated } from '../../../services/ticketService';
 import {
@@ -24,6 +31,11 @@ interface Props {
   isFiltering: boolean;
   count?: number;
   getSpecialIncidentAdornment?: (t: Ticket) => JSX.Element | null;
+  canDragDrop?: boolean;
+  draggedTicketId?: number | null;
+  onDragStartTicket?: (ticket: Ticket) => void;
+  onDragEndTicket?: () => void;
+  onDropTicketInColumn?: (targetStatus: Ticket['status']) => void;
 }
 
 export default function WorkOrdersColumn({
@@ -42,6 +54,11 @@ export default function WorkOrdersColumn({
   isFiltering,
   count,
   getSpecialIncidentAdornment,
+  canDragDrop = false,
+  draggedTicketId = null,
+  onDragStartTicket,
+  onDragEndTicket,
+  onDropTicketInColumn,
 }: Props) {
   const [localTickets, setLocalTickets] = useState<Ticket[]>([]);
   const [page, setPage] = useState(0);
@@ -55,11 +72,16 @@ export default function WorkOrdersColumn({
   const columnRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const observer = useRef<IntersectionObserver | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const suppressClickUntilRef = useRef(0);
+
+  const toTicketId = (value: string | number) => Number(value);
 
   // Decide qué tickets renderizar
   const ticketsToRender = isFiltering ? (tickets ?? []) : localTickets;
   // Loading solo cuando no hay tickets para mostrar y está cargando
   const showSkeleton = isInitialLoading && !isFiltering;
+  const isEmptyColumn = !showSkeleton && ticketsToRender.length === 0;
 
   const loadMoreTickets = useCallback(
     async (force = false) => {
@@ -175,20 +197,21 @@ export default function WorkOrdersColumn({
 
   useEffect(() => {
     if (isSearching || !lastUpdatedTicket) return;
+    const lastId = toTicketId(lastUpdatedTicket.id);
 
     if (lastUpdatedTicket.is_archived) {
       setLocalTickets((prev) =>
-        prev.filter((t) => t.id !== lastUpdatedTicket.id)
+        prev.filter((t) => toTicketId(t.id) !== lastId)
       );
       return;
     }
 
     if (lastUpdatedTicket.status === status) {
       setLocalTickets((prev) => {
-        const exists = prev.some((t) => t.id === lastUpdatedTicket.id);
+        const exists = prev.some((t) => toTicketId(t.id) === lastId);
         if (exists) {
           return prev.map((t) =>
-            t.id === lastUpdatedTicket.id ? lastUpdatedTicket : t
+            toTicketId(t.id) === lastId ? { ...t, ...lastUpdatedTicket } : t
           );
         } else {
           return [lastUpdatedTicket, ...prev];
@@ -196,14 +219,47 @@ export default function WorkOrdersColumn({
       });
     } else {
       setLocalTickets((prev) =>
-        prev.filter((t) => t.id !== lastUpdatedTicket.id)
+        prev.filter((t) => toTicketId(t.id) !== lastId)
       );
     }
   }, [isSearching, lastUpdatedTicket, status]);
 
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    if (!canDragDrop || draggedTicketId == null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
+    if (!canDragDrop || draggedTicketId == null) return;
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    if (!canDragDrop) return;
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!canDragDrop || draggedTicketId == null) return;
+    e.preventDefault();
+    setIsDragOver(false);
+    onDropTicketInColumn?.(status);
+  };
+
   return (
     // 🔧 Evitar que la card “crezca” horizontalmente por contenido interno
-    <div className="bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col overflow-hidden">
+    <div
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col h-full min-h-[480px] overflow-hidden transition-colors ${
+        isDragOver ? 'ring-2 ring-indigo-400 bg-indigo-50/30' : ''
+      }`}
+    >
       <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
         <span
           className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles(
@@ -224,7 +280,11 @@ export default function WorkOrdersColumn({
       {/* 🔧 Scroll solo vertical; jamás horizontal */}
       <div
         ref={columnRef}
-        className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden max-h-[80vh] pr-1"
+        className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden max-h-[80vh] flex-1 min-h-[220px] pr-1"
+        onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         {showSkeleton ? (
           Array.from({ length: 5 }).map((_, idx) => (
@@ -248,8 +308,35 @@ export default function WorkOrdersColumn({
                 // 🔧 min-w-0 permite que los truncados funcionen dentro de flex
                 <div
                   key={ticket.id}
-                  onClick={() => onOpenModal(ticket)}
-                  className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer min-w-0"
+                  onClick={() => {
+                    if (Date.now() < suppressClickUntilRef.current) return;
+                    onOpenModal(ticket);
+                  }}
+                  draggable={canDragDrop}
+                  aria-grabbed={
+                    draggedTicketId != null &&
+                    toTicketId(ticket.id) === draggedTicketId
+                  }
+                  onDragStart={(e) => {
+                    if (!canDragDrop) return;
+                    suppressClickUntilRef.current = Date.now() + 250;
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', String(ticket.id));
+                    onDragStartTicket?.(ticket);
+                  }}
+                  onDragEnd={() => {
+                    suppressClickUntilRef.current = Date.now() + 250;
+                    setIsDragOver(false);
+                    onDragEndTicket?.();
+                  }}
+                  className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer min-w-0 ${
+                    canDragDrop ? 'cursor-grab active:cursor-grabbing' : ''
+                  } ${
+                    draggedTicketId != null &&
+                    toTicketId(ticket.id) === draggedTicketId
+                      ? 'opacity-60'
+                      : ''
+                  }`}
                 >
                   {/* 🔧 Imágenes en GRID (2 cols) para evitar overflow horizontal */}
                   {ticket.image &&
@@ -453,6 +540,20 @@ export default function WorkOrdersColumn({
                     d="M4 12a8 8 0 018-8v8H4z"
                   />
                 </svg>
+              </div>
+            )}
+
+            {isEmptyColumn && (
+              <div
+                className={`rounded-lg border border-dashed px-3 py-10 text-center text-xs ${
+                  isDragOver
+                    ? 'border-indigo-400 text-indigo-700 bg-indigo-50'
+                    : 'border-gray-300 text-gray-500 bg-gray-50'
+                }`}
+              >
+                {canDragDrop
+                  ? 'Arrastra y suelta una orden aquí'
+                  : 'Sin órdenes en esta columna'}
               </div>
             )}
           </>

@@ -89,6 +89,47 @@ export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
   }
 }
 
+const WORK_ORDER_STATUS_SET = new Set<Ticket['status']>([
+  'Pendiente',
+  'En Ejecución',
+  'Finalizadas',
+]);
+
+/**
+ * Cambio de estado para Work Orders desde tablero (drag-and-drop).
+ * Valida entrada en cliente y deja la autorización real a RLS/policies en BD.
+ */
+export async function moveWorkOrderStatus(
+  workOrderId: number,
+  status: Ticket['status']
+): Promise<void> {
+  if (!Number.isInteger(workOrderId) || workOrderId <= 0) {
+    throw new Error('ID de work order inválido.');
+  }
+  if (!WORK_ORDER_STATUS_SET.has(status)) {
+    throw new Error('Estado de work order inválido.');
+  }
+
+  const { data, error } = await supabase
+    .from('tickets')
+    .update({ status })
+    .eq('id', workOrderId)
+    .eq('is_accepted', true)
+    .eq('is_archived', false)
+    .select('id')
+    .limit(1);
+
+  if (error) {
+    throw new Error(`No se pudo mover la orden: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error(
+      'No se pudo mover la orden (no existe, está archivada o no tienes permiso).'
+    );
+  }
+}
+
 export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
   const { data, error } = await supabase
     .from('tickets')

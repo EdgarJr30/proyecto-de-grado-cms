@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import EditTicketModal from './EditWorkOrdersModal';
 import {
   updateTicket,
+  moveWorkOrderStatus,
   getTicketCountsRPC,
   getTicketsByWorkOrdersFiltersPaginated,
 } from '../../../services/ticketService';
@@ -17,6 +18,7 @@ import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFi
 import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
 import { showToastError } from '../../../notifications/toast';
+import { useCan } from '../../../rbac/PermissionsContext';
 
 const STATUSES: Ticket['status'][] = [
   'Pendiente',
@@ -47,12 +49,19 @@ export default function WorkOrdersBoard({ filters }: Props) {
     'En Ejecución': 0,
     Finalizadas: 0,
   });
+  const [draggedTicket, setDraggedTicket] = useState<WorkOrder | null>(null);
+  const [movingTicketId, setMovingTicketId] = useState<number | null>(null);
+  const canMoveCards = useCan('work_orders:full_access');
 
   type WorkOrderWithSpecialIncident = WorkOrder & {
     special_incident_id?: number | null;
   };
 
   const loadedColumns = useRef(0);
+  const filtersRef = useRef<FilterState<WorkOrdersFilterKey> | undefined>(
+    filters
+  );
+  const isFilteringRef = useRef(false);
 
   /** ¿Hay filtros activos? */
   const isFiltering = useMemo(() => {
@@ -82,6 +91,27 @@ export default function WorkOrdersBoard({ filters }: Props) {
     [filters]
   );
 
+  const filtersKey = useMemo(() => JSON.stringify(filters ?? {}), [filters]);
+  const countsFiltersKey = useMemo(
+    () => JSON.stringify(countsFilters),
+    [countsFilters]
+  );
+  const countsFiltersRef = useRef(countsFilters);
+  const toId = (value: string | number | undefined | null) =>
+    Number(value ?? 0);
+
+  useEffect(() => {
+    countsFiltersRef.current = countsFilters;
+  }, [countsFilters]);
+
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
+  useEffect(() => {
+    isFilteringRef.current = isFiltering;
+  }, [isFiltering]);
+
   // Componente/función para pintar el chip
   function renderSpecialIncidentChip(specialIncidentId?: number | null) {
     if (!specialIncidentId) return null;
@@ -94,6 +124,15 @@ export default function WorkOrdersBoard({ filters }: Props) {
     );
   }
 
+  const loadFilteredTickets = useCallback(async () => {
+    const { data } = await getTicketsByWorkOrdersFiltersPaginated(
+      (filtersRef.current ?? {}) as FilterState<string>,
+      0,
+      FILTERED_LIMIT
+    );
+    setFilteredTickets((data ?? []) as WorkOrder[]);
+  }, []);
+
   /** Carga cuando hay filtros (una sola query y se reparte por columnas) */
   useEffect(() => {
     let alive = true;
@@ -101,7 +140,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
       setIsLoading(true);
       if (isFiltering) {
         const { data } = await getTicketsByWorkOrdersFiltersPaginated(
-          (filters ?? {}) as FilterState<string>,
+          (filtersRef.current ?? {}) as FilterState<string>,
           0,
           FILTERED_LIMIT
         );
@@ -115,7 +154,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
     return () => {
       alive = false;
     };
-  }, [isFiltering, JSON.stringify(filters)]);
+  }, [isFiltering, filtersKey]);
 
   /** Conteos (badges) */
   useEffect(() => {
@@ -127,7 +166,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
     return () => {
       alive = false;
     };
-  }, [JSON.stringify(countsFilters)]);
+  }, [countsFiltersKey, countsFilters]);
 
   //Cargar todas (activas e inactivas) y mapear por id
   useEffect(() => {
@@ -145,30 +184,29 @@ export default function WorkOrdersBoard({ filters }: Props) {
     };
   }, []);
 
-  /** UI optimista para los badges */
-  function bumpCountsLocal(oldTicket: Ticket, newTicket: Ticket) {
-    setCounts((prev) => {
-      const next = { ...prev };
-      if (STATUSES.includes(oldTicket.status)) {
-        next[oldTicket.status] = Math.max(0, (next[oldTicket.status] ?? 0) - 1);
-      }
-      if (STATUSES.includes(newTicket.status)) {
-        next[newTicket.status] = (next[newTicket.status] ?? 0) + 1;
-      }
-      return next;
-    });
-  }
-
-  /** Debounce para reconciliar con la BD vía RPC */
+  /** Debounce para reconciliar badges con la BD vía RPC */
   const refreshTimeout = useRef<number | null>(null);
-  function scheduleCountsRefresh() {
+  const filteredRefreshTimeout = useRef<number | null>(null);
+  const scheduleCountsRefresh = useCallback(() => {
     if (refreshTimeout.current) window.clearTimeout(refreshTimeout.current);
     refreshTimeout.current = window.setTimeout(async () => {
-      const c = await getTicketCountsRPC(countsFilters);
+      const c = await getTicketCountsRPC(countsFiltersRef.current);
       setCounts(c);
       refreshTimeout.current = null;
-    }, 1200);
-  }
+    }, 220);
+  }, []);
+
+  const scheduleFilteredRefresh = useCallback(() => {
+    if (filteredRefreshTimeout.current) {
+      window.clearTimeout(filteredRefreshTimeout.current);
+    }
+    filteredRefreshTimeout.current = window.setTimeout(async () => {
+      if (isFilteringRef.current) {
+        await loadFilteredTickets();
+      }
+      filteredRefreshTimeout.current = null;
+    }, 500);
+  }, [loadFilteredTickets]);
 
   /** Modal */
   const openModal = (ticket: WorkOrder) => {
@@ -184,8 +222,10 @@ export default function WorkOrdersBoard({ filters }: Props) {
   const handleSave = async (patch: Partial<WorkOrder>) => {
     try {
       const prev = (selectedTicket as WorkOrder) || (patch as WorkOrder);
+      const patchId = toId(patch.id as string | number | undefined);
+      if (!patchId) throw new Error('ID de ticket inválido.');
 
-      await updateTicket(Number(patch.id), {
+      await updateTicket(patchId, {
         comments: patch.comments ?? undefined,
         assignee_id: patch.assignee_id ?? undefined,
         priority: patch.priority as Ticket['priority'],
@@ -197,7 +237,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
       // ✅ Usa el ticket base (prev) y mezcla el patch para NO perder extras como special_incident_id
       const baseline =
         (selectedTicket as WorkOrder) ??
-        (filteredTickets.find((r) => r.id === patch.id) as WorkOrder) ??
+        (filteredTickets.find((r) => toId(r.id) === patchId) as WorkOrder) ??
         (lastUpdatedTicket as WorkOrder) ??
         (patch as WorkOrder);
 
@@ -206,7 +246,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
       // (esto ya estaba bien: en modo filtrado mezclas contra el row existente)
       setFilteredTickets((rows) =>
         rows.map((r) =>
-          r.id === patch.id
+          toId(r.id) === patchId
             ? ({ ...r, ...(patch as WorkOrder) } as WorkOrder)
             : r
         )
@@ -215,13 +255,16 @@ export default function WorkOrdersBoard({ filters }: Props) {
       setModalOpen(false);
       setSelectedTicket(null);
 
+      const nextTicket = {
+        ...(prev as WorkOrder),
+        ...(patch as WorkOrder),
+      } as Ticket;
       const affected =
-        prev.status !== patch.status ||
-        prev.is_accepted !== patch.is_accepted ||
-        prev.location_id !== patch.location_id;
+        prev.status !== nextTicket.status ||
+        prev.is_accepted !== nextTicket.is_accepted ||
+        prev.location_id !== nextTicket.location_id;
 
       if (affected) {
-        bumpCountsLocal(prev as Ticket, patch as Ticket);
         scheduleCountsRefresh();
       }
     } catch (error: unknown) {
@@ -239,6 +282,61 @@ export default function WorkOrdersBoard({ filters }: Props) {
     }
   };
 
+  const handleDragStartTicket = (ticket: Ticket) => {
+    if (!canMoveCards || movingTicketId !== null) return;
+    setDraggedTicket(ticket as WorkOrder);
+  };
+
+  const handleDragEndTicket = () => {
+    setDraggedTicket(null);
+  };
+
+  const handleDropTicketInColumn = async (targetStatus: Ticket['status']) => {
+    if (!canMoveCards || movingTicketId !== null) return;
+
+    const ticket = draggedTicket;
+    setDraggedTicket(null);
+    if (!ticket) return;
+
+    const ticketId = toId(ticket.id);
+    if (!ticketId) return;
+    if (ticket.status === targetStatus) return;
+
+    const previousTicket = ticket as Ticket;
+    const optimisticTicket = {
+      ...ticket,
+      status: targetStatus,
+    } as WorkOrder;
+
+    if (!isFilteringRef.current) {
+      setLastUpdatedTicket(optimisticTicket);
+    }
+    setMovingTicketId(ticketId);
+
+    try {
+      await moveWorkOrderStatus(ticketId, targetStatus);
+      if (isFilteringRef.current) {
+        await loadFilteredTickets();
+      }
+    } catch (error: unknown) {
+      const rollbackTicket = {
+        ...ticket,
+        status: previousTicket.status,
+      } as WorkOrder;
+      if (!isFilteringRef.current) {
+        setLastUpdatedTicket(rollbackTicket);
+      } else {
+        await loadFilteredTickets();
+      }
+
+      const msg = error instanceof Error ? error.message : String(error);
+      showToastError(`No se pudo mover la orden. ${msg}`);
+    } finally {
+      scheduleCountsRefresh();
+      setMovingTicketId(null);
+    }
+  };
+
   /** Sincroniza la animación del loader por columnas */
   const handleColumnLoaded = () => {
     loadedColumns.current += 1;
@@ -249,7 +347,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
     setIsLoading(true);
   }, [reloadKey]);
 
-  /** Realtime: actualiza badges por delta */
+  /** Realtime: sincroniza badges + cards entre usuarios */
   useEffect(() => {
     const channel = supabase
       .channel('tickets-changes-WorkOrdersBoard')
@@ -259,15 +357,26 @@ export default function WorkOrdersBoard({ filters }: Props) {
         (payload) => {
           const oldRow = payload.old as Ticket;
           const newRow = payload.new as Ticket;
-          if (
+          const countRelevantChanged =
             oldRow.status !== newRow.status ||
             oldRow.is_accepted !== newRow.is_accepted ||
             oldRow.location_id !== newRow.location_id ||
-            oldRow.is_archived !== newRow.is_archived
-          ) {
-            bumpCountsLocal(oldRow, newRow);
+            oldRow.is_archived !== newRow.is_archived;
+
+          if (countRelevantChanged) {
             scheduleCountsRefresh();
           }
+
+          if (isFilteringRef.current) {
+            scheduleFilteredRefresh();
+            return;
+          }
+
+          const nextTicket =
+            newRow.is_accepted && !newRow.is_archived
+              ? (newRow as WorkOrder)
+              : ({ ...newRow, is_archived: true } as WorkOrder);
+          setLastUpdatedTicket(nextTicket);
         }
       )
       .subscribe();
@@ -280,7 +389,16 @@ export default function WorkOrdersBoard({ filters }: Props) {
         // ignorar errores de desconexión si el socket no llegó a abrir
       }
     };
-  }, []); // 👈 suscríbete una sola vez
+  }, [scheduleCountsRefresh, scheduleFilteredRefresh]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimeout.current) window.clearTimeout(refreshTimeout.current);
+      if (filteredRefreshTimeout.current) {
+        window.clearTimeout(filteredRefreshTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex gap-6 h-full w-full overflow-x-auto">
@@ -328,6 +446,11 @@ export default function WorkOrdersBoard({ filters }: Props) {
               : undefined
           }
           count={counts[status]}
+          canDragDrop={canMoveCards && movingTicketId === null}
+          draggedTicketId={draggedTicket ? toId(draggedTicket.id) : null}
+          onDragStartTicket={handleDragStartTicket}
+          onDragEndTicket={handleDragEndTicket}
+          onDropTicketInColumn={handleDropTicketInColumn}
           getSpecialIncidentAdornment={(t) => {
             const siId = (t as WorkOrderWithSpecialIncident)
               .special_incident_id;
