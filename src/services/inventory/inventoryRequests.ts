@@ -3,6 +3,8 @@ import type {
   AvailableStockRow,
   TicketPartRequestRow,
   PartPick,
+  TicketWoPick,
+  WarehouseBinPick,
   WarehousePick,
 } from '../../types/inventory/inventoryRequests';
 
@@ -55,6 +57,37 @@ export async function listWarehousesPick(): Promise<WarehousePick[]> {
   return (data ?? []) as WarehousePick[];
 }
 
+export async function listAcceptedWorkOrders(
+  limit = 200
+): Promise<TicketWoPick[]> {
+  const { data, error } = await supabase
+    .from('tickets')
+    .select(
+      'id,title,status,priority,requester,is_accepted,is_archived,created_at'
+    )
+    .eq('is_accepted', true)
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as TicketWoPick[];
+}
+
+export async function listWarehouseBinsPick(
+  warehouseId: string
+): Promise<WarehouseBinPick[]> {
+  const { data, error } = await supabase
+    .from('warehouse_bins')
+    .select('id,warehouse_id,code,name,is_active')
+    .eq('warehouse_id', warehouseId)
+    .eq('is_active', true)
+    .order('code', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as WarehouseBinPick[];
+}
+
 export async function getAvailableStock(
   partId: string,
   warehouseId: string
@@ -90,6 +123,68 @@ export async function reserveTicketPart(input: {
     p_warehouse_id: input.warehouseId,
     p_qty: input.qty,
     p_allow_backorder: input.allowBackorder ?? false,
+  });
+
+  if (error) throw error;
+}
+
+export async function issueTicketPart(input: {
+  ticketId: number;
+  partId: string;
+  warehouseId: string;
+  qty: number;
+  fromBinId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('issue_ticket_part', {
+    p_ticket_id: input.ticketId,
+    p_part_id: input.partId,
+    p_warehouse_id: input.warehouseId,
+    p_qty: input.qty,
+    p_from_bin_id: input.fromBinId ?? null,
+    p_reference: input.reference ?? null,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) throw error;
+  return String(data);
+}
+
+export async function returnTicketPart(input: {
+  ticketId: number;
+  partId: string;
+  warehouseId: string;
+  qty: number;
+  toBinId?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('return_ticket_part', {
+    p_ticket_id: input.ticketId,
+    p_part_id: input.partId,
+    p_warehouse_id: input.warehouseId,
+    p_qty: input.qty,
+    p_to_bin_id: input.toBinId ?? null,
+    p_reference: input.reference ?? null,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) throw error;
+  return String(data);
+}
+
+export async function releaseTicketPartReservation(input: {
+  ticketId: number;
+  partId: string;
+  warehouseId: string;
+  qty: number;
+}): Promise<void> {
+  const { error } = await supabase.rpc('release_ticket_part_reservation', {
+    p_ticket_id: input.ticketId,
+    p_part_id: input.partId,
+    p_warehouse_id: input.warehouseId,
+    p_qty: input.qty,
   });
 
   if (error) throw error;

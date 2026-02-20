@@ -25,6 +25,7 @@ import PartsPage from '../pages/inventory/parts/PartsPage';
 import WarehousesPage from '../pages/inventory/warehouses/WarehousesPage';
 import WarehouseBinsPage from '../pages/inventory/WarehouseBinsPage';
 import StockOverviewPage from '../pages/inventory/StockOverviewPage';
+import StockByLocationPage from '../pages/inventory/StockByLocationPage';
 import InventoryDocsPage from '../pages/inventory/inventory_docs/InventoryDocsPage';
 import InventoryDocEditorPage from '../pages/inventory/InventoryDocEditorPage';
 import VendorsPage from '../pages/inventory/vendors/VendorsPage';
@@ -33,6 +34,7 @@ import ReorderPoliciesPage from '../pages/inventory/ReorderPoliciesPage';
 import ReorderSuggestionsPage from '../pages/inventory/ReorderSuggestionsPage';
 import KardexPage from '../pages/inventory/kardex_audit/KardexPage';
 import PartCostsPage from '../pages/inventory/parts/parts_costs/PartCostsPage';
+import InventoryReservationsPage from '../pages/inventory/InventoryReservationsPage';
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -404,6 +406,12 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
   {
+    path: '/inventory/stock-by-location',
+    element: <StockByLocationPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
     path: '/inventory/docs',
     element: <InventoryDocsPage />,
     allowPerms: ['inventory:read'],
@@ -448,6 +456,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/costos',
     element: <PartCostsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/reservations',
+    element: <InventoryReservationsPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },

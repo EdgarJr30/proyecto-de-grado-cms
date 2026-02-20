@@ -35,3 +35,22 @@ export type WarehousePick = {
   name: string;
   is_active: boolean;
 };
+
+export type WarehouseBinPick = {
+  id: string;
+  warehouse_id: string;
+  code: string;
+  name: string | null;
+  is_active: boolean;
+};
+
+export type TicketWoPick = {
+  id: number;
+  title: string;
+  status: string | null;
+  priority: string | null;
+  requester: string | null;
+  is_accepted: boolean;
+  is_archived: boolean;
+  created_at: string;
+};

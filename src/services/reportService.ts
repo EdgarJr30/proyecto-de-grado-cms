@@ -1338,8 +1338,7 @@ export async function getInventoryPartsReport(
 
   for (const row of requestRows) {
     const reserved = toNumber(row.reserved_qty);
-    const issued = toNumber(row.issued_qty);
-    const pending = Math.max(reserved - issued, 0);
+    const pending = Math.max(reserved, 0);
 
     if (pending <= 0) continue;
 
