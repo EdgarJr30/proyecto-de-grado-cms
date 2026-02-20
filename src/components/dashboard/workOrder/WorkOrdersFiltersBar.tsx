@@ -10,12 +10,14 @@ type Props = {
 
 export default function WorkOrdersFiltersBar({ onApply }: Props) {
   return (
-    <FilterBar<WorkOrdersFilterKey>
-      schema={WorkOrdersFilters}
-      onApply={onApply}
-      sticky
-      exportMerge={{ is_accepted: true }}
-      baseFilename="ordenes_trabajo"
-    />
+    <div className="wo-filter-shell">
+      <FilterBar<WorkOrdersFilterKey>
+        schema={WorkOrdersFilters}
+        onApply={onApply}
+        defaultOpenDesktop={false}
+        exportMerge={{ is_accepted: true }}
+        baseFilename="ordenes_trabajo"
+      />
+    </div>
   );
 }

@@ -256,13 +256,13 @@ export default function WorkOrdersColumn({
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`bg-white rounded-lg shadow-lg p-4 w-[300px] sm:w-[350px] md:w-[400px] xl:w-[420px] min-w-[300px] flex-shrink-0 flex flex-col h-full min-h-[480px] overflow-hidden transition-colors ${
-        isDragOver ? 'ring-2 ring-indigo-400 bg-indigo-50/30' : ''
+      className={`wo-board-column rounded-2xl border border-gray-200 bg-gray-100/70 p-3 flex-[1_1_0] min-w-[280px] flex flex-col h-full min-h-[520px] overflow-hidden transition-colors ${
+        isDragOver ? 'ring-2 ring-indigo-300 bg-indigo-50/60' : ''
       }`}
     >
-      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+      <h3 className="wo-board-column-head font-semibold text-base mb-3 flex items-center gap-2">
         <span
-          className={`px-2 py-1 rounded text-sm font-medium ${getStatusStyles(
+          className={`wo-board-status-chip px-2 py-1 rounded-lg text-xs font-semibold border ${getStatusStyles(
             status
           )}`}
         >
@@ -270,7 +270,7 @@ export default function WorkOrdersColumn({
         </span>
 
         <span
-          className="inline-flex items-center justify-center rounded-full border border-gray-300 text-xs min-w-6 h-6 px-1.5 bg-white text-gray-700"
+          className="wo-board-count inline-flex items-center justify-center rounded-full border border-gray-300 text-xs min-w-6 h-6 px-1.5 bg-white text-gray-700"
           title={`Total en ${status}`}
         >
           {visibleCount}
@@ -280,7 +280,7 @@ export default function WorkOrdersColumn({
       {/* 🔧 Scroll solo vertical; jamás horizontal */}
       <div
         ref={columnRef}
-        className="flex flex-col gap-3 overflow-y-auto overflow-x-hidden max-h-[80vh] flex-1 min-h-[220px] pr-1"
+        className="wo-board-column-body flex flex-col gap-2 overflow-y-auto overflow-x-hidden max-h-[80vh] flex-1 min-h-[220px] pr-1"
         onDragOver={handleDragOver}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
@@ -290,7 +290,7 @@ export default function WorkOrdersColumn({
           Array.from({ length: 5 }).map((_, idx) => (
             <div
               key={idx}
-              className="bg-gray-100 animate-pulse border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col gap-2"
+              className="bg-white/70 animate-pulse border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col gap-2"
             >
               <div className="w-3/4 h-4 bg-gray-200 rounded mb-2" />
               <div className="w-full h-3 bg-gray-200 rounded mb-1" />
@@ -329,7 +329,7 @@ export default function WorkOrdersColumn({
                     setIsDragOver(false);
                     onDragEndTicket?.();
                   }}
-                  className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer min-w-0 ${
+                  className={`wo-ticket-card bg-white border border-gray-200 rounded-xl p-3 shadow-sm hover:shadow-md transition cursor-pointer min-w-0 ${
                     canDragDrop ? 'cursor-grab active:cursor-grabbing' : ''
                   } ${
                     draggedTicketId != null &&
@@ -344,13 +344,13 @@ export default function WorkOrdersColumn({
                       const imagePaths = getTicketImagePaths(ticket.image);
                       if (imagePaths.length === 0) return null;
                       return (
-                        <div className="grid grid-cols-2 gap-1 mb-3">
+                        <div className="grid grid-cols-2 gap-1 mb-2">
                           {imagePaths.slice(0, 4).map((path, idx) => (
                             <img
                               key={idx}
                               src={getPublicImageUrl(path)}
                               alt={`Adjunto ${idx + 1}`}
-                              className="w-full h-24 object-cover rounded"
+                              className="w-full h-16 object-cover rounded-md"
                             />
                           ))}
                         </div>
@@ -359,14 +359,14 @@ export default function WorkOrdersColumn({
 
                   <div className="flex items-start justify-between gap-2 mb-1 min-w-0">
                     {/* 🔧 Título truncado y rompible */}
-                    <h4 className="font-semibold text-sm text-gray-900 truncate break-words max-w-[85%]">
+                    <h4 className="wo-ticket-title font-semibold text-[15px] text-gray-900 truncate break-words max-w-[85%]">
                       {ticket.title}
                     </h4>
 
                     {/* Botón ... */}
                     <button
                       type="button"
-                      className="text-gray-900 hover:text-gray-600 shrink-0"
+                      className="text-gray-500 hover:text-gray-700 shrink-0"
                       title="Ver más detalles"
                     >
                       <svg
@@ -387,12 +387,12 @@ export default function WorkOrdersColumn({
                   </div>
 
                   {/* 🔧 Descripción: 2 líneas máx + rompe palabras largas */}
-                  <p className="text-xs text-gray-600 line-clamp-2 break-words mb-2">
+                  <p className="wo-ticket-desc text-xs text-gray-500 line-clamp-2 break-words mb-2">
                     {ticket.description || 'Sin descripción'}
                   </p>
 
                   {/* 🔧 Chips con wrap para no desbordar */}
-                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-1.5 mb-2">
                     {ticket.is_urgent && (
                       <span className="flex items-center gap-1 text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">
                         <svg
@@ -413,7 +413,7 @@ export default function WorkOrdersColumn({
                     )}
 
                     <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded border ${getPriorityStyles(
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getPriorityStyles(
                         ticket.priority
                       )}`}
                     >
@@ -421,7 +421,7 @@ export default function WorkOrdersColumn({
                     </span>
 
                     <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded border ${getStatusStyles(
+                      className={`text-[11px] font-semibold px-2 py-0.5 rounded border ${getStatusStyles(
                         ticket.status
                       )}`}
                     >
@@ -430,7 +430,7 @@ export default function WorkOrdersColumn({
                   </div>
 
                   {/* 🔧 Metadatos: asegúrate de truncar y permitir saltos */}
-                  <div className="text-xs text-gray-500 space-y-1 min-w-0">
+                  <div className="wo-ticket-meta text-[11px] text-gray-500 space-y-1 min-w-0">
                     <div className="flex items-center gap-1">
                       <svg
                         className="w-3 h-3 shrink-0"
@@ -545,7 +545,7 @@ export default function WorkOrdersColumn({
 
             {isEmptyColumn && (
               <div
-                className={`rounded-lg border border-dashed px-3 py-10 text-center text-xs ${
+                className={`wo-empty-drop rounded-xl border border-dashed px-3 py-10 text-center text-xs ${
                   isDragOver
                     ? 'border-indigo-400 text-indigo-700 bg-indigo-50'
                     : 'border-gray-300 text-gray-500 bg-gray-50'

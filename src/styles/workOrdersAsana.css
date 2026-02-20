@@ -1,0 +1,185 @@
+.wo-asana {
+  --wo-bg: #f3f5fb;
+  --wo-surface: #ffffff;
+  --wo-surface-soft: #f7f9fd;
+  --wo-surface-muted: #edf2fb;
+  --wo-border: #d9e2ef;
+  --wo-border-strong: #c6d3e8;
+  --wo-text: #0f172a;
+  --wo-subtext: #5f6b81;
+  --wo-accent: #4f46e5;
+  --wo-accent-soft: #ecefff;
+  --wo-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --wo-shadow-md:
+    0 8px 18px rgba(15, 23, 42, 0.08),
+    0 1px 3px rgba(15, 23, 42, 0.08);
+  color: var(--wo-text);
+  font-family:
+    'Manrope',
+    'Nunito Sans',
+    'Segoe UI',
+    sans-serif;
+}
+
+.wo-asana .wo-page-header {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, transparent 100%),
+    var(--wo-bg);
+}
+
+.wo-asana .wo-page-header h2 {
+  color: var(--wo-text);
+}
+
+.wo-asana .wo-header-row {
+  min-height: 48px;
+}
+
+.wo-asana .wo-view-btn {
+  white-space: nowrap;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.wo-asana .wo-filters {
+  background: transparent;
+}
+
+.wo-asana .wo-filter-shell > div > div {
+  border-radius: 0.9rem;
+  border-color: var(--wo-border);
+  background: rgba(247, 249, 253, 0.9);
+  box-shadow: var(--wo-shadow-sm);
+  padding: 0.6rem 0.75rem;
+}
+
+.wo-asana .wo-filter-shell button {
+  min-height: 2.2rem;
+  border-radius: 0.7rem;
+  font-size: 0.86rem;
+}
+
+.wo-asana .wo-filter-shell .h-11 {
+  height: 2.2rem;
+}
+
+.wo-asana .wo-filter-shell input,
+.wo-asana .wo-filter-shell select {
+  font-size: 0.9rem;
+}
+
+.wo-asana .wo-filter-shell .mb-2 {
+  margin-bottom: 0.45rem;
+}
+
+.wo-asana .wo-filter-shell .mt-3 {
+  margin-top: 0.45rem;
+}
+
+.wo-asana .wo-content {
+  background: linear-gradient(180deg, var(--wo-bg) 0%, #eef2f9 100%);
+}
+
+.wo-asana .wo-board-layout {
+  align-items: stretch;
+  scroll-snap-type: x proximity;
+}
+
+.wo-asana .wo-board-layout > * {
+  scroll-snap-align: start;
+}
+
+.wo-asana .wo-board-column {
+  border-color: var(--wo-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, transparent 100%),
+    var(--wo-surface-muted);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+}
+
+.wo-asana .wo-board-column-head {
+  color: #1e293b;
+}
+
+.wo-asana .wo-board-count {
+  border-color: var(--wo-border-strong);
+  color: #475569;
+}
+
+.wo-asana .wo-ticket-card {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.wo-asana .wo-ticket-card:hover {
+  box-shadow:
+    var(--wo-shadow-md),
+    0 0 0 1px rgba(79, 70, 229, 0.25);
+  transform: translateY(-1px);
+}
+
+.wo-asana .wo-ticket-title {
+  letter-spacing: -0.01em;
+}
+
+.wo-asana .wo-ticket-desc {
+  color: var(--wo-subtext);
+}
+
+.wo-asana .wo-ticket-meta strong {
+  color: #334155;
+}
+
+.wo-asana .wo-empty-drop {
+  border-style: dashed;
+}
+
+.wo-asana .wo-list {
+  border-color: var(--wo-border);
+}
+
+.wo-asana .wo-list-head th {
+  border-bottom: 1px solid var(--wo-border);
+  background: var(--wo-surface);
+}
+
+.wo-asana .wo-list-section-row td {
+  background: var(--wo-surface-soft);
+  box-shadow: inset 0 1px 0 #edf2f8, inset 0 -1px 0 var(--wo-border);
+}
+
+.wo-asana .wo-list-row td {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.wo-asana .wo-list-row td:first-child {
+  border-left: 2px solid transparent;
+}
+
+.wo-asana .wo-list-row:hover td:first-child {
+  border-left-color: var(--wo-accent);
+}
+
+.wo-asana .wo-list-row:hover td {
+  background: #f4f6ff;
+}
+
+.wo-asana .wo-list-footer {
+  background: #f8fafd;
+}
+
+@media (max-width: 1024px) {
+  .wo-asana .wo-page-header h2 {
+    font-size: 1.75rem;
+  }
+}

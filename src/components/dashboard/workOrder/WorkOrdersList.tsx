@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Ticket, WorkOrder, WorkOrderExtras } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
@@ -17,6 +17,16 @@ type Props = {
 };
 
 const PAGE_SIZE = 10;
+const STATUS_ORDER: Ticket['status'][] = [
+  'Pendiente',
+  'En Ejecución',
+  'Finalizadas',
+];
+const STATUS_SECTION_LABEL: Record<Ticket['status'], string> = {
+  Pendiente: 'Pendientes',
+  'En Ejecución': 'En ejecución',
+  Finalizadas: 'Finalizadas',
+};
 
 function statusClass(s: Ticket['status']) {
   if (s === 'Pendiente') return 'bg-yellow-100 text-gray-800 border-gray-200';
@@ -59,6 +69,15 @@ export default function WorkOrdersList({
   const fkey = useMemo(() => JSON.stringify(filters ?? {}), [filters]);
   const toId = (value: string | number | undefined | null) =>
     Number(value ?? 0);
+  const groupedRows = useMemo(
+    () =>
+      STATUS_ORDER.map((status) => ({
+        status,
+        title: STATUS_SECTION_LABEL[status],
+        items: rows.filter((r) => r.status === status),
+      })).filter((g) => g.items.length > 0),
+    [rows]
+  );
 
   const reload = useCallback(async (p = 0) => {
     setLoading(true);
@@ -151,135 +170,144 @@ export default function WorkOrdersList({
   }, [page, reload]);
 
   return (
-    <div className="overflow-auto rounded-lg ring-1 ring-gray-200 bg-white">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50 sticky top-0 z-10">
+    <div className="wo-list overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+      <table className="min-w-full border-separate border-spacing-0">
+        <thead className="wo-list-head bg-white sticky top-0 z-10">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Orden
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Nombre
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Ubicación
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Fecha
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Técnico
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Estado
-            </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Prioridad
             </th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">
-              Fecha
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Estado
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Ubicación
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Técnico
             </th>
           </tr>
         </thead>
 
-        <tbody className="divide-y divide-gray-200 bg-white">
+        <tbody className="bg-white">
           {loading ? (
             <tr>
-              <td colSpan={6} className="py-8 text-center text-gray-400">
+              <td colSpan={6} className="py-10 text-center text-gray-400">
                 Cargando…
               </td>
             </tr>
           ) : rows.length === 0 ? (
             <tr>
-              <td colSpan={6} className="py-8 text-center text-gray-400">
+              <td colSpan={6} className="py-10 text-center text-gray-400">
                 Sin resultados.
               </td>
             </tr>
           ) : (
-            rows.map((t) => {
-              const images = getTicketImagePaths(t.image ?? '');
-              const first = images[0];
-              return (
-                <tr
-                  key={t.id}
-                  className="hover:bg-gray-50 transition cursor-pointer"
-                  onClick={() => onOpen?.(t)}
-                >
-                  {/* Orden (imagen + código + título) */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      {first ? (
-                        <img
-                          src={getPublicImageUrl(first)}
-                          alt="Adjunto"
-                          className="h-10 w-10 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded bg-gray-200" />
-                      )}
-                      <div>
-                        <div className="text-sm font-semibold text-gray-900">
-                          OT-{String(t.id).padStart(4, '0')}
-                        </div>
-                        <div className="text-sm text-gray-500 line-clamp-1">
-                          {t.title}
-                        </div>
-                      </div>
+            groupedRows.map((group) => (
+              <Fragment key={group.status}>
+                <tr className="wo-list-section-row">
+                  <td colSpan={6} className="px-3 py-2 bg-gray-50 border-y border-gray-200">
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <span className="text-gray-500">▾</span>
+                      {group.title}
+                      <span className="rounded-full bg-white border border-gray-300 px-2 text-xs text-gray-500">
+                        {group.items.length}
+                      </span>
                     </div>
                   </td>
-
-                  {/* Ubicación */}
-                  <td className="px-4 py-4">
-                    <div className="text-sm text-gray-500">{t.location_id}</div>
-                  </td>
-
-                  {/* Técnico */}
-                  <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    <AssigneeBadge
-                      assigneeId={
-                        (t as WorkOrderExtras).effective_assignee_id ??
-                        (t as WorkOrderExtras).primary_assignee_id ??
-                        (t as Ticket).assignee_id ??
-                        null
-                      }
-                      size="xs"
-                    />
-                  </td>
-
-                  {/* Estado */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(
-                        t.status
-                      )}`}
-                    >
-                      {t.status}
-                    </span>
-                  </td>
-
-                  {/* Prioridad */}
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${priorityClass(
-                        t.priority
-                      )}`}
-                    >
-                      {t.priority?.[0]?.toUpperCase()}
-                      {t.priority?.slice(1)}
-                    </span>
-                  </td>
-
-                  {/* Fecha (igual que WorkOrders: usa incident_date) */}
-                  <td className="px-4 py-4 text-sm text-gray-700 whitespace-nowrap">
-                    {t.incident_date ?? '—'}
-                  </td>
                 </tr>
-              );
-            })
+
+                {group.items.map((t) => {
+                  const images = getTicketImagePaths(t.image ?? '');
+                  const first = images[0];
+                  return (
+                    <tr
+                      key={t.id}
+                      className="wo-list-row hover:bg-indigo-50/40 transition cursor-pointer"
+                      onClick={() => onOpen?.(t)}
+                    >
+                      <td className="px-4 py-2.5 border-b border-gray-100">
+                        <div className="flex items-center gap-3 min-w-[280px]">
+                          {first ? (
+                            <img
+                              src={getPublicImageUrl(first)}
+                              alt="Adjunto"
+                              className="h-9 w-9 rounded-md object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="h-9 w-9 rounded-md bg-gray-100 border border-gray-200" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900 truncate">
+                              {t.title}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              OT-{String(t.id).padStart(4, '0')}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
+                        {t.incident_date ?? '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 border-b border-gray-100 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${priorityClass(
+                            t.priority
+                          )}`}
+                        >
+                          {t.priority?.[0]?.toUpperCase()}
+                          {t.priority?.slice(1)}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-2.5 border-b border-gray-100 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusClass(
+                            t.status
+                          )}`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-600 whitespace-nowrap">
+                        {t.location_id ?? '—'}
+                      </td>
+
+                      <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
+                        <AssigneeBadge
+                          assigneeId={
+                            (t as WorkOrderExtras).effective_assignee_id ??
+                            (t as WorkOrderExtras).primary_assignee_id ??
+                            (t as Ticket).assignee_id ??
+                            null
+                          }
+                          size="xs"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </Fragment>
+            ))
           )}
         </tbody>
       </table>
 
-      {/* Paginación */}
-      <div className="flex justify-end gap-2 p-3">
+      <div className="wo-list-footer flex justify-end gap-2 p-3 border-t border-gray-200 bg-gray-50/80">
         <button
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
-          className="px-3 py-2 rounded bg-gray-200 text-gray-700 font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-300 disabled:hover:bg-gray-200"
+          className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-gray-100 disabled:hover:bg-white"
         >
           Anterior
         </button>
@@ -288,7 +316,7 @@ export default function WorkOrdersList({
             setPage((p) => (p + 1 < Math.ceil(count / PAGE_SIZE) ? p + 1 : p))
           }
           disabled={page + 1 >= Math.ceil(count / PAGE_SIZE)}
-          className="px-3 py-2 rounded bg-indigo-600 text-white font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
+          className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium disabled:opacity-40 cursor-pointer hover:bg-indigo-500 disabled:hover:bg-indigo-600"
         >
           Siguiente
         </button>

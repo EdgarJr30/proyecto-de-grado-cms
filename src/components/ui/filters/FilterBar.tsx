@@ -249,6 +249,7 @@ type Props<T extends string> = {
   sticky?: boolean;
   exportMerge?: Record<string, unknown>;
   baseFilename?: string;
+  defaultOpenDesktop?: boolean;
 };
 
 export default function FilterBar<T extends string>({
@@ -257,6 +258,7 @@ export default function FilterBar<T extends string>({
   sticky,
   exportMerge,
   baseFilename,
+  defaultOpenDesktop = true,
 }: Props<T>) {
   const { values, setValue, reset, activeCount } = useFilters(schema);
 
@@ -267,12 +269,13 @@ export default function FilterBar<T extends string>({
 
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width: 768px)');
-    const initOpen = !!mq?.matches;
+    const initOpen = mq?.matches ? defaultOpenDesktop : false;
     setIsOpen(initOpen);
-    const handler = (e: MediaQueryListEvent) => setIsOpen(e.matches || false);
+    const handler = (e: MediaQueryListEvent) =>
+      setIsOpen(e.matches ? defaultOpenDesktop : false);
     mq?.addEventListener?.('change', handler);
     return () => mq?.removeEventListener?.('change', handler);
-  }, []);
+  }, [defaultOpenDesktop]);
 
   // Drawer (más filtros en móvil)
   const [openDrawer, setOpenDrawer] = useState(false);

@@ -401,7 +401,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
   }, []);
 
   return (
-    <div className="flex gap-6 h-full w-full overflow-x-auto">
+    <div className="wo-board-layout flex gap-4 h-full w-full overflow-x-auto pb-2">
       {STATUSES.map((status) => (
         <WorkOrdersColumn
           key={status}
@@ -416,9 +416,9 @@ export default function WorkOrdersBoard({ filters }: Props) {
           onOpenModal={openModal}
           getPriorityStyles={(priority) => {
             const styles: Record<Ticket['priority'], string> = {
-              Baja: 'bg-green-100 text-green-800 border-green-200',
-              Media: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-              Alta: 'bg-orange-100 text-orange-800 border-orange-200',
+              Baja: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+              Media: 'bg-amber-50 text-amber-700 border-amber-200',
+              Alta: 'bg-rose-50 text-rose-700 border-rose-200',
             };
             return (
               styles[priority] || 'bg-gray-100 text-gray-800 border-gray-200'
@@ -426,9 +426,9 @@ export default function WorkOrdersBoard({ filters }: Props) {
           }}
           getStatusStyles={(s) => {
             const styles: Record<Ticket['status'], string> = {
-              Pendiente: 'bg-yellow-100 text-gray-800 border-gray-200',
-              'En Ejecución': 'bg-blue-100 text-blue-800 border-blue-200',
-              Finalizadas: 'bg-green-100 text-green-800 border-green-200',
+              Pendiente: 'bg-amber-50 text-amber-800 border-amber-200',
+              'En Ejecución': 'bg-sky-50 text-sky-800 border-sky-200',
+              Finalizadas: 'bg-emerald-50 text-emerald-800 border-emerald-200',
             };
             return styles[s] || 'bg-gray-100 text-gray-800 border-gray-200';
           }}
