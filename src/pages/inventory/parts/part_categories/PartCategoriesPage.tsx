@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from '../../../../components/layout/Sidebar';
 import { usePermissions } from '../../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../../notifications';
 
 import type {
   PartCategoryInsert,
@@ -168,7 +172,11 @@ export default function PartCategoriesPage() {
   async function handleDelete(row: PartCategoryRow) {
     if (!canManage)
       return showToastError('No tienes permiso para gestionar maestros.');
-    const ok = confirm(`¿Eliminar la categoría "${row.name}"?`);
+    const ok = await showConfirmAlert({
+      title: 'Eliminar categoría',
+      text: `¿Eliminar la categoría "${row.name}"? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     setIsLoading(true);
@@ -190,7 +198,11 @@ export default function PartCategoriesPage() {
       return showToastError('No tienes permiso para gestionar maestros.');
     if (selectedRows.length === 0) return;
 
-    const ok = confirm(`¿Eliminar ${selectedRows.length} categoría(s)?`);
+    const ok = await showConfirmAlert({
+      title: 'Eliminar selección',
+      text: `¿Eliminar ${selectedRows.length} categoría(s) seleccionada(s)?`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     setIsLoading(true);

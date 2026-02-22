@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../components/layout/Sidebar';
 import { useCan } from '../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../notifications';
 import type {
   UUID,
   PartRow,
@@ -179,6 +183,15 @@ function PartVendorsContent({ embedded }: Props) {
   const onDelete = async (id: UUID) => {
     if (isReadOnly) return;
     if (!partId) return;
+    const relation = rows.find((r) => r.id === id);
+    const vendorName =
+      relation ? vendorById.get(relation.vendor_id)?.name : null;
+    const ok = await showConfirmAlert({
+      title: 'Quitar relación',
+      text: `¿Quitar la relación con "${vendorName ?? 'este proveedor'}"?`,
+      confirmButtonText: 'Sí, quitar',
+    });
+    if (!ok) return;
 
     try {
       await deletePartVendor(id);

@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import Swal from 'sweetalert2';
 import { useAuth } from '../../../context/AuthContext';
 import { useUser } from '../../../context/UserContext';
 import { useCan } from '../../../rbac/PermissionsContext';
@@ -11,7 +10,11 @@ import {
   deleteUser,
   type DbUser,
 } from '../../../services/userAdminService';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 import UserEditModal from './UserEditModal';
@@ -286,21 +289,11 @@ export default function UsersTable({
     confirmText?: string;
   }) => {
     const { title, text, confirmText = 'Sí, continuar' } = opts;
-    const res = await Swal.fire({
+    return showConfirmAlert({
       title,
       text,
-      icon: 'warning',
-      showCancelButton: true,
       confirmButtonText: confirmText,
-      cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#6b7280',
-      reverseButtons: true,
-      allowOutsideClick: () => !Swal.isLoading(),
-      allowEscapeKey: true,
-      focusCancel: true,
     });
-    return res.isConfirmed;
   };
 
   async function handleToggleActive(u: DbUser) {

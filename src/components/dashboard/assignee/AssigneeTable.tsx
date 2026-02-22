@@ -11,7 +11,11 @@ import {
   formatAssigneeFullName,
 } from '../../../services/assigneeService';
 import { useCan } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 
 interface Props {
   searchTerm: string;
@@ -166,6 +170,15 @@ export default function AssigneesTable({
       showToastError('No tienes permiso para activar/desactivar técnicos.');
       return;
     }
+    if (a.is_active) {
+      const ok = await showConfirmAlert({
+        title: 'Desactivar responsable',
+        text: `¿Seguro que quieres desactivar a "${formatAssigneeFullName(a)}"?`,
+        confirmButtonText: 'Sí, desactivar',
+      });
+      if (!ok) return;
+    }
+
     setIsLoading(true);
     try {
       await setAssigneeActive(a.id, !a.is_active);
@@ -185,11 +198,13 @@ export default function AssigneesTable({
       showToastError('No tienes permiso para eliminar técnicos.');
       return;
     }
-    const ok = confirm(
-      `¿Eliminar al responsable "${formatAssigneeFullName(
+    const ok = await showConfirmAlert({
+      title: 'Eliminar responsable',
+      text: `¿Eliminar al responsable "${formatAssigneeFullName(
         a
-      )}"? Esta acción no se puede deshacer.`
-    );
+      )}"? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
     setIsLoading(true);
     try {
@@ -211,11 +226,23 @@ export default function AssigneesTable({
       return;
     }
     if (selectedRows.length === 0) return;
+    const activeCount = selectedRows.filter((r) => r.is_active).length;
+    if (activeCount === 0) {
+      showToastSuccess('No hay responsables activos para desactivar.');
+      return;
+    }
+    const ok = await showConfirmAlert({
+      title: 'Desactivar selección',
+      text: `¿Desactivar ${activeCount} responsable(s) seleccionado(s)?`,
+      confirmButtonText: 'Sí, desactivar',
+    });
+    if (!ok) return;
+
     const ids = selectedRows.map((r) => r.id);
     setIsLoading(true);
     try {
       await bulkSetAssigneeActive(ids, false);
-      showToastSuccess(`Se desactivaron ${ids.length} responsables.`);
+      showToastSuccess(`Se desactivaron ${activeCount} responsables.`);
       setSelectedRows([]);
       await reload();
     } catch (e) {

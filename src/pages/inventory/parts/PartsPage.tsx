@@ -12,7 +12,11 @@ import {
   deletePart,
   updatePart,
 } from '../../../services/inventory';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 
 import PartsHeader from './components/PartsHeader';
 import PartsToolbar from './components/PartsToolbar';
@@ -182,7 +186,11 @@ export default function PartsPage() {
       return;
     }
 
-    const ok = confirm(`¿Eliminar el repuesto "${row.code}"?`);
+    const ok = await showConfirmAlert({
+      title: 'Eliminar repuesto',
+      text: `¿Eliminar el repuesto "${row.code}"? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     try {
@@ -201,7 +209,11 @@ export default function PartsPage() {
       return showToastError('No tienes permiso para gestionar maestros.');
     if (selectedRows.length === 0) return;
 
-    const ok = confirm(`¿Eliminar ${selectedRows.length} repuesto(s)?`);
+    const ok = await showConfirmAlert({
+      title: 'Eliminar selección',
+      text: `¿Eliminar ${selectedRows.length} repuesto(s) seleccionado(s)?`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     try {

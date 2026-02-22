@@ -6,4 +6,12 @@
     white-space: pre-wrap;    /* respeta saltos y envuelve */
   }
   .no-x-scroll { overflow-x: hidden; }
+
+  .app-shell-safe {
+    --app-topbar-height: 4rem;
+  }
+
+  .app-shell-safe main {
+    padding-top: var(--app-topbar-height) !important;
+  }
 }

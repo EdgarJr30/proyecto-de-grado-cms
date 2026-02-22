@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Asset, AssetUpdate } from '../../../../types/Asset';
 import { updateAsset } from '../../../../services/assetsService';
+import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetFormFields from './AssetFormFields';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -56,10 +57,13 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
         code: String(form.code ?? '').trim(),
         name: String(form.name ?? '').trim(),
       });
+      showToastSuccess('Activo actualizado.');
       await onUpdated();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
+      showToastError(msg);
     } finally {
       setIsSaving(false);
     }

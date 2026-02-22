@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../../../components/layout/Sidebar';
 import { useCan } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 
 import type { UUID, VendorInsert, VendorRow } from '../../../types/inventory';
 import {
@@ -157,6 +161,13 @@ export default function VendorsPage() {
 
   const onDelete = async (id: UUID) => {
     if (isReadOnly) return;
+    const vendor = rows.find((item) => item.id === id);
+    const ok = await showConfirmAlert({
+      title: 'Eliminar proveedor',
+      text: `¿Eliminar el proveedor "${vendor?.name ?? 'seleccionado'}"? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
+    if (!ok) return;
 
     try {
       await deleteVendor(id);

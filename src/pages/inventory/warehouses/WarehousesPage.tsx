@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 
 import type {
   WarehouseInsert,
@@ -159,9 +163,11 @@ export default function WarehousesPage() {
   async function onDelete(id: UUID) {
     if (!canManage) return;
 
-    const ok = window.confirm(
-      '¿Eliminar este warehouse? (Esto puede fallar si tiene bins/stock)'
-    );
+    const ok = await showConfirmAlert({
+      title: 'Eliminar warehouse',
+      text: 'Se eliminará este warehouse. La acción puede fallar si tiene bins o stock asociado.',
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     try {

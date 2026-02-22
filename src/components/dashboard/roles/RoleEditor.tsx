@@ -4,7 +4,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { PERMISSIONS } from '../../../rbac/permissionRegistry';
 import type { PermissionDef } from '../../../rbac/permissionRegistry';
 import { Can, useCan } from '../../../rbac/PermissionsContext';
-import { toast } from 'react-toastify';
+import { showToastError, showToastSuccess } from '../../../notifications';
 
 type Role = { id: number; name: string; description?: string | null };
 type RPIdRow = { permission_id: string };
@@ -66,7 +66,7 @@ export default function RoleEditor() {
     load().catch((err) => {
       const m = err instanceof Error ? err.message : String(err);
       setMsg(`Error cargando rol: ${m}`);
-      toast.error(`Error cargando rol: ${m}`);
+      showToastError(`Error cargando rol: ${m}`);
     });
   }, [roleId]);
 
@@ -117,13 +117,13 @@ export default function RoleEditor() {
       });
       if (error) throw error;
 
-      toast.success('Permisos guardados correctamente');
+      showToastSuccess('Permisos guardados correctamente');
       navigate('/admin/permisos', { replace: true });
     } catch (e: unknown) {
       const message =
         e instanceof Error ? e.message : 'Error guardando permisos';
       setMsg(message);
-      toast.error(message);
+      showToastError(message);
     } finally {
       setSaving(false);
     }

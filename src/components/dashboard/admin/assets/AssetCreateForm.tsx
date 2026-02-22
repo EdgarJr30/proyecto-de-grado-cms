@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type React from 'react';
 import type { AssetInsert } from '../../../../types/Asset';
 import { createAsset } from '../../../../services/assetsService';
+import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetFormFields from './AssetFormFields';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -58,7 +59,9 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
 
     const loc = Number(form.location_id);
     if (!loc || loc <= 0) {
-      setError('Selecciona/indica una ubicación válida (location_id).');
+      const msg = 'Selecciona/indica una ubicación válida (location_id).';
+      setError(msg);
+      showToastError(msg);
       return;
     }
 
@@ -75,10 +78,13 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
         name: form.name.trim(),
       });
 
+      showToastSuccess('Activo creado.');
       await onCreated();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
+      showToastError(msg);
     } finally {
       setIsSaving(false);
     }

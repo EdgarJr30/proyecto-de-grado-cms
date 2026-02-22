@@ -1,7 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../../../lib/supabaseClient';
 import { useCan } from '../../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../../notifications';
 
 import type { Announcement } from '../../../../types/Announcements';
 import type { AdminListParams } from '../../../../services/announcementService'; // ajusta si tu archivo tiene otro nombre
@@ -236,6 +240,14 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
       showToastError('No tienes permiso para activar/desactivar anuncios.');
       return;
     }
+    if (row.is_active) {
+      const ok = await showConfirmAlert({
+        title: 'Desactivar anuncio',
+        text: 'El anuncio dejará de mostrarse a los usuarios activos.',
+        confirmButtonText: 'Sí, desactivar',
+      });
+      if (!ok) return;
+    }
     setIsLoading(true);
     try {
       const res = await toggleAnnouncementActive(row.id, !row.is_active);
@@ -256,12 +268,14 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
       showToastError('No tienes permiso para eliminar anuncios.');
       return;
     }
-    const ok = confirm(
-      `¿Eliminar el anuncio "${row.message.substring(
+    const ok = await showConfirmAlert({
+      title: 'Eliminar anuncio',
+      text: `¿Eliminar el anuncio "${row.message.substring(
         0,
         80
-      )}..."? Esta acción no se puede deshacer.`
-    );
+      )}..."? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
     setIsLoading(true);
     try {
@@ -284,6 +298,18 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
       return;
     }
     if (selectedRows.length === 0) return;
+    const activeCount = selectedRows.filter((r) => r.is_active).length;
+    if (activeCount === 0) {
+      showToastSuccess('No hay anuncios activos para desactivar.');
+      return;
+    }
+    const ok = await showConfirmAlert({
+      title: 'Desactivar selección',
+      text: `¿Desactivar ${activeCount} anuncio(s) seleccionado(s)?`,
+      confirmButtonText: 'Sí, desactivar',
+    });
+    if (!ok) return;
+
     setIsLoading(true);
     try {
       for (const r of selectedRows) {
@@ -293,9 +319,7 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
         }
       }
       showToastSuccess(
-        `Se desactivaron ${
-          selectedRows.filter((r) => r.is_active).length
-        } anuncios.`
+        `Se desactivaron ${activeCount} anuncios.`
       );
       setSelectedRows([]);
       await reload();

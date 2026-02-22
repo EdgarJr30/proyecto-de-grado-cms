@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Can } from '../../../rbac/PermissionsContext';
 import { syncPermissions } from '../../../rbac/syncPermissions';
 import { Plus, RefreshCw, ShieldCheck } from 'lucide-react';
+import { showToastError, showToastSuccess } from '../../../notifications';
 
 export type Role = { id: number; name: string; description?: string | null };
 
@@ -28,7 +29,10 @@ export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
       .select('id,name,description')
       .order('name');
 
-    if (error) setMsg(error.message);
+    if (error) {
+      setMsg(error.message);
+      showToastError(error.message);
+    }
     setRoles((data ?? []) as Role[]);
     setLoading(false);
   }, []);
@@ -65,6 +69,14 @@ export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
                   setSyncing(true);
                   await syncPermissions();
                   await load();
+                  showToastSuccess('Permisos sincronizados.');
+                } catch (error: unknown) {
+                  const msg =
+                    error instanceof Error
+                      ? error.message
+                      : 'No se pudieron sincronizar permisos.';
+                  setMsg(msg);
+                  showToastError(msg);
                 } finally {
                   setSyncing(false);
                 }
@@ -220,6 +232,7 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
     setMsg(null);
     if (!name.trim()) {
       setMsg('Escribe un nombre de rol.');
+      showToastError('Escribe un nombre de rol.');
       return;
     }
     try {
@@ -228,9 +241,12 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
         .from('roles')
         .insert({ name: name.trim(), description: description.trim() || null });
       if (error) throw error;
+      showToastSuccess('Rol creado.');
       onClose();
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : 'Error creando rol');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error creando rol';
+      setMsg(msg);
+      showToastError(msg);
     } finally {
       setSubmitting(false);
     }

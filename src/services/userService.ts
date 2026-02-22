@@ -108,3 +108,51 @@ export async function updateCurrentUserProfile(
   }
   return data as UserProfile;
 }
+
+export async function changeCurrentUserPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const current = currentPassword.trim();
+  const next = newPassword.trim();
+
+  if (!current) {
+    throw new Error('Debes indicar tu contraseña actual.');
+  }
+  if (!next) {
+    throw new Error('Debes indicar la nueva contraseña.');
+  }
+
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+
+  if (userErr) {
+    throw new Error(userErr.message);
+  }
+  if (!user?.email) {
+    throw new Error('No fue posible validar el usuario autenticado.');
+  }
+
+  const { error: verifyErr } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password: current,
+  });
+
+  if (verifyErr) {
+    const msg = verifyErr.message?.toLowerCase() ?? '';
+    if (msg.includes('invalid login credentials')) {
+      throw new Error('La contraseña actual no es correcta.');
+    }
+    throw new Error(verifyErr.message);
+  }
+
+  const { error: updateErr } = await supabase.auth.updateUser({
+    password: next,
+  });
+
+  if (updateErr) {
+    throw new Error(updateErr.message);
+  }
+}

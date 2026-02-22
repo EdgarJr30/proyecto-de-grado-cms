@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
@@ -20,6 +20,14 @@ export default function Sidebar() {
   const location_id = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenSidebar = () => setIsOpen(true);
+    window.addEventListener('app:sidebar-open', handleOpenSidebar);
+    return () => {
+      window.removeEventListener('app:sidebar-open', handleOpenSidebar);
+    };
+  }, []);
 
   // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
   const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
@@ -69,27 +77,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Botón hamburguesa (móvil) */}
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 bg-white text-gray-800 p-2 rounded-md shadow"
-        onClick={() => setIsOpen(true)}
-        aria-label="Abrir menú"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
-
       {/* Overlay (móvil) */}
       <div
         className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${

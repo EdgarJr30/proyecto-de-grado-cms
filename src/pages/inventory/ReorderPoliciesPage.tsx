@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../notifications';
 
 import type {
   UUID,
@@ -333,8 +337,12 @@ export default function ReorderPoliciesPage() {
 
   async function onDelete(r: ReorderPolicyRow) {
     if (!canWrite) return;
-    // eslint-disable-next-line no-alert
-    if (!confirm('¿Eliminar esta política?')) return;
+    const ok = await showConfirmAlert({
+      title: 'Eliminar política',
+      text: 'Se eliminará esta política de reposición. Esta acción no se puede deshacer.',
+      confirmButtonText: 'Sí, eliminar',
+    });
+    if (!ok) return;
 
     setLoading(true);
     try {

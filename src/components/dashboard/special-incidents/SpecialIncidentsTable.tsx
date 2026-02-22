@@ -9,7 +9,11 @@ import {
   bulkSetSpecialIncidentActive,
 } from '../../../services/specialIncidentsService';
 import { useCan } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../../notifications';
 
 interface Props {
   searchTerm: string;
@@ -132,6 +136,14 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
       showToastError('No tienes permiso para activar/desactivar incidencias.');
       return;
     }
+    if (row.is_active) {
+      const ok = await showConfirmAlert({
+        title: 'Desactivar incidencia',
+        text: `¿Desactivar "${row.name}"?`,
+        confirmButtonText: 'Sí, desactivar',
+      });
+      if (!ok) return;
+    }
     setIsLoading(true);
     try {
       await setSpecialIncidentActive(row.id, !row.is_active);
@@ -151,9 +163,11 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
       showToastError('No tienes permiso para eliminar incidencias.');
       return;
     }
-    const ok = confirm(
-      `¿Eliminar el tipo de incidencia "${row.name}"? Esta acción no se puede deshacer.`
-    );
+    const ok = await showConfirmAlert({
+      title: 'Eliminar incidencia',
+      text: `¿Eliminar el tipo de incidencia "${row.name}"? Esta acción no se puede deshacer.`,
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
     setIsLoading(true);
     try {
@@ -175,11 +189,23 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
       return;
     }
     if (selectedRows.length === 0) return;
+    const activeCount = selectedRows.filter((r) => r.is_active).length;
+    if (activeCount === 0) {
+      showToastSuccess('No hay incidencias activas para desactivar.');
+      return;
+    }
+    const ok = await showConfirmAlert({
+      title: 'Desactivar selección',
+      text: `¿Desactivar ${activeCount} incidencia(s) seleccionada(s)?`,
+      confirmButtonText: 'Sí, desactivar',
+    });
+    if (!ok) return;
+
     const ids = selectedRows.map((r) => r.id);
     setIsLoading(true);
     try {
       await bulkSetSpecialIncidentActive(ids, false);
-      showToastSuccess(`Se desactivaron ${ids.length} incidencias.`);
+      showToastSuccess(`Se desactivaron ${activeCount} incidencias.`);
       setSelectedRows([]);
       await reload();
     } catch (e) {

@@ -12,6 +12,7 @@ import {
   toggleLocationActive,
   deleteLocation,
 } from '../../../../services/locationService';
+import { showConfirmAlert } from '../../../../notifications';
 import {
   showToastError,
   showToastSuccess,
@@ -158,6 +159,15 @@ export default function LocationsSettings() {
     try {
       if (!canDisable)
         throw new Error('No autorizado para activar/inactivar ubicaciones.');
+      if (loc.is_active) {
+        const ok = await showConfirmAlert({
+          title: 'Inactivar ubicación',
+          text: `¿Inactivar la ubicación "${loc.name}"?`,
+          confirmButtonText: 'Sí, inactivar',
+        });
+        if (!ok) return;
+      }
+
       setSubmitting(true);
       await toggleLocationActive(loc.id, !loc.is_active);
       showToastSuccess(
@@ -177,9 +187,11 @@ export default function LocationsSettings() {
       if (!canDelete)
         throw new Error('No autorizado para eliminar ubicaciones.');
 
-      const ok = window.confirm(
-        `¿Eliminar la ubicación "${loc.name}"?\n\nEsto no se puede deshacer.`
-      );
+      const ok = await showConfirmAlert({
+        title: 'Eliminar ubicación',
+        text: `¿Eliminar la ubicación "${loc.name}"? Esta acción no se puede deshacer.`,
+        confirmButtonText: 'Sí, eliminar',
+      });
       if (!ok) return;
 
       setSubmitting(true);

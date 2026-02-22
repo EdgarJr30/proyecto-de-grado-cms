@@ -12,6 +12,7 @@ import {
   toggleAssetCategoryActive,
   deleteAssetCategory,
 } from '../../../../services/assetCategoryService';
+import { showConfirmAlert } from '../../../../notifications';
 import {
   showToastError,
   showToastSuccess,
@@ -140,6 +141,15 @@ export default function AssetCategoriesSettings() {
     try {
       if (!canManage)
         throw new Error('No autorizado para activar/inactivar categorías.');
+      if (cat.is_active) {
+        const ok = await showConfirmAlert({
+          title: 'Inactivar categoría',
+          text: `¿Inactivar la categoría "${cat.name}"?`,
+          confirmButtonText: 'Sí, inactivar',
+        });
+        if (!ok) return;
+      }
+
       setSubmitting(true);
       await toggleAssetCategoryActive(cat.id, !cat.is_active);
       showToastSuccess(
@@ -159,9 +169,11 @@ export default function AssetCategoriesSettings() {
       if (!canManage)
         throw new Error('No autorizado para eliminar categorías.');
 
-      const ok = window.confirm(
-        `¿Eliminar la categoría "${cat.name}"?\n\nEsto no se puede deshacer.`
-      );
+      const ok = await showConfirmAlert({
+        title: 'Eliminar categoría',
+        text: `¿Eliminar la categoría "${cat.name}"? Esta acción no se puede deshacer.`,
+        confirmButtonText: 'Sí, eliminar',
+      });
       if (!ok) return;
 
       setSubmitting(true);

@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../notifications';
+import {
+  showConfirmAlert,
+  showToastError,
+  showToastSuccess,
+} from '../../notifications';
 import type {
   UUID,
   WarehouseBinInsert,
@@ -172,9 +176,11 @@ export default function WarehouseBinsPage() {
 
   async function onDelete(id: UUID) {
     if (!canWrite) return;
-    const ok = window.confirm(
-      '¿Eliminar este bin? (Puede fallar si hay stock)'
-    );
+    const ok = await showConfirmAlert({
+      title: 'Eliminar bin',
+      text: 'Se eliminará este bin. La acción puede fallar si existe stock asociado.',
+      confirmButtonText: 'Sí, eliminar',
+    });
     if (!ok) return;
 
     try {
