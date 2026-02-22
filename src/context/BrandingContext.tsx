@@ -1,12 +1,15 @@
 import React, {
+  useCallback,
   createContext,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { getPublicSociety } from '../services/societyService';
 import { getBrandingPublicUrl } from '../services/brandingStorageService';
+import { onDataInvalidated, onNavigation } from '../lib/dataInvalidation';
 
 type PublicSociety = {
   id: number;
@@ -70,52 +73,97 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       }
     );
   });
+  const lastRefreshAtRef = useRef(0);
+  const resolvedRef = useRef(resolved);
 
-  const refresh = async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent ?? true;
-    if (!silent) setLoading(true);
+  useEffect(() => {
+    resolvedRef.current = resolved;
+  }, [resolved]);
 
-    try {
-      const s = (await getPublicSociety()) as PublicSociety | null;
+  const refresh = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? true;
+      if (!silent) setLoading(true);
 
-      setSociety(s);
+      try {
+        const s = (await getPublicSociety()) as PublicSociety | null;
 
-      const societyName = s?.name?.trim() || 'CompanyName';
-      const logoSrc = s?.logo_url
-        ? getBrandingPublicUrl(s.logo_url)
-        : resolved.logoSrc;
-      const loginImgSrc = s?.login_img_url
-        ? getBrandingPublicUrl(s.login_img_url)
-        : resolved.loginImgSrc;
+        setSociety(s);
 
-      const nextResolved = {
-        societyName,
-        logoSrc: logoSrc ?? null,
-        loginImgSrc: loginImgSrc ?? null,
-      };
-      setResolved(nextResolved);
+        const societyName = s?.name?.trim() || 'CompanyName';
+        const fallback = resolvedRef.current;
+        const logoSrc = s?.logo_url
+          ? getBrandingPublicUrl(s.logo_url)
+          : fallback.logoSrc;
+        const loginImgSrc = s?.login_img_url
+          ? getBrandingPublicUrl(s.login_img_url)
+          : fallback.loginImgSrc;
 
-      const payload: BrandingCache = {
-        society: s,
-        resolved: nextResolved,
-        updatedAt: new Date().toISOString(),
-      };
-      localStorage.setItem(LS_KEY, JSON.stringify(payload));
-    } catch (error: unknown) {
-      // no rompas UI; mantén cache
-      if (error instanceof Error)
-        console.error('[BrandingProvider] refresh error:', error.message);
-      else console.error('[BrandingProvider] refresh error:', error);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
+        const nextResolved = {
+          societyName,
+          logoSrc: logoSrc ?? null,
+          loginImgSrc: loginImgSrc ?? null,
+        };
+        setResolved(nextResolved);
+
+        const payload: BrandingCache = {
+          society: s,
+          resolved: nextResolved,
+          updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(payload));
+        lastRefreshAtRef.current = Date.now();
+      } catch (error: unknown) {
+        // no rompas UI; mantén cache
+        if (error instanceof Error)
+          console.error('[BrandingProvider] refresh error:', error.message);
+        else console.error('[BrandingProvider] refresh error:', error);
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    []
+  );
+
+  const refreshIfStale = useCallback(
+    (maxAgeMs: number) => {
+      const age = Date.now() - lastRefreshAtRef.current;
+      if (age < maxAgeMs) return;
+      void refresh({ silent: true });
+    },
+    [refresh]
+  );
 
   // 2) refresca una sola vez en background al iniciar la app
   useEffect(() => {
     void refresh({ silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => {
+    const unsubscribeInvalidation = onDataInvalidated('branding', () => {
+      void refresh({ silent: true });
+    });
+    const unsubscribeNavigation = onNavigation(() => {
+      if (document.visibilityState === 'hidden') return;
+      refreshIfStale(45_000);
+    });
+    const handleFocus = () => refreshIfStale(60_000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfStale(60_000);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      unsubscribeInvalidation();
+      unsubscribeNavigation();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [refresh, refreshIfStale]);
 
   const value: BrandingState = {
     society,

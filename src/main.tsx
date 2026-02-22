@@ -1,17 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { BrowserRouter } from 'react-router-dom';
 import 'react-toastify/dist/ReactToastify.css';
-import { APP_ROUTES, PUBLIC_ROUTES } from './Routes/appRoutes';
-import RequirePerm from './Routes/RequirePerm';
-import ProtectedRoute from './Routes/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { UserProvider } from './context/UserContext';
 import { AssigneeProvider } from './context/AssigneeContext';
 import { PermissionsProvider } from './rbac/PermissionsContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { BrandingProvider } from './context/BrandingContext';
+import { ThemeProvider } from './context/ThemeContext';
+import ThemedAppRoot from './components/app/ThemedAppRoot';
 
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
@@ -25,54 +23,22 @@ console.log('🚀 Aplicación iniciada en modo:', process.env.NODE_ENV);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <UserProvider>
-        <AssigneeProvider>
-          <BrowserRouter>
-            <PermissionsProvider>
-              <SettingsProvider>
-                <BrandingProvider>
-                  <ToastContainer
-                    position="bottom-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme="colored"
-                  />
-                  <Routes>
-                    {/* Públicas / especiales */}
-                    {PUBLIC_ROUTES.map((r) => (
-                      <Route key={r.path} path={r.path} element={r.element} />
-                    ))}
-
-                    {/* Protegidas dinamicamente */}
-                    {APP_ROUTES.map((r) => (
-                      <Route
-                        key={r.path}
-                        path={r.path}
-                        element={
-                          <ProtectedRoute>
-                            <RequirePerm allow={r.allowPerms}>
-                              {r.element}
-                            </RequirePerm>
-                          </ProtectedRoute>
-                        }
-                      />
-                    ))}
-
-                    {/* comodín */}
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </BrandingProvider>
-              </SettingsProvider>
-            </PermissionsProvider>
-          </BrowserRouter>
-        </AssigneeProvider>
-      </UserProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <UserProvider>
+          <AssigneeProvider>
+            <BrowserRouter>
+              <PermissionsProvider>
+                <SettingsProvider>
+                  <BrandingProvider>
+                    <ThemedAppRoot />
+                  </BrandingProvider>
+                </SettingsProvider>
+              </PermissionsProvider>
+            </BrowserRouter>
+          </AssigneeProvider>
+        </UserProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

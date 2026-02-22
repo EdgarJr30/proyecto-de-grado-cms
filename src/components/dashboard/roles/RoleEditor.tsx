@@ -5,6 +5,7 @@ import { PERMISSIONS } from '../../../rbac/permissionRegistry';
 import type { PermissionDef } from '../../../rbac/permissionRegistry';
 import { Can, useCan } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
+import { invalidateData } from '../../../lib/dataInvalidation';
 
 type Role = { id: number; name: string; description?: string | null };
 type RPIdRow = { permission_id: string };
@@ -116,6 +117,7 @@ export default function RoleEditor() {
         p_perm_codes: codes,
       });
       if (error) throw error;
+      invalidateData('permissions');
 
       showToastSuccess('Permisos guardados correctamente');
       navigate('/admin/permisos', { replace: true });

@@ -5,6 +5,7 @@ import type {
   LocationOption,
   LocationUpdate,
 } from '../types/Location';
+import { invalidateData } from '../lib/dataInvalidation';
 
 type ListLocationsArgs = {
   includeInactive?: boolean; // para pantallas de admin
@@ -100,6 +101,7 @@ export async function createLocation(
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('No data returned from createLocation');
+    invalidateData('locations');
     return data;
   } catch (error: unknown) {
     throw normalizeDbError(error);
@@ -131,6 +133,7 @@ export async function updateLocation(
 
     if (error) throw new Error(error.message);
     if (!data) throw new Error('No data returned from updateLocation');
+    invalidateData('locations');
     return data;
   } catch (error: unknown) {
     throw normalizeDbError(error);
@@ -149,6 +152,7 @@ export async function deleteLocation(id: number): Promise<void> {
   try {
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) throw new Error(error.message);
+    invalidateData('locations');
   } catch (error: unknown) {
     throw normalizeDbError(error);
   }

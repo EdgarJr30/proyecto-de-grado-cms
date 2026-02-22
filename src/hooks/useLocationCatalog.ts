@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listLocations } from '../services/locationService';
 import type { Location } from '../types/Location';
+import { onDataInvalidated } from '../lib/dataInvalidation';
 
 export type LocationFilterOption = {
   label: string;
@@ -18,32 +19,42 @@ export function useLocationCatalog(args: UseLocationCatalogArgs = {}) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const aliveRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      aliveRef.current = false;
+    },
+    []
+  );
+
+  const loadLocations = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listLocations({ includeInactive });
+      if (!aliveRef.current) return;
+      setLocations(rows);
+    } catch (err: unknown) {
+      if (!aliveRef.current) return;
+      const message =
+        err instanceof Error ? err.message : 'Error cargando ubicaciones';
+      setError(message);
+      setLocations([]);
+    } finally {
+      if (aliveRef.current) setLoading(false);
+    }
+  }, [includeInactive]);
 
   useEffect(() => {
-    let cancelled = false;
+    void loadLocations();
+  }, [loadLocations]);
 
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const rows = await listLocations({ includeInactive });
-        if (cancelled) return;
-        setLocations(rows);
-      } catch (err: unknown) {
-        if (cancelled) return;
-        const message =
-          err instanceof Error ? err.message : 'Error cargando ubicaciones';
-        setError(message);
-        setLocations([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [includeInactive]);
+  useEffect(() => {
+    return onDataInvalidated('locations', () => {
+      void loadLocations();
+    });
+  }, [loadLocations]);
 
   const locationNameById = useMemo(() => {
     const map = new Map<number, string>();

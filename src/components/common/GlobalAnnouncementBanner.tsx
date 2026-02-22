@@ -1,35 +1,72 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getPublicAnnouncements } from '../../services/announcementService';
 import type { Announcement } from '../../types/Announcements';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
+import { onDataInvalidated, onNavigation } from '../../lib/dataInvalidation';
 
 export default function GlobalAnnouncementBanner() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<number[]>([]);
+  const lastLoadedAtRef = useRef(0);
+
+  const load = useCallback(async () => {
+    const { data } = await getPublicAnnouncements({
+      orderBy: 'starts_at',
+      ascending: false,
+      limit: 5,
+    });
+    if (!data) return;
+
+    // Solo activos y no expirados
+    const now = new Date();
+    const visibles = data.filter(
+      (a) =>
+        a.is_active &&
+        (!a.starts_at || new Date(a.starts_at) <= now) &&
+        (!a.ends_at || new Date(a.ends_at) >= now)
+    );
+    setAnnouncements(visibles);
+    setCurrentIndex(0);
+    lastLoadedAtRef.current = Date.now();
+  }, []);
 
   useEffect(() => {
-    async function load() {
-      const { data } = await getPublicAnnouncements({
-        orderBy: 'starts_at',
-        ascending: false,
-        limit: 5,
-      });
-      if (data) {
-        // Solo activos y no expirados
-        const now = new Date();
-        const visibles = data.filter(
-          (a) =>
-            a.is_active &&
-            (!a.starts_at || new Date(a.starts_at) <= now) &&
-            (!a.ends_at || new Date(a.ends_at) >= now)
-        );
-        setAnnouncements(visibles);
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    const refreshIfStale = (maxAgeMs: number) => {
+      if (document.visibilityState === 'hidden') return;
+      const age = Date.now() - lastLoadedAtRef.current;
+      if (age < maxAgeMs) return;
+      void load();
+    };
+
+    const unsubscribeInvalidation = onDataInvalidated('announcements', () => {
+      void load();
+    });
+    const unsubscribeNavigation = onNavigation(() => {
+      refreshIfStale(60_000);
+    });
+    const onFocus = () => refreshIfStale(60_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfStale(60_000);
       }
-    }
-    load();
-  }, []);
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      unsubscribeInvalidation();
+      unsubscribeNavigation();
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [load]);
 
   // Rotación automática
   useEffect(() => {

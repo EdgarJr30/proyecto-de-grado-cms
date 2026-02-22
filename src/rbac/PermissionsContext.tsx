@@ -9,6 +9,7 @@ import React, {
   useRef,
 } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { onDataInvalidated, onNavigation } from '../lib/dataInvalidation';
 
 type PermsState = {
   // permisos
@@ -33,7 +34,6 @@ const PermCtx = createContext<PermsState>({
   roles: [],
   ready: false,
   has: () => false,
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   refresh: async () => {},
 });
 
@@ -59,6 +59,23 @@ let inflightRoles: Promise<string[]> | null = null;
 let rolesTs = 0;
 
 const CACHE_TTL_MS = 5 * 60_000; // 5 min
+
+function invalidatePermsCache() {
+  cachedPerms = null;
+  inflightPerms = null;
+  permsTs = 0;
+}
+
+function invalidateRolesCache() {
+  cachedRoles = null;
+  inflightRoles = null;
+  rolesTs = 0;
+}
+
+function invalidatePermissionCaches() {
+  invalidatePermsCache();
+  invalidateRolesCache();
+}
 
 async function fetchPermsOnce(): Promise<string[]> {
   const now = Date.now();
@@ -165,6 +182,7 @@ export function PermissionsProvider({
   });
 
   const [ready, setReady] = useState<boolean>(false);
+  const lastRefreshAtRef = useRef(0);
 
   // visibilidad de pestaña (para ignorar silenciosos sin foco)
   const ignoreSilentRef = useRef(document.visibilityState === 'hidden');
@@ -176,7 +194,7 @@ export function PermissionsProvider({
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  const setLocalPerms = (list: string[]) => {
+  const setLocalPerms = useCallback((list: string[]) => {
     setCodes((prev) => {
       if (!shallowEq(prev, list)) {
         try {
@@ -188,9 +206,9 @@ export function PermissionsProvider({
       }
       return prev;
     });
-  };
+  }, []);
 
-  const setLocalRoles = (list: string[]) => {
+  const setLocalRoles = useCallback((list: string[]) => {
     setRoles((prev) => {
       if (!shallowEq(prev, list)) {
         try {
@@ -202,12 +220,12 @@ export function PermissionsProvider({
       }
       return prev;
     });
-  };
+  }, []);
 
   const _refresh = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = Boolean(opts?.silent);
-      if (!silent && !ready) setReady(false);
+      if (!silent) setReady(false);
       try {
         const [permList, roleList] = await Promise.all([
           fetchPermsOnce(),
@@ -215,15 +233,28 @@ export function PermissionsProvider({
         ]);
         setLocalPerms(permList);
         setLocalRoles(roleList);
-        if (!ready) setReady(true);
       } catch (e) {
         console.error('[Permissions] refresh error:', (e as Error).message);
         setLocalPerms([]);
         setLocalRoles([]);
-        if (!ready) setReady(true);
+      } finally {
+        setReady(true);
+        lastRefreshAtRef.current = Date.now();
       }
     },
-    [ready]
+    [setLocalPerms, setLocalRoles]
+  );
+
+  const refreshIfStale = useCallback(
+    (maxAgeMs: number, opts?: { force?: boolean }) => {
+      if (ignoreSilentRef.current) return;
+      const force = Boolean(opts?.force);
+      const age = Date.now() - lastRefreshAtRef.current;
+      if (!force && age < maxAgeMs) return;
+      if (force) invalidatePermissionCaches();
+      void _refresh({ silent: true });
+    },
+    [_refresh]
   );
 
   // debounce para eventos silenciosos
@@ -239,7 +270,7 @@ export function PermissionsProvider({
   useEffect(() => {
     const hasLocal = codes.length > 0 || roles.length > 0;
     setReady(false);
-    void _refresh({ silent: hasLocal }).finally(() => setReady(true));
+    void _refresh({ silent: hasLocal });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -250,10 +281,8 @@ export function PermissionsProvider({
         case 'SIGNED_IN':
         case 'SIGNED_OUT':
           // invalida caches y refresca (hard)
-          cachedPerms = null;
-          permsTs = 0;
-          cachedRoles = null;
-          rolesTs = 0;
+          invalidatePermissionCaches();
+          lastRefreshAtRef.current = 0;
           if (evt === 'SIGNED_OUT') {
             setLocalPerms([]);
             setLocalRoles([]);
@@ -272,10 +301,8 @@ export function PermissionsProvider({
         case 'USER_UPDATED':
         case 'TOKEN_REFRESHED':
           if (!ignoreSilentRef.current) {
-            cachedPerms = null;
-            permsTs = 0;
-            cachedRoles = null;
-            rolesTs = 0;
+            invalidatePermissionCaches();
+            lastRefreshAtRef.current = 0;
             debouncedSilent(); // no bloquees UI
           }
           break;
@@ -285,7 +312,32 @@ export function PermissionsProvider({
       }
     });
     return () => sub?.subscription.unsubscribe();
-  }, [_refresh, debouncedSilent]);
+  }, [_refresh, debouncedSilent, setLocalPerms, setLocalRoles]);
+
+  useEffect(() => {
+    const unsubscribeInvalidation = onDataInvalidated('permissions', () => {
+      refreshIfStale(0, { force: true });
+    });
+    const unsubscribeNavigation = onNavigation(() => {
+      refreshIfStale(30_000);
+    });
+    const onFocus = () => refreshIfStale(60_000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfStale(60_000);
+      }
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      unsubscribeInvalidation();
+      unsubscribeNavigation();
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [refreshIfStale]);
 
   const setObj = useMemo(() => new Set(codes), [codes]);
 

@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabaseClient";
 import type { Announcement, AnnouncementInput } from "../types/Announcements";
 import type {AnnouncementAudienceRole} from "../types/AnnouncementAudienceRole";
+import { invalidateData } from '../lib/dataInvalidation';
 
 // Helper genérico para convertir unknown a Error
 function toError(e: unknown): Error {
@@ -132,6 +133,7 @@ export async function createAnnouncement(input: AnnouncementInput): Promise<{
       if (setRes.error) return { data: announcement, error: setRes.error };
     }
 
+    invalidateData('announcements');
     return { data: announcement, error: null };
   } catch (e) {
     return { data: null, error: toError(e) };
@@ -182,6 +184,7 @@ export async function updateAnnouncement(id: number, input: AnnouncementInput): 
       if (setRes.error) return { data: updated, error: setRes.error };
     }
 
+    invalidateData('announcements');
     return { data: updated, error: null };
   } catch (e) {
     return { data: null, error: toError(e) };
@@ -193,6 +196,7 @@ export async function deleteAnnouncement(id: number): Promise<{ error: Error | n
   try {
     const { error } = await supabase.from("announcements").delete().eq("id", id);
     if (error) return { error: new Error(error.message) };
+    invalidateData('announcements');
     return { error: null };
   } catch (e) {
     return { error: toError(e) };
@@ -207,6 +211,7 @@ export async function toggleAnnouncementActive(id: number, active: boolean): Pro
       p_active: active,
     });
     if (error) return { error: new Error(error.message) };
+    invalidateData('announcements');
     return { error: null };
   } catch (e) {
     return { error: toError(e) };

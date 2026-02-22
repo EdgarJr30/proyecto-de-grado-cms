@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Assignee, AssigneeSection } from '../types/Assignee';
+import { invalidateData } from '../lib/dataInvalidation';
 
 export type AssigneeInput = {
   name: string;
@@ -122,6 +123,7 @@ export async function createAssignee(input: AssigneeInput): Promise<number> {
     .single();
 
   if (error) throw new Error(error.message);
+  invalidateData('assignees');
   return data!.id as number;
 }
 
@@ -136,20 +138,24 @@ export async function updateAssignee(id: number, input: Partial<AssigneeInput>):
     .eq('id', id);
 
   if (error) throw new Error(error.message);
+  invalidateData('assignees');
 }
 
 export async function deleteAssignee(id: number): Promise<void> {
   const { error } = await supabase.from('assignees').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  invalidateData('assignees');
 }
 
 export async function setAssigneeActive(id: number, isActive: boolean): Promise<void> {
   const { error } = await supabase.from('assignees').update({ is_active: isActive }).eq('id', id);
   if (error) throw new Error(error.message);
+  invalidateData('assignees');
 }
 
 export async function bulkSetAssigneeActive(ids: number[], isActive: boolean): Promise<void> {
   if (ids.length === 0) return;
   const { error } = await supabase.from('assignees').update({ is_active: isActive }).in('id', ids);
   if (error) throw new Error(error.message);
+  invalidateData('assignees');
 }

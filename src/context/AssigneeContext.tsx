@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -13,6 +14,7 @@ import {
   makeAssigneeMap,
 } from '../services/assigneeService';
 import { useAuth } from './AuthContext';
+import { onDataInvalidated, onNavigation } from '../lib/dataInvalidation';
 
 export type AssigneeState = {
   loading: boolean;
@@ -34,8 +36,9 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
   const [error, setError] = useState<string | null>(null);
   const [list, setList] = useState<Assignee[]>([]);
   const hydratedRef = useRef(false);
+  const lastRefreshAtRef = useRef(0);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setError(null);
     const firstLoad = !hydratedRef.current;
     if (firstLoad) setLoading(true);
@@ -47,6 +50,7 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       const data = await getAllAssignees();
       setList(data);
+      lastRefreshAtRef.current = Date.now();
     } catch (e: unknown) {
       const msg =
         e instanceof Error ? e.message : 'Error cargando responsables';
@@ -56,12 +60,49 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!hydratedRef.current) hydratedRef.current = true;
       setLoading(false);
     }
-  };
+  }, [isAuthenticated]);
+
+  const refreshIfStale = useCallback(
+    (maxAgeMs: number) => {
+      if (!isAuthenticated) return;
+      const age = Date.now() - lastRefreshAtRef.current;
+      if (age < maxAgeMs) return;
+      void refresh();
+    },
+    [isAuthenticated, refresh]
+  );
 
   useEffect(() => {
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const unsubscribeInvalidation = onDataInvalidated('assignees', () => {
+      void refresh();
+    });
+    const unsubscribeNavigation = onNavigation(() => {
+      if (document.visibilityState === 'hidden') return;
+      refreshIfStale(20_000);
+    });
+    const handleFocus = () => refreshIfStale(60_000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refreshIfStale(60_000);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      unsubscribeInvalidation();
+      unsubscribeNavigation();
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isAuthenticated, refresh, refreshIfStale]);
 
   const value = useMemo<AssigneeState>(() => {
     const activeList = list.filter((a) => a.is_active);
@@ -74,7 +115,7 @@ export const AssigneeProvider: React.FC<{ children: React.ReactNode }> = ({
       bySectionActive: groupBySection(activeList),
       refresh,
     };
-  }, [loading, error, list]);
+  }, [loading, error, list, refresh]);
 
   return (
     <AssigneeContext.Provider value={value}>

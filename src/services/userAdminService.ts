@@ -1,5 +1,6 @@
 // services/userAdminService.ts
 import { supabase } from '../lib/supabaseClient';
+import { invalidateData } from '../lib/dataInvalidation';
 
 export type DbUser = {
   id: string;
@@ -74,6 +75,9 @@ export async function updateUser(userId: string, patch: Partial<DbUser>) {
     .eq('id', userId);
 
   if (error) throw error;
+  if (typeof patch.rol_id !== 'undefined') {
+    invalidateData('permissions');
+  }
 }
 
 export async function setUserActive(userId: string, active: boolean) {
@@ -183,6 +187,7 @@ export async function bulkSetUsersRole(
     .update({ rol_id: roleId })
     .in('id', userIds);
   if (error) throw error;
+  invalidateData('permissions');
 }
 
 export async function bulkClearUsersRole(userIds: string[]): Promise<void> {
@@ -192,4 +197,5 @@ export async function bulkClearUsersRole(userIds: string[]): Promise<void> {
     .update({ rol_id: null })
     .in('id', userIds);
   if (error) throw error;
+  invalidateData('permissions');
 }

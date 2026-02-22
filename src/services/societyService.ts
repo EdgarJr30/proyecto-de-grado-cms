@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Society, SocietyFormState } from '../types/Society';
+import { invalidateData } from '../lib/dataInvalidation';
 
 export async function getLatestSociety(): Promise<Society | null> {
   const { data, error } = await supabase
@@ -33,6 +34,7 @@ export async function updateSociety(
     .eq('id', id);
 
   if (error) throw new Error(error.message);
+  invalidateData('branding');
 }
 
 export async function createSociety(
@@ -48,6 +50,7 @@ export async function createSociety(
     .single();
 
   if (error) throw new Error(error.message);
+  invalidateData('branding');
   return data as Society;
 }
 
