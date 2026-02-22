@@ -113,6 +113,7 @@ export default function UsersTable({
   const [locationIdC, setLocationIdC] = useState<number | ''>('');
   const [passwordC, setPasswordC] = useState('');
   const [rolIdC, setRolIdC] = useState<number | ''>('');
+  const [createFormVersion, setCreateFormVersion] = useState(0);
   const [submittingCreate, setSubmittingCreate] = useState(false);
   const [msgCreate, setMsgCreate] = useState<{
     type: 'ok' | 'err';
@@ -400,6 +401,12 @@ export default function UsersTable({
     resetCreate();
   };
 
+  const openCreateModal = () => {
+    resetCreate();
+    setCreateFormVersion((prev) => prev + 1);
+    setOpenCreate(true);
+  };
+
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
     setMsgCreate(null);
@@ -502,7 +509,7 @@ export default function UsersTable({
         <div className="ml-auto flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setOpenCreate(true)}
+            onClick={openCreateModal}
             disabled={!canFull}
             title={
               !canFull
@@ -1002,12 +1009,19 @@ export default function UsersTable({
                 Se creará en Auth y en public.users
               </p>
 
-              <form onSubmit={handleCreateUser} className="mt-4 space-y-4">
+              <form
+                key={createFormVersion}
+                onSubmit={handleCreateUser}
+                className="mt-4 space-y-4"
+                autoComplete="off"
+              >
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
                     Nombre
                   </label>
                   <input
+                    name="create-user-name"
+                    autoComplete="off"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={nameC}
                     onChange={(e) => setNameC(e.target.value)}
@@ -1020,6 +1034,8 @@ export default function UsersTable({
                     Apellido
                   </label>
                   <input
+                    name="create-user-last-name"
+                    autoComplete="off"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={lastNameC}
                     onChange={(e) => setLastNameC(e.target.value)}
@@ -1033,6 +1049,8 @@ export default function UsersTable({
                   </label>
                   <input
                     type="email"
+                    name="create-user-email"
+                    autoComplete="off"
                     maxLength={MAX_EMAIL_LENGTH}
                     placeholder="tuemail@cilm.do"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -1090,6 +1108,8 @@ export default function UsersTable({
                     Password
                   </label>
                   <PasswordInput
+                    name="create-user-password"
+                    autoComplete="new-password"
                     minLength={8}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={passwordC}
