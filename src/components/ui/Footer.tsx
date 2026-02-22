@@ -3,11 +3,13 @@ import { useBranding } from '../../context/BrandingContext';
 
 type FooterProps = {
   variant?: 'light' | 'dark';
+  compact?: boolean;
   className?: string;
 };
 
 export default function Footer({
   variant = 'light',
+  compact = false,
   className = '',
 }: FooterProps) {
   const { societyName } = useBranding();
@@ -25,17 +27,19 @@ export default function Footer({
     >
       <div
         className={`
-          px-4 py-3 text-xs
-          flex flex-col gap-2
+          ${compact ? 'px-3 py-2 text-[11px]' : 'px-4 py-3 text-xs'}
+          flex flex-col ${compact ? 'gap-1' : 'gap-2'}
           ${isDark ? '' : 'md:flex-row md:items-center md:justify-between'}
         `}
       >
-        <p className="text-center">
+        <p
+          className={`text-center ${compact ? 'leading-tight text-[10px] whitespace-nowrap' : ''}`}
+        >
           © {year} {societyName}. All rights reserved.
         </p>
 
         <div className="flex justify-center">
-          <AppVersion />
+          <AppVersion className={compact ? 'text-[11px] px-2 py-0.5' : ''} />
         </div>
       </div>
     </footer>
