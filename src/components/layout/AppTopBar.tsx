@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, PanelTop } from 'lucide-react';
+import { Menu, PanelTop, X } from 'lucide-react';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import UserQuickMenu from './UserQuickMenu';
 
@@ -27,13 +27,29 @@ function resolveTitle(pathname: string) {
 
 export default function AppTopBar() {
   const location_id = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const handleSidebarState = (event: Event) => {
+      const customEvent = event as CustomEvent<{ open?: boolean }>;
+      setSidebarOpen(Boolean(customEvent.detail?.open));
+    };
+
+    window.addEventListener('app:sidebar-state', handleSidebarState);
+    return () => {
+      window.removeEventListener('app:sidebar-state', handleSidebarState);
+    };
+  }, []);
+
   const title = useMemo(
     () => resolveTitle(location_id.pathname),
     [location_id.pathname]
   );
 
-  const handleOpenSidebar = () => {
-    window.dispatchEvent(new Event('app:sidebar-open'));
+  const handleToggleSidebar = () => {
+    window.dispatchEvent(
+      new Event(sidebarOpen ? 'app:sidebar-close' : 'app:sidebar-open')
+    );
   };
 
   return (
@@ -42,11 +58,12 @@ export default function AppTopBar() {
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
-            onClick={handleOpenSidebar}
+            onClick={handleToggleSidebar}
             className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-            aria-label="Abrir menú lateral"
+            aria-label={sidebarOpen ? 'Cerrar menú lateral' : 'Abrir menú lateral'}
+            aria-expanded={sidebarOpen}
           >
-            <Menu className="h-5 w-5" />
+            {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
           <div className="min-w-0">

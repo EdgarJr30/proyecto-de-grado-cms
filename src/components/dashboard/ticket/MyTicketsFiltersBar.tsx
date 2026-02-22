@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import FilterBar from '../../ui/filters/FilterBar';
 import {
   MyTicketsFilters,
@@ -6,9 +7,15 @@ import {
 
 type Props = {
   onApply: (values: Record<MyTicketsFilterKey, unknown>) => void;
+  moduleTabs?: ReactNode;
+  showFilters?: boolean;
 };
 
-export default function MyTicketsFiltersBar({ onApply }: Props) {
+export default function MyTicketsFiltersBar({
+  onApply,
+  moduleTabs,
+  showFilters = true,
+}: Props) {
   return (
     <div className="people-filter-shell">
       <FilterBar<MyTicketsFilterKey>
@@ -16,6 +23,8 @@ export default function MyTicketsFiltersBar({ onApply }: Props) {
         onApply={onApply}
         defaultOpenDesktop={false}
         baseFilename="mis_tickets"
+        moduleTabs={moduleTabs}
+        showFilters={showFilters}
       />
     </div>
   );

@@ -23,11 +23,20 @@ export default function Sidebar() {
 
   useEffect(() => {
     const handleOpenSidebar = () => setIsOpen(true);
+    const handleCloseSidebar = () => setIsOpen(false);
     window.addEventListener('app:sidebar-open', handleOpenSidebar);
+    window.addEventListener('app:sidebar-close', handleCloseSidebar);
     return () => {
       window.removeEventListener('app:sidebar-open', handleOpenSidebar);
+      window.removeEventListener('app:sidebar-close', handleCloseSidebar);
     };
   }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('app:sidebar-state', { detail: { open: isOpen } })
+    );
+  }, [isOpen]);
 
   // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
   const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
@@ -63,8 +72,8 @@ export default function Sidebar() {
   if (loading || !ready) {
     return (
       <aside className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]">
-        <div className="p-6 border-b border-gray-700">
-          <div className="h-8 w-32 rounded bg-gray-800 animate-pulse" />
+        <div className="h-16 px-4 border-b border-gray-700 flex items-center">
+          <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
         </div>
         <div className="p-4 space-y-2">
           <div className="h-9 rounded bg-gray-800 animate-pulse" />
@@ -79,7 +88,7 @@ export default function Sidebar() {
     <>
       {/* Overlay (móvil) */}
       <div
-        className={`fixed inset-0 bg-black/40 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-x-0 bottom-0 top-16 bg-black/40 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         } md:hidden`}
         onClick={() => setIsOpen(false)}
@@ -88,18 +97,18 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
+          fixed top-16 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
           transform transition-transform duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0 md:static md:flex h-[100dvh] overflow-y-auto
+          h-[calc(100dvh-4rem)] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh] overflow-y-auto
         `}
       >
         {/* Logo */}
-        <div className="p-6 border-b border-gray-700">
+        <div className="h-16 px-4 border-b border-gray-700 flex items-center">
           {logoSrc ? (
-            <img src={finalLogoSrc} alt="Logo" className="h-8 w-auto" />
+            <img src={finalLogoSrc} alt="Logo" className="h-7 w-auto" />
           ) : (
-            <div className="h-8 w-32 rounded bg-gray-800 animate-pulse" />
+            <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
           )}
         </div>
 

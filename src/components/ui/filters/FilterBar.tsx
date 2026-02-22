@@ -1,5 +1,5 @@
 // src/components/ui/filters/FilterBar.tsx
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type {
   FilterSchema,
   FilterField,
@@ -20,7 +20,7 @@ const primaryBtn =
 const chipCls =
   'inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700';
 const toolbar =
-  'rounded-2xl border border-gray-200 bg-white p-3 md:p-4 shadow-sm';
+  'rounded-2xl border border-gray-200 bg-white p-2.5 md:p-3 shadow-sm';
 
 /* ============ vistas guardadas (localStorage) ============ */
 type SavedView<T extends string> = {
@@ -250,6 +250,9 @@ type Props<T extends string> = {
   exportMerge?: Record<string, unknown>;
   baseFilename?: string;
   defaultOpenDesktop?: boolean;
+  moduleActions?: ReactNode;
+  moduleTabs?: ReactNode;
+  showFilters?: boolean;
 };
 
 export default function FilterBar<T extends string>({
@@ -259,6 +262,9 @@ export default function FilterBar<T extends string>({
   exportMerge,
   baseFilename,
   defaultOpenDesktop = true,
+  moduleActions,
+  moduleTabs,
+  showFilters = true,
 }: Props<T>) {
   const { values, setValue, reset, activeCount } = useFilters(schema);
 
@@ -266,8 +272,16 @@ export default function FilterBar<T extends string>({
   // - Móvil: inicia cerrado
   // - Desktop (md+): inicia abierto (pero puede ocultarse)
   const [isOpen, setIsOpen] = useState(false);
+  // Drawer (más filtros en móvil)
+  const [openDrawer, setOpenDrawer] = useState(false);
 
   useEffect(() => {
+    if (!showFilters) {
+      setIsOpen(false);
+      setOpenDrawer(false);
+      return;
+    }
+
     const mq = window.matchMedia?.('(min-width: 768px)');
     const initOpen = mq?.matches ? defaultOpenDesktop : false;
     setIsOpen(initOpen);
@@ -275,10 +289,7 @@ export default function FilterBar<T extends string>({
       setIsOpen(e.matches ? defaultOpenDesktop : false);
     mq?.addEventListener?.('change', handler);
     return () => mq?.removeEventListener?.('change', handler);
-  }, [defaultOpenDesktop]);
-
-  // Drawer (más filtros en móvil)
-  const [openDrawer, setOpenDrawer] = useState(false);
+  }, [defaultOpenDesktop, showFilters]);
 
   // Vistas guardadas
   const [views, setViews] = useState<SavedView<T>[]>(() =>
@@ -327,58 +338,61 @@ export default function FilterBar<T extends string>({
     saveViews(schema.id, next);
   }
 
+  const hasModuleTabs = Boolean(moduleTabs);
+
   return (
     <div className={`${sticky ? 'sticky top-0 z-10' : ''}`}>
       <div className={toolbar}>
-        {/* ===== Encabezado con toggle en móvil y desktop ===== */}
-        {/* ===== Encabezado ===== */}
-        <div className="mb-2 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsOpen((s) => !s)}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
-            aria-expanded={isOpen}
-            aria-controls="filters-content"
-            title={isOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
-          >
-            <svg
-              className={`h-4 w-4 transition-transform ${
-                isOpen ? 'rotate-180' : ''
-              }`}
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden
-            >
-              <path d="M5.25 7.5L10 12.25 14.75 7.5H5.25z" />
-            </svg>
-            {isOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
-            <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-              {activeCount}
-            </span>
-          </button>
+        {hasModuleTabs && <div className="mb-2">{moduleTabs}</div>}
 
-          {/* 👉 Header limpio: solo Aplicar a la derecha */}
-          <div className="ml-auto flex items-center gap-2">
-            {/* Botón CSV, desacoplado de la lógica interna */}
-            <ExportTicketsCsvAdapter
-              filters={values as Record<T, unknown>}
-              exportMerge={exportMerge}
-              pillBtnClassName={pillBtn}
-              baseFilename={baseFilename ?? schema.id}
-            />
+        {showFilters && (
+          <div className="mb-1 flex items-center gap-2 overflow-x-auto pb-1">
             <button
               type="button"
-              onClick={apply}
-              className={primaryBtn}
-              title="Aplicar filtros"
+              onClick={() => setIsOpen((s) => !s)}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm hover:bg-gray-50"
+              aria-expanded={isOpen}
+              aria-controls="filters-content"
+              title={isOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
             >
-              Aplicar
+              <svg
+                className={`h-4 w-4 transition-transform ${
+                  isOpen ? 'rotate-180' : ''
+                }`}
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M5.25 7.5L10 12.25 14.75 7.5H5.25z" />
+              </svg>
+              {isOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+              <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                {activeCount}
+              </span>
             </button>
+
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {moduleActions && <div className="shrink-0">{moduleActions}</div>}
+              <ExportTicketsCsvAdapter
+                filters={values as Record<T, unknown>}
+                exportMerge={exportMerge}
+                pillBtnClassName={pillBtn}
+                baseFilename={baseFilename ?? schema.id}
+              />
+              <button
+                type="button"
+                onClick={apply}
+                className={primaryBtn}
+                title="Aplicar filtros"
+              >
+                Aplicar
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ===== Contenido completo: controlado por isOpen en todos los breakpoints ===== */}
-        {isOpen && (
+        {showFilters && isOpen && (
           <div id="filters-content">
             {/* fila principal */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -524,7 +538,7 @@ export default function FilterBar<T extends string>({
         )}
 
         {/* ===== Drawer móvil ===== */}
-        {openDrawer && (
+        {showFilters && openDrawer && (
           <div
             className="fixed inset-0 z-50 md:hidden"
             onClick={() => setOpenDrawer(false)}

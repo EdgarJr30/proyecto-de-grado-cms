@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import FilterBar from '../../ui/filters/FilterBar';
 import {
   WorkOrdersFilters,
@@ -8,9 +8,10 @@ import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 type Props = {
   onApply: (values: Record<WorkOrdersFilterKey, unknown>) => void;
+  moduleActions?: ReactNode;
 };
 
-export default function WorkOrdersFiltersBar({ onApply }: Props) {
+export default function WorkOrdersFiltersBar({ onApply, moduleActions }: Props) {
   const { filterOptions } = useLocationCatalog({
     includeInactive: false,
     activeOnlyOptions: true,
@@ -36,6 +37,7 @@ export default function WorkOrdersFiltersBar({ onApply }: Props) {
         defaultOpenDesktop={false}
         exportMerge={{ is_accepted: true }}
         baseFilename="ordenes_trabajo"
+        moduleActions={moduleActions}
       />
     </div>
   );

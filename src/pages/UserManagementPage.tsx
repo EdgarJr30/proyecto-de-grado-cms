@@ -28,15 +28,7 @@ export default function UserManagementPage() {
     <div className="people-asana h-screen flex bg-[#f3f4f8]">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="people-page-header px-4 md:px-6 lg:px-8 py-3 md:py-4">
-          <div className="people-header-row flex items-center justify-between gap-3">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-              Usuarios
-            </h2>
-          </div>
-        </header>
-
-        <div className="people-filters px-4 md:px-6 lg:px-8 pt-2">
+        <div className="people-filters px-4 md:px-6 lg:px-8 pt-3">
           <UsersFiltersBar
             onApply={(vals) => {
               setFilters((prev) =>
@@ -46,7 +38,7 @@ export default function UserManagementPage() {
           />
         </div>
 
-        <section className="people-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-2 pb-6">
+        <section className="people-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-3 pb-6">
           <UsersTable
             searchTerm={searchTerm}
             selectedLocation={selectedLocation}

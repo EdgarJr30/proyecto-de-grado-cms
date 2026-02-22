@@ -38,6 +38,54 @@ export default function WorkOrdersPage() {
     [filters]
   );
 
+  const viewSwitcher = (
+    <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
+      <button
+        type="button"
+        onClick={() => setView('board')}
+        className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer
+          ${
+            view === 'board'
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+          }`}
+        title="Vista Board"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path d="M3 3h6v6H3V3zm8 0h6v6h-6V3zM3 11h6v6H3v-6zm8 6v-6h6v6h-6z" />
+        </svg>
+        Board
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setView('list')}
+        className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer
+          ${
+            view === 'list'
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+          }`}
+        title="Vista de lista"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
+        </svg>
+        Lista
+      </button>
+    </div>
+  );
+
   async function handleSave(patch: Partial<WorkOrder>) {
     try {
       const ticketUpdate = toTicketUpdate(patch);
@@ -62,61 +110,7 @@ export default function WorkOrdersPage() {
     <div className="wo-asana h-screen flex bg-[#f3f4f8]">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="wo-page-header px-4 md:px-6 lg:px-8 py-3 md:py-4">
-          <div className="wo-header-row flex items-center justify-between gap-3">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-              Órdenes de Trabajo
-            </h2>
-
-            <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
-              <button
-                type="button"
-                onClick={() => setView('board')}
-                className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer
-                  ${
-                    view === 'board'
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                      : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
-                  }`}
-                title="Vista Board"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M3 3h6v6H3V3zm8 0h6v6h-6V3zM3 11h6v6H3v-6zm8 6v-6h6v6h-6z" />
-                </svg>
-                Board
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setView('list')}
-                className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer
-                  ${
-                    view === 'list'
-                      ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-                      : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
-                  }`}
-                title="Vista de lista"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                >
-                  <path d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
-                </svg>
-                Lista
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <div className="wo-filters px-4 md:px-6 lg:px-8 pt-2">
+        <div className="wo-filters px-4 md:px-6 lg:px-8 pt-3">
           <WorkOrdersFiltersBar
             onApply={(vals) => {
               // ✅ ÚNICA sincronización de filtros
@@ -124,10 +118,11 @@ export default function WorkOrdersPage() {
                 JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
               );
             }}
+            moduleActions={viewSwitcher}
           />
         </div>
 
-        <section className="wo-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-2 pb-6">
+        <section className="wo-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-3 pb-6">
           {view === 'board' ? (
             <WorkOrdersBoard filters={mergedFilters} />
           ) : (

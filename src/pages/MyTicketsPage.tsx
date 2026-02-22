@@ -344,58 +344,49 @@ export default function MyTicketsPage() {
     }
   };
 
+  const profileTabs = (
+    <div className="flex w-full flex-wrap items-center gap-1 rounded-2xl border border-gray-200 bg-white/90 p-1 shadow-sm md:w-fit">
+      <TabButton
+        active={activeTab === 'tickets'}
+        label="Mis tickets"
+        icon={Ticket}
+        onClick={() => setActiveTab('tickets')}
+      />
+      <TabButton
+        active={activeTab === 'profile'}
+        label="Datos personales"
+        icon={UserRound}
+        onClick={() => setActiveTab('profile')}
+      />
+      <TabButton
+        active={activeTab === 'security'}
+        label="Seguridad"
+        icon={KeyRound}
+        onClick={() => setActiveTab('security')}
+      />
+    </div>
+  );
+
   return (
     <div className="people-asana h-screen flex bg-[#f3f4f8]">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="people-page-header px-4 md:px-6 lg:px-8 py-3 md:py-4">
-          <div className="people-header-row flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                Mi Perfil
-              </h2>
-              <p className="mt-1 text-sm text-gray-500">
-                Gestiona tus datos personales, seguridad y tickets creados.
-              </p>
-            </div>
-          </div>
-        </header>
-
         <section className="people-content flex-1 overflow-auto px-4 md:px-6 lg:px-8 pt-3 pb-6">
-          <div className="flex w-full flex-wrap items-center gap-1 rounded-2xl border border-gray-200 bg-white/90 p-1 shadow-sm md:w-fit">
-            <TabButton
-              active={activeTab === 'tickets'}
-              label="Mis tickets"
-              icon={Ticket}
-              onClick={() => setActiveTab('tickets')}
-            />
-            <TabButton
-              active={activeTab === 'profile'}
-              label="Datos personales"
-              icon={UserRound}
-              onClick={() => setActiveTab('profile')}
-            />
-            <TabButton
-              active={activeTab === 'security'}
-              label="Seguridad"
-              icon={KeyRound}
-              onClick={() => setActiveTab('security')}
+          <div className="people-filters">
+            <MyTicketsFiltersBar
+              onApply={(vals) => {
+                setFilters((prev) =>
+                  JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
+                );
+              }}
+              moduleTabs={profileTabs}
+              showFilters={activeTab === 'tickets'}
             />
           </div>
 
           {activeTab === 'tickets' && (
-            <div className="mt-4">
-              <div className="people-filters">
-                <MyTicketsFiltersBar
-                  onApply={(vals) => {
-                    setFilters((prev) =>
-                      JSON.stringify(prev) === JSON.stringify(vals) ? prev : vals
-                    );
-                  }}
-                />
-              </div>
-
-              <div className="people-table-toolbar mt-3 flex items-center gap-3 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
+            <div className="mt-3">
+              <div className="people-table-toolbar flex items-center gap-3 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
                 <p className="text-sm font-medium text-gray-700">
                   Mis tickets - Página {safePage + 1} de {totalPages} -{' '}
                   {filteredTickets.length} total
