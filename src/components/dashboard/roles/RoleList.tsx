@@ -143,56 +143,102 @@ export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
             </div>
           </div>
         ) : (
-          // Tabla
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-fixed border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="bg-gray-50 text-left p-3 font-semibold text-gray-700 border-b border-gray-200 rounded-tl-2xl">
-                    Nombre
-                  </th>
-                  <th className="bg-gray-50 text-left p-3 font-semibold text-gray-700 border-b border-gray-200">
-                    Descripción
-                  </th>
-                  <th className="bg-gray-50 text-right p-3 font-semibold text-gray-700 border-b border-gray-200 rounded-tr-2xl">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="p-3 font-medium text-gray-900 border-t border-gray-200">
+          <>
+            {/* Mobile cards: evita solapamiento de columnas en pantallas estrechas */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {filtered.map((r) => (
+                <article key={`mobile-${r.id}`} className="space-y-3 p-4">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      Nombre
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-gray-900 break-words">
                       {r.name}
-                    </td>
-                    <td className="p-3 text-gray-500 border-t border-gray-200">
-                      {r.description?.trim() ? r.description : '—'}
-                    </td>
-                    <td className="p-3 border-t border-gray-200">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          to={`/admin/roles/${r.id}`}
-                          className="cursor-pointer inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 hover:bg-gray-50"
-                          title="Editar permisos del rol"
-                        >
-                          Editar permisos
-                        </Link>
+                    </p>
+                  </div>
 
-                        <button
-                          type="button"
-                          onClick={() => onOpenUsers?.(r.id)}
-                          className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white border px-3 py-1.5 text-indigo-700 hover:bg-indigo-50"
-                          title="Ver y administrar usuarios del rol"
-                        >
-                          Usuarios
-                        </button>
-                      </div>
-                    </td>
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      Descripción
+                    </p>
+                    <p className="mt-1 text-sm text-gray-600 break-words">
+                      {r.description?.trim() ? r.description : '—'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <Link
+                      to={`/admin/roles/${r.id}`}
+                      className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-gray-50"
+                      title="Editar permisos del rol"
+                    >
+                      Editar permisos
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => onOpenUsers?.(r.id)}
+                      className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+                      title="Ver y administrar usuarios del rol"
+                    >
+                      Usuarios
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm table-auto border-separate border-spacing-0">
+                <thead>
+                  <tr>
+                    <th className="w-[28%] bg-gray-50 text-left p-3 font-semibold text-gray-700 border-b border-gray-200 rounded-tl-2xl">
+                      Nombre
+                    </th>
+                    <th className="w-[42%] bg-gray-50 text-left p-3 font-semibold text-gray-700 border-b border-gray-200">
+                      Descripción
+                    </th>
+                    <th className="w-[30%] bg-gray-50 text-right p-3 font-semibold text-gray-700 border-b border-gray-200 rounded-tr-2xl">
+                      Acciones
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="p-3 font-medium text-gray-900 border-t border-gray-200 break-words">
+                        {r.name}
+                      </td>
+                      <td className="p-3 text-gray-500 border-t border-gray-200 break-words">
+                        {r.description?.trim() ? r.description : '—'}
+                      </td>
+                      <td className="p-3 border-t border-gray-200 align-top">
+                        <div className="flex justify-end gap-2">
+                          <Link
+                            to={`/admin/roles/${r.id}`}
+                            className="cursor-pointer inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 hover:bg-gray-50"
+                            title="Editar permisos del rol"
+                          >
+                            Editar permisos
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => onOpenUsers?.(r.id)}
+                            className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-white border px-3 py-1.5 text-indigo-700 hover:bg-indigo-50"
+                            title="Ver y administrar usuarios del rol"
+                          >
+                            Usuarios
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {msg && (

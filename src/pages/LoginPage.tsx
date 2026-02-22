@@ -6,6 +6,8 @@ import AppVersion from '../components/ui/AppVersion';
 import { getSession, signInWithPassword } from '../utils/auth';
 import { usePermissions } from '../rbac/PermissionsContext';
 import { useBranding } from '../context/BrandingContext';
+import { showToastError, showToastSuccess } from '../notifications/toast';
+import PasswordInput from '../components/ui/password-input';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -61,24 +63,27 @@ export default function LoginPage() {
 
       if (error) {
         const msg = error.message?.toLowerCase() || '';
-        setError(
+        const finalMessage =
           msg.includes('invalid login credentials')
             ? 'Correo o contraseña incorrectos.'
-            : error.message || 'No se pudo iniciar sesión.'
-        );
+            : error.message || 'No se pudo iniciar sesión.';
+        setError(finalMessage);
+        showToastError(finalMessage);
         return;
       }
 
       if (data.session?.user) {
+        showToastSuccess('Inicio de sesión exitoso. Bienvenido.');
         await refresh({ silent: false });
         navigate('/inicio', { replace: true });
       }
     } catch (err: unknown) {
-      setError(
+      const finalMessage =
         err instanceof Error
           ? err.message
-          : 'Error inesperado al iniciar sesión'
-      );
+          : 'Error inesperado al iniciar sesión';
+      setError(finalMessage);
+      showToastError(finalMessage);
     } finally {
       setSubmitting(false);
     }
@@ -137,10 +142,9 @@ export default function LoginPage() {
                   Contraseña
                 </label>
                 <div className="mt-2">
-                  <input
+                  <PasswordInput
                     id="password"
                     name="password"
-                    type="password"
                     placeholder="Contraseña"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

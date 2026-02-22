@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Menu, PanelTop, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import UserQuickMenu from './UserQuickMenu';
 
@@ -77,10 +77,6 @@ export default function AppTopBar() {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600 md:inline-flex md:items-center md:gap-1.5">
-            <PanelTop className="h-3.5 w-3.5" />
-            Barra superior
-          </span>
           <UserQuickMenu />
         </div>
       </div>

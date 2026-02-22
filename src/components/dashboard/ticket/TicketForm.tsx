@@ -37,6 +37,7 @@ import {
 } from '../../../utils/formatDate';
 import { useNavigate } from 'react-router-dom';
 import { showToastError } from '../../../notifications';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 // ==== Tipos ====
 type DbLocation = {
@@ -890,25 +891,32 @@ export default function TicketForm() {
 
           {/* Botones de navegación en el paso 4 */}
           <div className="w-full flex justify-center">
-            <div className="w-full max-w-5xl px-18 pb-8">
-              <div className="flex justify-between pt-6 border-t border-gray-100">
+            <div className="w-full max-w-5xl px-4 sm:px-6 pb-8">
+              <div className="flex flex-nowrap items-center gap-3 pt-6 border-t border-gray-100">
                 {step > 1 && (
                   <Button
                     variant="outline"
                     type="button"
-                    className="px-6 py-2"
+                    className="h-11 px-4 sm:px-5 text-sm sm:text-base whitespace-nowrap gap-2 shrink-0"
                     onClick={handlePrevious}
                   >
-                    ← Anterior
+                    <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="whitespace-nowrap">Anterior</span>
                   </Button>
                 )}
-                <div className="px-6 py-2" />
                 <Button
                   type="submit"
-                  className="px-6 py-2"
+                  className="ml-auto h-11 px-5 sm:px-6 text-sm sm:text-base whitespace-nowrap gap-2 shrink-0"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Enviando...' : 'Crear Ticket'}
+                  {isSubmitting ? (
+                    'Enviando...'
+                  ) : (
+                    <>
+                      <span className="whitespace-nowrap">Crear Ticket</span>
+                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -919,34 +927,39 @@ export default function TicketForm() {
       {/* Botones para pasos 1, 2 y 3 */}
       {step < 4 && (
         <div className="w-full flex justify-center">
-          <div className="w-full max-w-5xl px-18 pb-8">
-            <div className="flex justify-between pt-6 border-t border-gray-100">
+          <div className="w-full max-w-5xl px-4 sm:px-6 pb-8">
+            <div className="flex flex-nowrap items-center gap-3 pt-6 border-t border-gray-100">
               {/* Botón "Anterior" si no es el primer paso */}
               {step > 1 ? (
                 <Button
                   variant="outline"
                   type="button"
-                  className="px-6 py-2"
+                  className="h-11 px-4 sm:px-5 text-sm sm:text-base whitespace-nowrap gap-2 shrink-0"
                   onClick={handlePrevious}
                   disabled={step === 1}
                 >
-                  ← Anterior
+                  <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="whitespace-nowrap">Anterior</span>
                 </Button>
               ) : (
                 // Botón "Mis Tickets" cuando es paso 1
                 <Button
                   variant="outline"
                   type="button"
-                  className="px-6 py-2"
+                  className="h-11 px-4 sm:px-5 text-sm sm:text-base whitespace-nowrap shrink-0"
                   onClick={() => navigate('/mi-perfil')}
                 >
-                  Mis Tickets
+                  <span className="whitespace-nowrap">Mis Tickets</span>
                 </Button>
               )}
-              <div className="px-6 py-2" />
               {/* Botón Siguiente */}
-              <Button type="button" className="px-6 py-2" onClick={handleNext}>
-                Siguiente →
+              <Button
+                type="button"
+                className="ml-auto h-11 px-5 sm:px-6 text-sm sm:text-base whitespace-nowrap gap-2 shrink-0"
+                onClick={handleNext}
+              >
+                <span className="whitespace-nowrap">Siguiente</span>
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
               </Button>
             </div>
           </div>

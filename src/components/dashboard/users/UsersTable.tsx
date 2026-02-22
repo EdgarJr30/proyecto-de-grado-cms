@@ -18,6 +18,7 @@ import {
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 import UserEditModal from './UserEditModal';
+import PasswordInput from '../../ui/password-input';
 
 interface Role {
   id: number;
@@ -1088,8 +1089,7 @@ export default function UsersTable({
                   <label className="block text-sm font-medium text-gray-700">
                     Password
                   </label>
-                  <input
-                    type="password"
+                  <PasswordInput
                     minLength={8}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={passwordC}

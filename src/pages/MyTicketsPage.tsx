@@ -25,6 +25,7 @@ import { useLocationCatalog } from '../hooks/useLocationCatalog';
 import { usePermissions } from '../rbac/PermissionsContext';
 import { useUser } from '../context/UserContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
+import PasswordInput from '../components/ui/password-input';
 import '../styles/peopleAsana.css';
 
 const PAGE_SIZE = 8;
@@ -722,9 +723,8 @@ export default function MyTicketsPage() {
                   >
                     Contraseña actual
                   </label>
-                  <input
+                  <PasswordInput
                     id="current-password"
-                    type="password"
                     value={currentPassword}
                     onChange={(event) => setCurrentPassword(event.target.value)}
                     className={INPUT_CLASS}
@@ -740,9 +740,8 @@ export default function MyTicketsPage() {
                     >
                       Nueva contraseña
                     </label>
-                    <input
+                    <PasswordInput
                       id="new-password"
-                      type="password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       className={INPUT_CLASS}
@@ -757,9 +756,8 @@ export default function MyTicketsPage() {
                     >
                       Confirmar contraseña
                     </label>
-                    <input
+                    <PasswordInput
                       id="confirm-password"
-                      type="password"
                       value={confirmPassword}
                       onChange={(event) => setConfirmPassword(event.target.value)}
                       className={INPUT_CLASS}
