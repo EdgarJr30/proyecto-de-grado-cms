@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { useTheme } from '../../context/ThemeContext';
+import { cn } from '../../utils/cn';
 import UserQuickMenu from './UserQuickMenu';
 
 function escapeRegExp(value: string) {
@@ -84,17 +85,53 @@ export default function AppTopBar() {
             onClick={toggleTheme}
             aria-label={
               isDark
-                ? 'Cambiar a modo claro'
-                : 'Cambiar a modo oscuro'
+                ? 'Desactivar modo oscuro'
+                : 'Activar modo oscuro'
             }
-            aria-pressed={isDark}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            role="switch"
+            aria-checked={isDark}
+            className="group relative inline-flex h-10 w-[84px] items-center rounded-full border border-slate-300/90 bg-white/80 p-1 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900/80"
           >
-            {isDark ? (
-              <Sun className="h-5 w-5" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
+            <span
+              className={cn(
+                'pointer-events-none absolute inset-1 rounded-full transition-all duration-300',
+                isDark
+                  ? 'bg-gradient-to-r from-slate-800 via-indigo-900 to-slate-800'
+                  : 'bg-gradient-to-r from-sky-100 via-slate-50 to-amber-100'
+              )}
+            />
+            <span className="pointer-events-none absolute left-3 right-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.08em]">
+              <span
+                className={cn(
+                  'transition-colors duration-300',
+                  isDark ? 'text-slate-500' : 'text-slate-700'
+                )}
+              >
+                Off
+              </span>
+              <span
+                className={cn(
+                  'transition-colors duration-300',
+                  isDark ? 'text-emerald-200' : 'text-slate-400'
+                )}
+              >
+                On
+              </span>
+            </span>
+            <span
+              className={cn(
+                'relative z-10 inline-flex h-8 w-8 items-center justify-center rounded-full shadow-md ring-1 ring-slate-900/10 transition-all duration-300 ease-out',
+                isDark
+                  ? 'translate-x-[44px] bg-slate-100 text-indigo-700'
+                  : 'translate-x-0 bg-white text-amber-500'
+              )}
+            >
+              {isDark ? (
+                <Moon className="h-4 w-4 transition-transform duration-500 group-active:scale-90" />
+              ) : (
+                <Sun className="h-4 w-4 transition-transform duration-500 group-active:scale-90" />
+              )}
+            </span>
           </button>
           <UserQuickMenu />
         </div>
