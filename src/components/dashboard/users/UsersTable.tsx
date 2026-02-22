@@ -171,7 +171,6 @@ export default function UsersTable({
         ).supabase
           .from('locations')
           .select('id,name,code,is_active')
-          .eq('is_active', true)
           .order('name');
 
         if (!active) return;
@@ -480,10 +479,18 @@ export default function UsersTable({
 
   const renderLocation = (u: DbUser) => {
     if (typeof u.location_id === 'number') {
-      return locationNameById.get(u.location_id) ?? String(u.location_id);
+      return (
+        locationNameById.get(u.location_id) ?? `Ubicación #${u.location_id}`
+      );
     }
     return '—';
   };
+
+  const selectedLocationLabel =
+    selectedLocationId == null
+      ? 'TODAS'
+      : (locationNameById.get(selectedLocationId) ??
+        `Ubicación #${selectedLocationId}`);
 
   return (
     <div className="people-board flex flex-col flex-1 min-h-0">
@@ -491,7 +498,7 @@ export default function UsersTable({
       <div className="people-table-toolbar flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
         <div className="text-sm text-gray-700 font-medium">
           <span className="mr-2">Ubicación:</span>
-          <strong>{selectedLocation || 'TODAS'}</strong>
+          <strong>{selectedLocationLabel}</strong>
         </div>
 
         <span className="rounded-full border border-gray-300 bg-white px-2 py-0.5 text-xs text-gray-600">

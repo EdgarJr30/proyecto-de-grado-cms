@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Disclosure } from '@headlessui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
-import { LOCATIONS } from '../../constants/locations';
 import GlobalAnnouncementBanner from '../common/GlobalAnnouncementBanner';
+import { useLocationCatalog } from '../../hooks/useLocationCatalog';
 
 function FilterIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -35,6 +35,10 @@ export default function Navbar({
   selectedLocation,
   onFilterLocation,
 }: NavbarProps) {
+  const { filterOptions } = useLocationCatalog({
+    includeInactive: false,
+    activeOnlyOptions: true,
+  });
   const [input, setInput] = useState('');
   const [debouncedInput, setDebouncedInput] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
@@ -88,9 +92,9 @@ export default function Navbar({
                 className="block w-full rounded-md bg-white border border-gray-300 py-1.5 pl-2 pr-8 text-base text-gray-900 focus:outline-2 focus:outline-indigo-600 sm:text-sm"
               >
                 <option value="">Todas las ubicaciones</option>
-                {LOCATIONS.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
+                {filterOptions.map((loc) => (
+                  <option key={loc.value} value={loc.value}>
+                    {loc.label}
                   </option>
                 ))}
               </select>
@@ -142,20 +146,20 @@ export default function Navbar({
                   >
                     Todas las ubicaciones
                   </button>
-                  {LOCATIONS.map((loc) => (
+                  {filterOptions.map((loc) => (
                     <button
-                      key={loc}
+                      key={loc.value}
                       className={`w-full px-4 py-2 text-left hover:bg-indigo-50 ${
-                        selectedLocation === loc
+                        selectedLocation === loc.value
                           ? 'font-semibold text-indigo-600'
                           : 'text-gray-700'
                       }`}
                       onClick={() => {
-                        onFilterLocation(loc);
+                        onFilterLocation(loc.value);
                         setShowDropdown(false);
                       }}
                     >
-                      {loc}
+                      {loc.label}
                     </button>
                   ))}
                 </div>

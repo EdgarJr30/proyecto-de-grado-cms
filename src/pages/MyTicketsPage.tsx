@@ -10,6 +10,7 @@ import type { Ticket } from '../types/Ticket';
 import type { FilterState } from '../types/filters';
 import type { MyTicketsFilterKey } from '../features/management/myTicketsFilters';
 import MyTicketsFiltersBar from '../components/dashboard/ticket/MyTicketsFiltersBar';
+import { useLocationCatalog } from '../hooks/useLocationCatalog';
 import '../styles/peopleAsana.css';
 
 const PAGE_SIZE = 8;
@@ -28,6 +29,7 @@ function statusChipClass(value?: Ticket['status']) {
 }
 
 export default function MyTicketsPage() {
+  const { getLocationLabel } = useLocationCatalog();
   const [userId, setUserId] = useState<string | null>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,6 +139,13 @@ export default function MyTicketsPage() {
     return filteredTickets.slice(from, to);
   }, [filteredTickets, safePage]);
 
+  const renderLocation = (ticket: Ticket) => {
+    const fromRow = (ticket as Ticket & { location_name?: string | null })
+      .location_name;
+    if (fromRow) return fromRow;
+    return getLocationLabel(ticket.location_id);
+  };
+
   return (
     <div className="people-asana h-screen flex bg-[#f3f4f8]">
       <Sidebar />
@@ -218,7 +227,7 @@ export default function MyTicketsPage() {
                       ) : null}
                       <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-600">
                         <span>ID: {ticket.id}</span>
-                        <span>Ubicación: {ticket.location_id ?? '—'}</span>
+                        <span>Ubicación: {renderLocation(ticket)}</span>
                         <span>Solicitante: {ticket.requester || '—'}</span>
                         <span>Fecha: {ticket.incident_date || '—'}</span>
                       </div>
@@ -293,7 +302,7 @@ export default function MyTicketsPage() {
                               </span>
                             </td>
                             <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
-                              {ticket.location_id ?? '—'}
+                              {renderLocation(ticket)}
                             </td>
                             <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
                               {ticket.incident_date || '—'}

@@ -60,6 +60,7 @@ function StatusChip({ value }: { value: string }) {
 
 export default function WorkRequestsDetailModal({
   ticket,
+  locationLabel,
   onClose,
   canFullWR,
   getAssigneeFor,
@@ -67,6 +68,7 @@ export default function WorkRequestsDetailModal({
   onAccepted,
 }: {
   ticket: Ticket;
+  locationLabel?: string;
   onClose: () => void;
   canFullWR: boolean;
   getAssigneeFor: (id: number) => number | '';
@@ -236,7 +238,12 @@ export default function WorkRequestsDetailModal({
               </div>
               <div>
                 <dt className="text-gray-500">Ubicación</dt>
-                <dd className="text-gray-900">{ticket.location_id}</dd>
+                <dd className="text-gray-900">
+                  {locationLabel ??
+                    (typeof ticket.location_id === 'number'
+                      ? `Ubicación #${ticket.location_id}`
+                      : '—')}
+                </dd>
               </div>
               <div>
                 <dt className="text-gray-500">Fecha de creación</dt>

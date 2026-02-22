@@ -10,6 +10,7 @@ import {
 } from '../../services/userAdminService';
 import { showToastError, showToastSuccess } from '../../notifications';
 import { useCan } from '../../rbac/PermissionsContext';
+import { useLocationCatalog } from '../../hooks/useLocationCatalog';
 
 const PAGE_SIZE = 8;
 
@@ -47,6 +48,11 @@ export default function RoleUsersPage({
   onClose,
   hideBackLink = false,
 }: Props) {
+  const { getLocationLabel } = useLocationCatalog({
+    includeInactive: true,
+    activeOnlyOptions: false,
+  });
+
   // Permitir seguir funcionando por URL si no nos pasan roleId
   const { roleId: roleIdFromParams } = useParams();
   const { search: locationSearch } = useLocation();
@@ -154,6 +160,9 @@ export default function RoleUsersPage({
       );
     }
   };
+
+  const renderLocation = (locationId: number | null) =>
+    getLocationLabel(locationId);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 space-y-6">
@@ -319,7 +328,7 @@ export default function RoleUsersPage({
                       {u.email}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {u.location_id ?? '—'}
+                      {renderLocation(u.location_id)}
                     </td>
                     <td className="px-4 py-3">
                       <ActiveChip active={u.is_active} />
@@ -369,6 +378,7 @@ export default function RoleUsersPage({
         <AddUsersModal
           roleId={resolvedRoleId}
           roleName={roleName}
+          renderLocation={renderLocation}
           onClose={async (changed) => {
             setOpenAdd(false);
             if (changed) await load();
@@ -382,10 +392,12 @@ export default function RoleUsersPage({
 function AddUsersModal({
   roleId,
   roleName,
+  renderLocation,
   onClose,
 }: {
   roleId: number;
   roleName: string;
+  renderLocation: (locationId: number | null) => string;
   onClose: (changed: boolean) => void;
 }) {
   const canManageRoles = useCan('rbac:manage_roles');
@@ -555,7 +567,7 @@ function AddUsersModal({
                         </td>
                         <td className="px-4 py-2 text-sm">{u.email}</td>
                         <td className="px-4 py-2 text-sm">
-                          {u.location_id ?? '—'}
+                          {renderLocation(u.location_id)}
                         </td>
                         <td className="px-4 py-2">
                           <ActiveChip active={u.is_active} />

@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState, useEffect, useMemo } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import type { SpecialIncident } from '../../../types/SpecialIncident';
 import {
@@ -22,6 +29,7 @@ import { useAssignees } from '../../../context/AssigneeContext';
 import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import WorkRequestsDetailModal from './WorkRequestsDetailModal';
+import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 interface Props {
   filters: FilterState<WorkRequestsFilterKey>;
@@ -72,6 +80,10 @@ function StatusChip({ value }: { value: string }) {
 }
 
 export default function WorkRequestsBoard({ filters }: Props) {
+  const { getLocationLabel } = useLocationCatalog({
+    includeInactive: true,
+    activeOnlyOptions: false,
+  });
   const checkbox = useRef<HTMLInputElement>(null);
   const [checked, setChecked] = useState(false);
   const [indeterminate, setIndeterminate] = useState(false);
@@ -95,11 +107,20 @@ export default function WorkRequestsBoard({ filters }: Props) {
   const [assigneesMap, setAssigneesMap] = useState<Record<number, number | ''>>(
     {}
   );
-  const getAssigneeFor = (id: number) => assigneesMap[id] ?? '';
+  const getAssigneeFor = useCallback(
+    (id: number) => assigneesMap[id] ?? '',
+    [assigneesMap]
+  );
   const setAssigneeFor = (id: number, assigneeId: number) =>
     setAssigneesMap((prev) => ({ ...prev, [id]: assigneeId }));
 
   const ticketsToShow = tickets;
+  const renderLocation = (ticket: Ticket) => {
+    const fromRow = (ticket as Ticket & { location_name?: string | null })
+      .location_name;
+    if (fromRow) return fromRow;
+    return getLocationLabel(ticket.location_id);
+  };
 
   // Checkbox maestro
   useLayoutEffect(() => {
@@ -123,7 +144,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
     if (!canFullWR) return false;
     if (selectedTicket.length === 0) return false;
     return selectedTicket.every((t) => Boolean(getAssigneeFor(Number(t.id))));
-  }, [canFullWR, selectedTicket, assigneesMap]);
+  }, [canFullWR, selectedTicket, getAssigneeFor]);
 
   async function handleAcceptSelected() {
     if (!canFullWR) {
@@ -411,7 +432,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
                         <span className="text-gray-700">{t.requester}</span>
                         <span className="text-gray-400">•</span>
-                        <span className="text-gray-700">{t.location_id}</span>
+                        <span className="text-gray-700">{renderLocation(t)}</span>
                       </div>
                       <div className="mt-3 flex items-center gap-2">
                         <PriorityChip value={t.priority ?? 'Media'} />
@@ -642,7 +663,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                             <StatusChip value={t.status ?? 'Nueva'} />
                           </td>
                           <td className="px-4 py-3 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
-                            {t.location_id}
+                            {renderLocation(t)}
                           </td>
                           <td className="px-4 py-3 border-b border-gray-100 whitespace-nowrap">
                             {firstAsset ? (
@@ -775,6 +796,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
       {detailTicket && (
         <WorkRequestsDetailModal
           ticket={detailTicket}
+          locationLabel={renderLocation(detailTicket)}
           onClose={() => setDetailTicket(null)}
           canFullWR={canFullWR}
           getAssigneeFor={getAssigneeFor}

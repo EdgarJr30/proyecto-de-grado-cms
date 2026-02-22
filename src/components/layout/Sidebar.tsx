@@ -8,12 +8,14 @@ import { APP_ROUTES } from '../../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useBranding } from '../../context/BrandingContext';
 import Footer from '../ui/Footer';
+import { useLocationCatalog } from '../../hooks/useLocationCatalog';
 
 export default function Sidebar() {
   const { loading } = useAuth();
   const { profile } = useUser();
   const { has, ready, roles } = usePermissions();
   const { logoSrc } = useBranding();
+  const { getLocationLabel } = useLocationCatalog();
 
   const location_id = useLocation();
   const navigate = useNavigate();
@@ -44,6 +46,10 @@ export default function Sidebar() {
   const initials = profile?.name?.trim()?.charAt(0).toUpperCase() ?? 'U';
   const fullName = profile ? `${profile.name} ${profile.last_name}` : 'Usuario';
   const rolesString = roles.length ? roles.join(', ') : '—';
+  const userLocationLabel =
+    typeof profile?.location_id === 'number'
+      ? getLocationLabel(profile.location_id)
+      : null;
 
   // Mientras carga auth o permisos → skeleton
   if (loading || !ready) {
@@ -147,9 +153,9 @@ export default function Sidebar() {
               <p className="text-xs text-gray-400 truncate">{rolesString}</p>
             </div>
           </div>
-          {profile?.location_id && (
+          {userLocationLabel && (
             <p className="mt-1 text-[11px] text-gray-400 truncate">
-              {profile.location_id}
+              {userLocationLabel}
             </p>
           )}
         </div>

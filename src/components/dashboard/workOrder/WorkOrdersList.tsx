@@ -9,6 +9,7 @@ import {
 import { getTicketsByWorkOrdersFiltersPaginated } from '../../../services/ticketService';
 import AssigneeBadge from '../../common/AssigneeBadge';
 import { supabase } from '../../../lib/supabaseClient';
+import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 type Props = {
   filters?: FilterState<WorkOrdersFilterKey>;
@@ -60,6 +61,10 @@ export default function WorkOrdersList({
   onOpen,
   lastUpdatedTicket,
 }: Props) {
+  const { getLocationLabel } = useLocationCatalog({
+    includeInactive: true,
+    activeOnlyOptions: false,
+  });
   const [rows, setRows] = useState<WorkOrder[]>([]);
   const [page, setPage] = useState(0);
   const [count, setCount] = useState(0);
@@ -280,7 +285,8 @@ export default function WorkOrdersList({
                       </td>
 
                       <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-600 whitespace-nowrap">
-                        {t.location_id ?? '—'}
+                        {(t as WorkOrder & { location_name?: string | null })
+                          .location_name ?? getLocationLabel(t.location_id)}
                       </td>
 
                       <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">

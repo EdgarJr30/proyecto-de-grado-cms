@@ -19,6 +19,7 @@ import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
 import { showToastError } from '../../../notifications/toast';
 import { useCan } from '../../../rbac/PermissionsContext';
+import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 const STATUSES: Ticket['status'][] = [
   'Pendiente',
@@ -32,6 +33,10 @@ interface Props {
 }
 
 export default function WorkOrdersBoard({ filters }: Props) {
+  const { getLocationLabel } = useLocationCatalog({
+    includeInactive: true,
+    activeOnlyOptions: false,
+  });
   const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [modalOpen, setModalOpen] = useState(false);
@@ -446,6 +451,7 @@ export default function WorkOrdersBoard({ filters }: Props) {
               : undefined
           }
           count={counts[status]}
+          getLocationLabel={getLocationLabel}
           canDragDrop={canMoveCards && movingTicketId === null}
           draggedTicketId={draggedTicket ? toId(draggedTicket.id) : null}
           onDragStartTicket={handleDragStartTicket}

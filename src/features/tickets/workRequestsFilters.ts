@@ -1,5 +1,4 @@
 import type { FilterSchema } from '../../types/filters';
-import { LOCATIONS } from '../../constants/locations';
 
 export type WorkRequestsFilterKey =
   | 'q'
@@ -49,7 +48,7 @@ export const WorkRequestsFilters: FilterSchema<WorkRequestsFilterKey> = {
       key: 'location_id',
       type: 'select',
       label: 'Todas las ubicaciones',
-      options: LOCATIONS.map((l) => ({ label: l, value: l })),
+      options: [],
       responsive: 'bar',
       immediate: true,
     },

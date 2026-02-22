@@ -1,5 +1,4 @@
 import type { FilterSchema } from '../../types/filters';
-import { LOCATIONS } from '../../constants/locations';
 
 export type UsersFilterKey = 'q' | 'location_id' | 'include_inactive';
 
@@ -19,7 +18,7 @@ export const UsersFilters: FilterSchema<UsersFilterKey> = {
       key: 'location_id',
       type: 'select',
       label: 'Todas las ubicaciones',
-      options: LOCATIONS.map((l) => ({ label: l, value: l })),
+      options: [],
       responsive: 'bar',
       immediate: true,
     },

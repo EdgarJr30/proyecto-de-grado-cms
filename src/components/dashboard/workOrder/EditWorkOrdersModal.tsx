@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, type JSX } from 'react';
 import type { WorkOrder } from '../../../types/Ticket';
 import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
-import { LOCATIONS } from '../../../constants/locations';
 import { STATUSES } from '../../../constants/const_ticket';
 import {
   getTicketImagePaths,
@@ -24,6 +23,7 @@ import {
   confirmArchiveWorkOrder,
 } from '../../../notifications/index';
 import TicketPartsPanel from '../../../pages/inventory/parts/TicketPartsPanel';
+import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -47,6 +47,10 @@ export default function EditWorkOrdersModal({
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const { maxSecondary } = useSettings();
+  const { filterOptions, locationNameById } = useLocationCatalog({
+    includeInactive: true,
+    activeOnlyOptions: false,
+  });
 
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
@@ -63,6 +67,21 @@ export default function EditWorkOrdersModal({
   const canUseTicketPartsPanel = canInventoryRead && canInventoryOperate;
   const addDisabledCls = (base = '') =>
     base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
+  const selectedLocationName = (() => {
+    const fromTicket = (edited as WorkOrder & { location_name?: string | null })
+      .location_name;
+    if (fromTicket) return fromTicket;
+    if (typeof edited.location_id === 'number') {
+      return (
+        locationNameById.get(edited.location_id) ??
+        `Ubicación #${edited.location_id}`
+      );
+    }
+    return 'No especificada';
+  })();
+  const hasSelectedLocationOption =
+    typeof edited.location_id === 'number' &&
+    filterOptions.some((opt) => Number(opt.value) === edited.location_id);
 
   // --- principal & secundarios ---
   const [primaryId, setPrimaryId] = useState<number | ''>(
@@ -391,9 +410,13 @@ export default function EditWorkOrdersModal({
               <option value="" disabled>
                 Selecciona una ubicación
               </option>
-              {LOCATIONS.map((loc) => (
-                <option key={loc} value={loc}>
-                  {loc}
+              {typeof edited.location_id === 'number' &&
+                !hasSelectedLocationOption && (
+                  <option value={edited.location_id}>{selectedLocationName}</option>
+                )}
+              {filterOptions.map((loc) => (
+                <option key={loc.value} value={loc.value}>
+                  {loc.label}
                 </option>
               ))}
             </select>

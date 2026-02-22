@@ -26,6 +26,15 @@ function normalizeDateRange(
   };
 }
 
+function parseLocationFilter(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  }
+  return null;
+}
+
 export async function createTicket(
   ticket: Omit<
     Ticket,
@@ -193,8 +202,9 @@ export async function getFilteredTickets(
     query = query.eq('is_accepted', isAccepted);
   }
 
-  if (location_id) {
-    query = query.eq('location_id', location_id);
+  const locationFilter = parseLocationFilter(location_id);
+  if (locationFilter != null) {
+    query = query.eq('location_id', locationFilter);
   }
 
   if (term.length >= 2) {
@@ -227,8 +237,9 @@ export async function getUnacceptedTicketsPaginated(
     .order('id', { ascending: false })
     .range(from, to);
 
-  if (location_id) {
-    query = query.eq('location_id', location_id);
+  const locationFilter = parseLocationFilter(location_id);
+  if (locationFilter != null) {
+    query = query.eq('location_id', locationFilter);
   }
 
   const { data, error, count } = await query;
@@ -330,10 +341,11 @@ export async function acceptTickets(input: AcceptTicketsInput): Promise<void> {
 /** RPC de conteos (sin cambios) */
 export async function getTicketCountsRPC(filters?: {
   term?: string;
-  location_id?: string;
+  location_id?: string | number;
 }): Promise<TicketCounts> {
+  const locationFilter = parseLocationFilter(filters?.location_id);
   const { data, error } = await supabase.rpc('ticket_counts', {
-    p_location: filters?.location_id ?? null,
+    p_location: locationFilter,
     p_term: filters?.term ?? null,
   });
 
@@ -384,8 +396,8 @@ export async function getTicketsByFiltersPaginated(
     q = q.or(ors.join(','));
   }
 
-  const location_id = (values.location_id as string) || '';
-  if (location_id) q = q.eq('location_id', location_id);
+  const locationFilter = parseLocationFilter(values.location_id);
+  if (locationFilter != null) q = q.eq('location_id', locationFilter);
 
   if (typeof values.accepted === 'boolean') {
     q = q.eq('is_accepted', values.accepted);
@@ -458,8 +470,8 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
   }
 
   const locationRaw = (values as Record<string, unknown>)['location_id'];
-  const location_id = typeof locationRaw === 'string' ? locationRaw : undefined;
-  if (location_id) q = q.eq('location_id', location_id);
+  const locationFilter = parseLocationFilter(locationRaw);
+  if (locationFilter != null) q = q.eq('location_id', locationFilter);
 
   const assigneeIdRaw = (values as Record<string, unknown>)['assignee_id'];
   if (
