@@ -14,6 +14,7 @@
     'Nunito Sans',
     'Segoe UI',
     sans-serif;
+  background: var(--people-bg);
 }
 
 .people-asana .people-page-header {
@@ -96,6 +97,53 @@
 
 .people-asana .people-pagination {
   padding-top: 0.25rem;
+}
+
+:root.dark .people-asana {
+  --people-bg: #0b1220;
+  --people-surface: #0f172a;
+  --people-surface-soft: #152238;
+  --people-border: #314259;
+  --people-border-strong: #455a78;
+  --people-text: #e2e8f0;
+  --people-subtext: #9fb0c7;
+  --people-accent: #818cf8;
+  --people-shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.45);
+  background: var(--people-bg);
+}
+
+:root.dark .people-asana .people-page-header {
+  border-bottom-color: rgba(100, 116, 139, 0.35);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, transparent 100%),
+    var(--people-bg);
+}
+
+:root.dark .people-asana .people-filter-shell > div > div {
+  border-color: var(--people-border);
+  background: color-mix(in srgb, var(--people-surface-soft) 88%, transparent);
+  box-shadow: var(--people-shadow-sm);
+}
+
+:root.dark .people-asana .people-content {
+  background: linear-gradient(180deg, var(--people-bg) 0%, #0f1b30 100%);
+}
+
+:root.dark .people-asana .people-table-toolbar {
+  border-color: var(--people-border);
+  background: color-mix(in srgb, var(--people-surface) 88%, transparent);
+}
+
+:root.dark .people-asana .people-table-shell {
+  border-color: var(--people-border);
+}
+
+:root.dark .people-asana .people-table-head th {
+  border-bottom-color: var(--people-border);
+}
+
+:root.dark .people-asana .people-table-row:hover td:first-child {
+  border-left-color: var(--people-accent);
 }
 
 @media (max-width: 1024px) {

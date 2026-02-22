@@ -76,52 +76,52 @@ const SEARCHABLE_TABS = new Set<TabKey>([
 
 const TAB_TONES: Record<TabKey, ModuleTone> = {
   roles: {
-    iconBg: 'bg-indigo-100',
-    iconColor: 'text-indigo-700',
-    selectedBg: 'bg-indigo-50',
-    selectedBorder: 'border-indigo-200',
+    iconBg: 'bg-indigo-100 dark:bg-indigo-500/15',
+    iconColor: 'text-indigo-700 dark:text-indigo-300',
+    selectedBg: 'bg-indigo-50 dark:bg-indigo-500/15',
+    selectedBorder: 'border-indigo-200 dark:border-indigo-400/30',
     focusRing: 'focus-visible:ring-indigo-500',
   },
   permissions: {
-    iconBg: 'bg-cyan-100',
-    iconColor: 'text-cyan-700',
-    selectedBg: 'bg-cyan-50',
-    selectedBorder: 'border-cyan-200',
+    iconBg: 'bg-cyan-100 dark:bg-cyan-500/15',
+    iconColor: 'text-cyan-700 dark:text-cyan-300',
+    selectedBg: 'bg-cyan-50 dark:bg-cyan-500/15',
+    selectedBorder: 'border-cyan-200 dark:border-cyan-400/30',
     focusRing: 'focus-visible:ring-cyan-500',
   },
   incidents: {
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-700',
-    selectedBg: 'bg-amber-50',
-    selectedBorder: 'border-amber-200',
+    iconBg: 'bg-amber-100 dark:bg-amber-500/15',
+    iconColor: 'text-amber-700 dark:text-amber-300',
+    selectedBg: 'bg-amber-50 dark:bg-amber-500/15',
+    selectedBorder: 'border-amber-200 dark:border-amber-400/30',
     focusRing: 'focus-visible:ring-amber-500',
   },
   announcements: {
-    iconBg: 'bg-rose-100',
-    iconColor: 'text-rose-700',
-    selectedBg: 'bg-rose-50',
-    selectedBorder: 'border-rose-200',
+    iconBg: 'bg-rose-100 dark:bg-rose-500/15',
+    iconColor: 'text-rose-700 dark:text-rose-300',
+    selectedBg: 'bg-rose-50 dark:bg-rose-500/15',
+    selectedBorder: 'border-rose-200 dark:border-rose-400/30',
     focusRing: 'focus-visible:ring-rose-500',
   },
   sociedad: {
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-700',
-    selectedBg: 'bg-emerald-50',
-    selectedBorder: 'border-emerald-200',
+    iconBg: 'bg-emerald-100 dark:bg-emerald-500/15',
+    iconColor: 'text-emerald-700 dark:text-emerald-300',
+    selectedBg: 'bg-emerald-50 dark:bg-emerald-500/15',
+    selectedBorder: 'border-emerald-200 dark:border-emerald-400/30',
     focusRing: 'focus-visible:ring-emerald-500',
   },
   assets: {
-    iconBg: 'bg-slate-200',
-    iconColor: 'text-slate-700',
-    selectedBg: 'bg-slate-100',
-    selectedBorder: 'border-slate-300',
+    iconBg: 'bg-slate-200 dark:bg-slate-700',
+    iconColor: 'text-slate-700 dark:text-slate-200',
+    selectedBg: 'bg-slate-100 dark:bg-slate-700/60',
+    selectedBorder: 'border-slate-300 dark:border-slate-500',
     focusRing: 'focus-visible:ring-slate-500',
   },
   general: {
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-700',
-    selectedBg: 'bg-blue-50',
-    selectedBorder: 'border-blue-200',
+    iconBg: 'bg-blue-100 dark:bg-blue-500/15',
+    iconColor: 'text-blue-700 dark:text-blue-300',
+    selectedBg: 'bg-blue-50 dark:bg-blue-500/15',
+    selectedBorder: 'border-blue-200 dark:border-blue-400/30',
     focusRing: 'focus-visible:ring-blue-500',
   },
 };
@@ -195,10 +195,12 @@ function SettingsModuleNav({
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-      <div className="border-b border-gray-200 px-4 py-3">
-        <h2 className="text-sm font-semibold text-gray-900">Submódulos</h2>
-        <p className="mt-1 text-xs text-gray-500">
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <div className="border-b border-gray-200 px-4 py-3 dark:border-slate-700">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+          Submódulos
+        </h2>
+        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
           Navega por secciones con foco claro y permisos visibles.
         </p>
       </div>
@@ -233,9 +235,9 @@ function SettingsModuleNav({
                 module.tone.focusRing,
                 selected
                   ? `${module.tone.selectedBg} ${module.tone.selectedBorder}`
-                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50',
+                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-slate-600 dark:hover:bg-slate-800/70',
                 !module.enabled &&
-                  'cursor-not-allowed border-gray-200 bg-gray-100 opacity-70'
+                  'cursor-not-allowed border-gray-200 bg-gray-100 opacity-70 dark:border-slate-700 dark:bg-slate-800'
               )}
               title={module.enabled ? module.description : 'Sin permisos'}
             >
@@ -251,18 +253,18 @@ function SettingsModuleNav({
                 </span>
 
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-gray-900">
+                  <span className="block text-sm font-semibold text-gray-900 dark:text-slate-100">
                     {module.label}
                   </span>
-                  <span className="mt-1 block text-xs text-gray-500">
+                  <span className="mt-1 block text-xs text-gray-500 dark:text-slate-400">
                     {module.helper}
                   </span>
                   <span
                     className={cn(
                       'mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
                       module.enabled
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-gray-200 text-gray-600'
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                        : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300'
                     )}
                   >
                     {module.enabled ? 'Disponible' : 'Sin acceso'}
@@ -442,43 +444,43 @@ export default function AdminSettingsHubPage() {
   const ActiveIcon = activeModule.icon;
 
   return (
-    <div className="h-screen flex bg-[#f4f6fb] text-slate-900">
+    <div className="h-screen flex bg-[#f4f6fb] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Sidebar />
 
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 min-w-0">
         <header className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-0">
-          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/70 p-5 shadow-sm">
+          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/70 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600">
+                <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   <Sparkles className="h-3.5 w-3.5 text-blue-600" />
                   Centro de configuración
                 </p>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight">
                   Configuración
                 </h1>
-                <p className="mt-1 text-sm text-slate-600 max-w-3xl">
+                <p className="mt-1 text-sm text-slate-600 max-w-3xl dark:text-slate-300">
                   Organiza roles, permisos, incidencias, anuncios, datos de
                   sociedad y parámetros globales desde una sola vista.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <p className="text-slate-500">Submódulos</p>
-                  <p className="mt-1 text-lg font-bold text-slate-900">
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                  <p className="text-slate-500 dark:text-slate-400">Submódulos</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
                     {modules.length}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <p className="text-slate-500">Disponibles</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-700">
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                  <p className="text-slate-500 dark:text-slate-400">Disponibles</p>
+                  <p className="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-300">
                     {enabledCount}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 col-span-2 sm:col-span-1">
-                  <p className="text-slate-500">Módulo activo</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900 truncate">
+                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 col-span-2 sm:col-span-1 dark:border-slate-700 dark:bg-slate-900">
+                  <p className="text-slate-500 dark:text-slate-400">Módulo activo</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
                     {activeModule.label}
                   </p>
                 </div>
@@ -496,28 +498,28 @@ export default function AdminSettingsHubPage() {
                 onChange={(next) => setTab(next)}
               />
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h3 className="text-sm font-semibold text-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Estado de acceso
                 </h3>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Los módulos bloqueados requieren permisos adicionales.
                 </p>
                 <div className="mt-3 space-y-2 text-xs">
                   {modules.map((module) => (
                     <div
                       key={`${module.key}-status`}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2"
+                      className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 dark:border-slate-700"
                     >
-                      <span className="font-medium text-slate-700">
+                      <span className="font-medium text-slate-700 dark:text-slate-200">
                         {module.label}
                       </span>
                       <span
                         className={cn(
                           'rounded-full px-2 py-0.5 font-semibold',
                           module.enabled
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-slate-200 text-slate-600'
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                            : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                         )}
                       >
                         {module.enabled ? 'OK' : 'Bloqueado'}
@@ -529,7 +531,7 @@ export default function AdminSettingsHubPage() {
             </aside>
 
             <div className="space-y-4 min-w-0">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex items-start gap-3">
                     <div
@@ -543,10 +545,10 @@ export default function AdminSettingsHubPage() {
                     </div>
 
                     <div>
-                      <h2 className="text-xl font-semibold text-slate-900">
+                      <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                         {activeModule.label}
                       </h2>
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                         {activeModule.description}
                       </p>
                     </div>
@@ -556,19 +558,19 @@ export default function AdminSettingsHubPage() {
                     <div className="w-full lg:w-[360px]">
                       <label
                         htmlFor="admin-settings-search"
-                        className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+                        className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
                       >
                         Buscar en {activeModule.label}
                       </label>
                       <div className="relative mt-1">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                         <input
                           id="admin-settings-search"
                           type="search"
                           value={searchTerm}
                           onChange={(event) => setSearchTerm(event.target.value)}
                           placeholder={searchPlaceholder}
-                          className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                          className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-500/30"
                         />
                       </div>
                     </div>
@@ -580,7 +582,7 @@ export default function AdminSettingsHubPage() {
                 role="tabpanel"
                 id={`settings-panel-${tab}`}
                 aria-labelledby={`settings-tab-${tab}`}
-                className="rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-5 shadow-sm"
+                className="rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
               >
                 {tab === 'roles' && (
                   <Can perm="rbac:manage_roles">
@@ -591,7 +593,7 @@ export default function AdminSettingsHubPage() {
                           setRoleUsersModal({ open: true, roleId })
                         }
                       />
-                      <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         Tip: usa el botón “Usuarios” para gestionar miembros del
                         rol sin salir de esta pantalla.
                       </p>

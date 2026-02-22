@@ -17,6 +17,7 @@
     'Nunito Sans',
     'Segoe UI',
     sans-serif;
+  background: var(--wr-bg);
 }
 
 .wr-asana .wr-page-header {
@@ -103,6 +104,56 @@
 
 .wr-asana .wr-pagination {
   padding-top: 0.25rem;
+}
+
+:root.dark .wr-asana {
+  --wr-bg: #0b1220;
+  --wr-surface: #0f172a;
+  --wr-surface-soft: #152238;
+  --wr-border: #314259;
+  --wr-border-strong: #455a78;
+  --wr-text: #e2e8f0;
+  --wr-subtext: #9fb0c7;
+  --wr-accent: #818cf8;
+  --wr-shadow-sm: 0 1px 2px rgba(2, 6, 23, 0.45);
+  --wr-shadow-md:
+    0 12px 24px rgba(2, 6, 23, 0.45),
+    0 2px 5px rgba(2, 6, 23, 0.35);
+  background: var(--wr-bg);
+}
+
+:root.dark .wr-asana .wr-page-header {
+  border-bottom-color: rgba(100, 116, 139, 0.35);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.88) 0%, transparent 100%),
+    var(--wr-bg);
+}
+
+:root.dark .wr-asana .wr-filter-shell > div > div {
+  border-color: var(--wr-border);
+  background: color-mix(in srgb, var(--wr-surface-soft) 88%, transparent);
+  box-shadow: var(--wr-shadow-sm);
+}
+
+:root.dark .wr-asana .wr-content {
+  background: linear-gradient(180deg, var(--wr-bg) 0%, #0f1b30 100%);
+}
+
+:root.dark .wr-asana .wr-requests-toolbar {
+  border-color: var(--wr-border);
+  background: color-mix(in srgb, var(--wr-surface) 88%, transparent);
+}
+
+:root.dark .wr-asana .wr-table-shell {
+  border-color: var(--wr-border);
+}
+
+:root.dark .wr-asana .wr-table-head th {
+  border-bottom-color: var(--wr-border);
+}
+
+:root.dark .wr-asana .wr-table-row:hover td:first-child {
+  border-left-color: var(--wr-accent);
 }
 
 @media (max-width: 1024px) {

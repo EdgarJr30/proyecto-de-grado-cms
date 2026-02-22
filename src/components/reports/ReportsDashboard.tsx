@@ -288,9 +288,11 @@ function buildFilters(args: {
 
 function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
-      <div className="text-sm font-semibold text-rose-700">No se pudo cargar el reporte</div>
-      <div className="mt-1 text-sm text-rose-600">{message}</div>
+    <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 dark:border-rose-500/40 dark:bg-rose-500/15">
+      <div className="text-sm font-semibold text-rose-700 dark:text-rose-300">
+        No se pudo cargar el reporte
+      </div>
+      <div className="mt-1 text-sm text-rose-600 dark:text-rose-200">{message}</div>
       <button
         type="button"
         onClick={onRetry}
@@ -306,9 +308,9 @@ function SectionLoading({ title }: { title: string }) {
   return (
     <ReportCard title={title} subtitle="Cargando datos...">
       <div className="space-y-3">
-        <div className="h-3 rounded bg-gray-200 animate-pulse" />
-        <div className="h-3 rounded bg-gray-200 animate-pulse" />
-        <div className="h-3 rounded bg-gray-200 animate-pulse" />
+        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
+        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
+        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
       </div>
     </ReportCard>
   );
@@ -1166,7 +1168,7 @@ export default function ReportsDashboard() {
   }, [adminState.data, roleMatrixColumns]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 text-slate-900 dark:text-slate-100">
       <section className="rounded-3xl border bg-gradient-to-r from-blue-700 via-sky-700 to-teal-700 p-5 text-white shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -1188,11 +1190,13 @@ export default function ReportsDashboard() {
         </div>
       </section>
 
-      <section className="rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-gray-800">Filtros globales</h2>
-            <p className="mt-1 text-xs text-gray-500 md:hidden">
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
+              Filtros globales
+            </h2>
+            <p className="mt-1 text-xs text-gray-500 md:hidden dark:text-slate-400">
               Rango: {fromDate} {'->'} {toDate} · Ubicación:{' '}
               {locationId
                 ? (() => {
@@ -1206,7 +1210,7 @@ export default function ReportsDashboard() {
           <button
             type="button"
             onClick={() => setMobileFiltersOpen((prev) => !prev)}
-            className="md:hidden rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+            className="md:hidden rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             aria-expanded={mobileFiltersOpen}
             aria-label="Mostrar u ocultar filtros"
           >
@@ -1217,7 +1221,7 @@ export default function ReportsDashboard() {
         <div className={cx('mt-4', mobileFiltersOpen ? 'block' : 'hidden', 'md:block')}>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Preset de fecha
               </label>
               <select
@@ -1225,7 +1229,7 @@ export default function ReportsDashboard() {
                 onChange={(e) =>
                   applyPreset(e.target.value as '30d' | '90d' | 'ytd' | 'custom')
                 }
-                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               >
                 <option value="30d">Últimos 30 días</option>
                 <option value="90d">Últimos 90 días</option>
@@ -1235,7 +1239,7 @@ export default function ReportsDashboard() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Desde
               </label>
               <input
@@ -1245,12 +1249,12 @@ export default function ReportsDashboard() {
                   setDatePreset('custom');
                   setFromDate(e.target.value);
                 }}
-                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Hasta
               </label>
               <input
@@ -1260,12 +1264,12 @@ export default function ReportsDashboard() {
                   setDatePreset('custom');
                   setToDate(e.target.value);
                 }}
-                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">
                 Ubicación
               </label>
               <select
@@ -1274,7 +1278,7 @@ export default function ReportsDashboard() {
                   const value = e.target.value;
                   setLocationId(value ? Number(value) : '');
                 }}
-                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
               >
                 <option value="">Todas</option>
                 {locations.map((location) => (
@@ -1284,7 +1288,9 @@ export default function ReportsDashboard() {
                 ))}
               </select>
               {locationsError ? (
-                <p className="mt-1 text-xs text-amber-700">{locationsError}</p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+                  {locationsError}
+                </p>
               ) : null}
             </div>
           </div>
@@ -1305,7 +1311,7 @@ export default function ReportsDashboard() {
               void resetActiveTabLayout();
             }}
             disabled={resettingLayout || resettingAllLayouts}
-            className="w-full sm:w-auto rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full sm:w-auto rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             {resettingLayout ? 'Restaurando...' : 'Orden por defecto'}
           </button>
@@ -1315,7 +1321,7 @@ export default function ReportsDashboard() {
               void resetAllLayouts();
             }}
             disabled={resettingLayout || resettingAllLayouts}
-            className="w-full sm:w-auto rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full sm:w-auto rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300 dark:hover:bg-rose-500/25"
           >
             {resettingAllLayouts ? 'Reseteando todo...' : 'Resetear todo'}
           </button>
@@ -1328,10 +1334,14 @@ export default function ReportsDashboard() {
         onChange={(tabId) => setActiveTab(tabId as TabId)}
       />
 
-      <section className="rounded-2xl border border-dashed bg-blue-50/60 px-3 py-2 text-xs text-blue-700">
+      <section className="rounded-2xl border border-dashed bg-blue-50/60 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200">
         Arrastra y suelta los KPI y bloques de reportes para reordenarlos. El orden se guarda automáticamente en tu usuario.
         Puedes usar "Orden por defecto" para la pestaña actual o "Resetear todo" para restaurar todas las vistas.
-        {layoutError ? <div className="mt-1 text-amber-700">{layoutError}</div> : null}
+        {layoutError ? (
+          <div className="mt-1 text-amber-700 dark:text-amber-300">
+            {layoutError}
+          </div>
+        ) : null}
       </section>
 
       {activeTab === 'executive' ? (
@@ -1539,8 +1549,8 @@ export default function ReportsDashboard() {
         </section>
       ) : null}
 
-      <footer className="pb-3 text-xs text-gray-500">
-        Vista actual: <span className="font-medium text-gray-700">{activeTabLabel}</span>
+      <footer className="pb-3 text-xs text-gray-500 dark:text-slate-400">
+        Vista actual: <span className="font-medium text-gray-700 dark:text-slate-200">{activeTabLabel}</span>
       </footer>
     </div>
   );

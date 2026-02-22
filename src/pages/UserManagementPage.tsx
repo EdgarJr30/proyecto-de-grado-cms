@@ -25,7 +25,7 @@ export default function UserManagementPage() {
   const includeInactive = Boolean(mergedFilters.include_inactive);
 
   return (
-    <div className="people-asana h-screen flex bg-[#f3f4f8]">
+    <div className="people-asana h-screen flex bg-[#f3f4f8] dark:bg-slate-950">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
         <div className="people-filters px-4 md:px-6 lg:px-8 pt-3">

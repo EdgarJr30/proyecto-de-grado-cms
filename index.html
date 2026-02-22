@@ -4,6 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/ICONO.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        try {
+          var key = 'mlm:theme';
+          var stored = window.localStorage.getItem(key);
+          var hasStored = stored === 'dark' || stored === 'light';
+          var systemDark =
+            window.matchMedia &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = hasStored ? stored : systemDark ? 'dark' : 'light';
+          var root = document.documentElement;
+
+          root.classList.toggle('dark', theme === 'dark');
+          root.style.colorScheme = theme;
+        } catch (_error) {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      })();
+    </script>
     <link href="/src/App.css" rel="stylesheet" />
     <title>CMMS - Gestión de Mantenimiento</title>
 
