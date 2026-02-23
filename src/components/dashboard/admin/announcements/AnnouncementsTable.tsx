@@ -234,6 +234,21 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    if (!detail && !openForm) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (openForm) {
+        if (submitting) return;
+        setOpenForm(false);
+        return;
+      }
+      setDetail(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [detail, openForm, submitting]);
+
   // --- acciones fila ---
   async function handleToggleActive(row: Announcement) {
     if (!canDisable) {
@@ -899,8 +914,11 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Detalle del anuncio</h2>
                 <button
+                  type="button"
                   onClick={() => setDetail(null)}
                   className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
                   ✕
                 </button>
@@ -1017,8 +1035,11 @@ export default function AnnouncementsTable({ searchTerm }: Props) {
                   {isEditing ? 'Editar anuncio' : 'Nuevo anuncio'}
                 </h2>
                 <button
+                  type="button"
                   onClick={() => setOpenForm(false)}
                   className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
                   ✕
                 </button>

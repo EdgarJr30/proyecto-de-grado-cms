@@ -135,6 +135,15 @@ export default function WarehouseBinsPage() {
     setIsModalOpen(false);
   }
 
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !saving) setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isModalOpen, saving]);
+
   async function onSave() {
     if (!warehouseId || !canWrite) return;
 
@@ -337,71 +346,90 @@ export default function WarehouseBinsPage() {
         </section>
 
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-            <div className="w-full max-w-lg rounded-2xl border bg-white shadow-xl">
-              <div className="p-5 border-b">
-                <h3 className="text-lg font-semibold">
-                  {editing ? 'Editar ubicación' : 'Nueva ubicación'}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  El código debe ser único por almacén.
-                </p>
-              </div>
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/30" onClick={closeModal} />
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+              <div
+                className="w-full max-w-lg rounded-2xl border bg-white shadow-xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="p-5 border-b">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold">
+                        {editing ? 'Editar ubicación' : 'Nueva ubicación'}
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        El código debe ser único por almacén.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                      aria-label="Cerrar"
+                      title="Cerrar"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
 
-              <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <label className="text-sm">
-                  <span className="text-gray-700">Código</span>
-                  <input
-                    value={form.code}
-                    onChange={(e) =>
-                      setForm((s) => ({ ...s, code: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </label>
+                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="text-sm">
+                    <span className="text-gray-700">Código</span>
+                    <input
+                      value={form.code}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, code: e.target.value }))
+                      }
+                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                    />
+                  </label>
 
-                <label className="text-sm">
-                  <span className="text-gray-700">Nombre (opcional)</span>
-                  <input
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((s) => ({ ...s, name: e.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                  />
-                </label>
+                  <label className="text-sm">
+                    <span className="text-gray-700">Nombre (opcional)</span>
+                    <input
+                      value={form.name}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, name: e.target.value }))
+                      }
+                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
+                    />
+                  </label>
 
-                <label className="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
-                    checked={form.is_active}
-                    onChange={(e) =>
-                      setForm((s) => ({ ...s, is_active: e.target.checked }))
-                    }
-                  />
-                  Activo
-                </label>
-              </div>
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                      checked={form.is_active}
+                      onChange={(e) =>
+                        setForm((s) => ({ ...s, is_active: e.target.checked }))
+                      }
+                    />
+                    Activo
+                  </label>
+                </div>
 
-              <div className="p-5 border-t flex justify-end gap-2">
-                <button
-                  onClick={closeModal}
-                  className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
-                >
-                  Cancelar
-                </button>
-                <button
-                  disabled={!canWrite || saving}
-                  onClick={() => void onSave()}
-                  className={cx(
-                    'rounded-xl px-4 py-2 text-sm font-medium border shadow-sm',
-                    'bg-gray-900 text-white border-gray-900 hover:opacity-95',
-                    (!canWrite || saving) && 'opacity-50 cursor-not-allowed'
-                  )}
-                >
-                  {saving ? 'Guardando...' : 'Guardar'}
-                </button>
+                <div className="p-5 border-t flex justify-end gap-2">
+                  <button
+                    onClick={closeModal}
+                    className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    disabled={!canWrite || saving}
+                    onClick={() => void onSave()}
+                    className={cx(
+                      'rounded-xl px-4 py-2 text-sm font-medium border shadow-sm',
+                      'bg-gray-900 text-white border-gray-900 hover:opacity-95',
+                      (!canWrite || saving) && 'opacity-50 cursor-not-allowed'
+                    )}
+                  >
+                    {saving ? 'Guardando...' : 'Guardar'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

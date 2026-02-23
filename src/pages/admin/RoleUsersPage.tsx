@@ -410,6 +410,14 @@ function AddUsersModal({
   const [loading, setLoading] = useState(true);
   const PAGE_SIZE = 8;
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -470,9 +478,11 @@ function AddUsersModal({
               <span className="text-indigo-700">{roleName}</span>
             </h2>
             <button
+              type="button"
               onClick={() => onClose(false)}
               className="cursor-pointer rounded p-1 text-gray-500 hover:bg-gray-100"
               aria-label="Cerrar"
+              title="Cerrar"
             >
               ✕
             </button>

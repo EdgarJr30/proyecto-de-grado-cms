@@ -112,6 +112,15 @@ export default function LocationsSettings() {
     setOpen(false);
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !submitting) setOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, submitting]);
+
   const onSubmit = async () => {
     try {
       setSubmitting(true);
@@ -385,11 +394,13 @@ export default function LocationsSettings() {
                   onClick={closeModal}
                   disabled={submitting}
                   className={cx(
-                    'rounded-lg px-3 py-1 border bg-white hover:bg-gray-50',
+                    'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50',
                     submitting && 'opacity-60 cursor-not-allowed'
                   )}
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
-                  Cerrar
+                  ✕
                 </button>
               </div>
             </div>

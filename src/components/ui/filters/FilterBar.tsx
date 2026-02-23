@@ -291,6 +291,15 @@ export default function FilterBar<T extends string>({
     return () => mq?.removeEventListener?.('change', handler);
   }, [defaultOpenDesktop, showFilters]);
 
+  useEffect(() => {
+    if (!openDrawer) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenDrawer(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [openDrawer]);
+
   // Vistas guardadas
   const [views, setViews] = useState<SavedView<T>[]>(() =>
     loadViews<T>(schema.id)
@@ -550,7 +559,18 @@ export default function FilterBar<T extends string>({
             >
               <div className="mx-auto max-w-xl">
                 <div className="mb-3 h-1 w-10 rounded bg-gray-300 mx-auto" />
-                <h3 className="text-base font-semibold mb-3">Filtros</h3>
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-base font-semibold">Filtros</h3>
+                  <button
+                    type="button"
+                    onClick={() => setOpenDrawer(false)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                    aria-label="Cerrar"
+                    title="Cerrar"
+                  >
+                    ✕
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 gap-3">
                   {schema.fields
                     .filter(

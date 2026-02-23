@@ -108,6 +108,15 @@ export default function UserEditModal({
     });
   }, [open, user]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   const errors: Partial<Record<keyof FormState, string>> = {};
 
   async function submitForm(e: React.FormEvent) {
@@ -162,7 +171,13 @@ export default function UserEditModal({
             <h2 className="text-lg font-semibold">
               {isEditing ? 'Editar usuario' : 'Usuario'}
             </h2>
-            <button onClick={onClose} className="text-gray-500">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-gray-500"
+              aria-label="Cerrar"
+              title="Cerrar"
+            >
               ✕
             </button>
           </div>

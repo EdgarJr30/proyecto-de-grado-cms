@@ -130,6 +130,21 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
+  useEffect(() => {
+    if (!detail && !openForm) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (openForm) {
+        if (submitting) return;
+        setOpenForm(false);
+        return;
+      }
+      setDetail(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [detail, openForm, submitting]);
+
   // --- acciones fila ---
   async function handleToggleActive(row: SpecialIncident) {
     if (!canFull && !canDisable) {
@@ -685,8 +700,11 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
                   Detalle de la incidencia
                 </h2>
                 <button
+                  type="button"
                   onClick={() => setDetail(null)}
                   className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
                   ✕
                 </button>
@@ -760,8 +778,11 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
                   {isEditing ? 'Editar incidencia' : 'Nueva incidencia'}
                 </h2>
                 <button
+                  type="button"
                   onClick={() => setOpenForm(false)}
                   className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
                   ✕
                 </button>

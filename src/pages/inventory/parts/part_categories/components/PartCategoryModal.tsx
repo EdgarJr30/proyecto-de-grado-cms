@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { FormState } from './types';
 import { GhostButton, PrimaryButton } from './buttons';
 import { ArrowRight } from 'lucide-react';
@@ -90,6 +91,15 @@ export function PartCategoryModal({
   onChangeForm: (patch: Partial<FormState>) => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (

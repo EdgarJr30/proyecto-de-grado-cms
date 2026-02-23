@@ -203,6 +203,15 @@ export default function KardexPage() {
     dir: 'desc',
   });
 
+  useEffect(() => {
+    if (!detailRow) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDetailRow(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [detailRow]);
+
   const totalPages = useMemo(() => {
     const t = Math.max(count, 0);
     return Math.max(Math.ceil(t / Math.max(pageSize, 1)), 1);
@@ -563,9 +572,11 @@ export default function KardexPage() {
                 <button
                   type="button"
                   onClick={() => setDetailRow(null)}
-                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
-                  Cerrar
+                  ✕
                 </button>
               </div>
             </header>

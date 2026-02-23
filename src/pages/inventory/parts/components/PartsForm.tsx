@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type {
   PartCriticality,
   PartCategoryRow,
@@ -46,6 +47,15 @@ function Modal(props: {
   children: React.ReactNode;
 }) {
   const { open, title, subtitle, onClose, children } = props;
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   return (

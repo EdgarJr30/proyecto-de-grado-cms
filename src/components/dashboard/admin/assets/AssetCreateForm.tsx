@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
 import type { AssetInsert } from '../../../../types/Asset';
 import { createAsset } from '../../../../services/assetsService';
@@ -52,6 +52,14 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
     const locOk = Number(form.location_id) > 0;
     return hasBasics && locOk && !isSaving;
   }, [form.code, form.name, form.location_id, isSaving]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,10 +120,12 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
 
             <button
               type="button"
-              className="shrink-0 rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-50"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
               onClick={onClose}
+              aria-label="Cerrar"
+              title="Cerrar"
             >
-              Cerrar
+              ✕
             </button>
           </div>
 
