@@ -23,7 +23,9 @@ import {
   confirmArchiveWorkOrder,
 } from '../../../notifications/index';
 import TicketPartsPanel from '../../../pages/inventory/parts/TicketPartsPanel';
+import TicketAssetsPanel from '../../../pages/inventory/assets/TicketAssetsPanel';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
+import { normalizeLocationId } from '../../../utils/locationId';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -65,20 +67,22 @@ export default function EditWorkOrdersModal({
     'inventory:full_access',
   ]);
   const canUseTicketPartsPanel = canInventoryRead && canInventoryOperate;
+  const canAssetsUpdate = useCan(['assets:update', 'assets:full_access']);
   const addDisabledCls = (base = '') =>
     base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
+  const selectedLocationId = normalizeLocationId(edited.location_id);
   const selectedLocationName = (() => {
     const fromTicket = (edited as WorkOrder & { location_name?: string | null })
       .location_name;
     if (fromTicket) return fromTicket;
-    if (typeof edited.location_id === 'number') {
-      return locationNameById.get(edited.location_id) ?? 'Sin ubicación';
+    if (selectedLocationId != null) {
+      return locationNameById.get(selectedLocationId) ?? 'Sin ubicación';
     }
     return 'No especificada';
   })();
   const hasSelectedLocationOption =
-    typeof edited.location_id === 'number' &&
-    filterOptions.some((opt) => Number(opt.value) === edited.location_id);
+    selectedLocationId != null &&
+    filterOptions.some((opt) => Number(opt.value) === selectedLocationId);
 
   // --- principal & secundarios ---
   const [primaryId, setPrimaryId] = useState<number | ''>(
@@ -400,17 +404,16 @@ export default function EditWorkOrdersModal({
             <label className="block text-sm font-medium">Ubicación</label>
             <select
               name="location_id"
-              value={edited.location_id || ''}
+              value={selectedLocationId != null ? String(selectedLocationId) : ''}
               disabled
               className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
             >
               <option value="" disabled>
                 Selecciona una ubicación
               </option>
-              {typeof edited.location_id === 'number' &&
-                !hasSelectedLocationOption && (
-                  <option value={edited.location_id}>{selectedLocationName}</option>
-                )}
+              {selectedLocationId != null && !hasSelectedLocationOption && (
+                <option value={selectedLocationId}>{selectedLocationName}</option>
+              )}
               {filterOptions.map((loc) => (
                 <option key={loc.value} value={loc.value}>
                   {loc.label}
@@ -667,6 +670,29 @@ export default function EditWorkOrdersModal({
             isAccepted={Boolean(edited.is_accepted)}
           />
         )}
+      </div>
+
+      {/* ✅ Activos fijos vinculados al ticket */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-base font-semibold text-slate-900">
+            Activos fijos del ticket
+          </h3>
+          {!edited.is_accepted && (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+              Disponible al aceptar (OT)
+            </span>
+          )}
+        </div>
+
+        <TicketAssetsPanel
+          ticketId={Number(ticket.id)}
+          isAccepted={Boolean(edited.is_accepted)}
+          ticketTitle={edited.title}
+          ticketStatus={edited.status}
+          requester={edited.requester}
+          canManageLinks={canAssetsUpdate}
+        />
       </div>
 
       {/* Lightbox imágenes */}

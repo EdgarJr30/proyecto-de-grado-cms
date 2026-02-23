@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import type {
+  AssetMaintenanceLog,
   AssetStatus,
+  AssetTicketView,
   AssetView,
   BigIntLike,
 } from '../../../../types/Asset';
-import { getAssets } from '../../../../services/assetsService';
+import {
+  getAssetMaintenanceLog,
+  getAssetTicketsView,
+  getAssets,
+} from '../../../../services/assetsService';
 import AssetCreateForm from './AssetCreateForm';
 import AssetEditForm from './AssetEditForm';
 
@@ -137,6 +143,19 @@ function Icon({
   }
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return '—';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString('es-DO', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 type ViewMode = 'none' | 'create' | 'edit';
 
 export default function AssetsBoard() {
@@ -150,6 +169,12 @@ export default function AssetsBoard() {
   );
 
   const [modal, setModal] = useState<ViewMode>('none');
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
+  const [assetTickets, setAssetTickets] = useState<AssetTicketView[]>([]);
+  const [maintenanceLog, setMaintenanceLog] = useState<AssetMaintenanceLog[]>(
+    []
+  );
 
   async function reload() {
     setError('');
@@ -169,6 +194,43 @@ export default function AssetsBoard() {
     void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!selectedAssetId) {
+      setAssetTickets([]);
+      setMaintenanceLog([]);
+      setHistoryError('');
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      setHistoryLoading(true);
+      setHistoryError('');
+      try {
+        const [tickets, logs] = await Promise.all([
+          getAssetTicketsView(selectedAssetId),
+          getAssetMaintenanceLog(selectedAssetId),
+        ]);
+        if (cancelled) return;
+        setAssetTickets(tickets);
+        setMaintenanceLog(logs);
+      } catch (error: unknown) {
+        if (cancelled) return;
+        setHistoryError(
+          error instanceof Error ? error.message : 'No se pudo cargar el historial.'
+        );
+        setAssetTickets([]);
+        setMaintenanceLog([]);
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssetId]);
 
   const filteredAssets = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -451,67 +513,153 @@ export default function AssetsBoard() {
                   </button>
                 </div>
 
-                <div className="px-4 pt-4">
-                  {selectedAsset?.image_url ? (
-                    <img
-                      src={selectedAsset.image_url}
-                      alt="Activo"
-                      className="h-40 w-full rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="h-40 w-full rounded-lg bg-gray-100" />
-                  )}
-                </div>
-
-                <div className="px-4 pt-4">
-                  {selectedAsset ? (
-                    <div className="flex items-center gap-2">
-                      <StatusBadge value={selectedAsset.status} />
-                      <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
-                        <Icon name="pin" className="h-4 w-4 text-gray-400" />
-                        {selectedAsset.location_name ?? '—'}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500">
-                      Selecciona un activo.
-                    </div>
-                  )}
-                </div>
-
-                {/* ✅ categoría visible en drawer */}
-                <div className="px-4 pt-3">
-                  <div className="text-xs text-gray-500">Categoría</div>
-                  <div className="text-sm font-medium text-gray-900">
-                    {selectedCategoryName ?? '—'}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="px-4 pt-4">
+                    {selectedAsset?.image_url ? (
+                      <img
+                        src={selectedAsset.image_url}
+                        alt="Activo"
+                        className="h-40 w-full rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="h-40 w-full rounded-lg bg-gray-100" />
+                    )}
                   </div>
-                </div>
 
-                <div className="px-4 pt-4">
-                  <div className="rounded-lg border bg-gray-50 p-3">
-                    <div className="text-xs font-semibold text-gray-700">
-                      Datos técnicos
+                  <div className="px-4 pt-4">
+                    {selectedAsset ? (
+                      <div className="flex items-center gap-2">
+                        <StatusBadge value={selectedAsset.status} />
+                        <span className="ml-auto inline-flex items-center gap-1 text-sm text-gray-600">
+                          <Icon name="pin" className="h-4 w-4 text-gray-400" />
+                          {selectedAsset.location_name ?? '—'}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">
+                        Selecciona un activo.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ✅ categoría visible en drawer */}
+                  <div className="px-4 pt-3">
+                    <div className="text-xs text-gray-500">Categoría</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {selectedCategoryName ?? '—'}
                     </div>
+                  </div>
 
-                    <div className="mt-2 space-y-1 text-sm text-gray-700">
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">Modelo</span>
-                        <span className="font-medium">
-                          {displayText(selectedAsset?.model)}
+                  <div className="px-4 pt-4">
+                    <div className="rounded-lg border bg-gray-50 p-3">
+                      <div className="text-xs font-semibold text-gray-700">
+                        Datos técnicos
+                      </div>
+
+                      <div className="mt-2 space-y-1 text-sm text-gray-700">
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500">Modelo</span>
+                          <span className="font-medium">
+                            {displayText(selectedAsset?.model)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500">No. Serie</span>
+                          <span className="font-medium">
+                            {displayText(selectedAsset?.serial_number)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between gap-3">
+                          <span className="text-gray-500">Asset tag</span>
+                          <span className="font-medium">
+                            {displayText(selectedAsset?.asset_tag)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-4 pt-4">
+                    <div className="rounded-lg border bg-white">
+                      <div className="flex items-center justify-between border-b px-3 py-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Tickets vinculados
+                        </h4>
+                        <span className="text-xs text-gray-500">
+                          {assetTickets.length}
                         </span>
                       </div>
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">No. Serie</span>
-                        <span className="font-medium">
-                          {displayText(selectedAsset?.serial_number)}
+
+                      {historyLoading ? (
+                        <div className="px-3 py-4 text-xs text-gray-500">
+                          Cargando historial…
+                        </div>
+                      ) : historyError ? (
+                        <div className="px-3 py-4 text-xs text-rose-600">
+                          {historyError}
+                        </div>
+                      ) : assetTickets.length === 0 ? (
+                        <div className="px-3 py-4 text-xs text-gray-500">
+                          Sin tickets vinculados.
+                        </div>
+                      ) : (
+                        <div className="max-h-44 overflow-auto divide-y">
+                          {assetTickets.map((row) => (
+                            <div
+                              key={`${row.asset_id}-${String(row.id)}`}
+                              className="px-3 py-2"
+                            >
+                              <div className="text-xs font-semibold text-gray-900">
+                                #{String(row.id)} {row.title ?? 'Ticket'}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-gray-600">
+                                {row.status ?? '—'} · {formatDate(row.created_at)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="px-4 pb-4">
+                    <div className="rounded-lg border bg-white">
+                      <div className="flex items-center justify-between border-b px-3 py-2">
+                        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Historial de mantenimiento
+                        </h4>
+                        <span className="text-xs text-gray-500">
+                          {maintenanceLog.length}
                         </span>
                       </div>
-                      <div className="flex justify-between gap-3">
-                        <span className="text-gray-500">Asset tag</span>
-                        <span className="font-medium">
-                          {displayText(selectedAsset?.asset_tag)}
-                        </span>
-                      </div>
+
+                      {historyLoading ? (
+                        <div className="px-3 py-4 text-xs text-gray-500">
+                          Cargando bitácora…
+                        </div>
+                      ) : historyError ? (
+                        <div className="px-3 py-4 text-xs text-rose-600">
+                          {historyError}
+                        </div>
+                      ) : maintenanceLog.length === 0 ? (
+                        <div className="px-3 py-4 text-xs text-gray-500">
+                          Sin mantenimientos registrados.
+                        </div>
+                      ) : (
+                        <div className="max-h-52 overflow-auto divide-y">
+                          {maintenanceLog.map((entry) => (
+                            <div key={String(entry.id)} className="px-3 py-2">
+                              <div className="text-xs font-semibold text-gray-900">
+                                {entry.maintenance_type} · {entry.summary}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-gray-600">
+                                {formatDate(entry.performed_at)}
+                                {entry.ticket_id ? ` · OT #${String(entry.ticket_id)}` : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

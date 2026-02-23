@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import type {
   Asset,
   AssetInsert,
+  AssetOption,
   AssetUpdate,
   AssetView,
   AssetStatus,
@@ -17,6 +18,10 @@ import type {
 } from '../types/Asset';
 
 type SbError = { message: string };
+
+function toId(value: BigIntLike): number {
+  return typeof value === 'number' ? value : Number(value);
+}
 
 // 🔒 helpers
 function toErrorMessage(error: unknown): string {
@@ -44,6 +49,27 @@ export async function getAssets(): Promise<AssetView[]> {
     .order('id', { ascending: false });
 
   return assertOk(data, error, 'No se pudieron obtener los activos.');
+}
+
+/** Lista liviana de activos para selects y asignaciones */
+export async function listAssetOptions(args: {
+  includeInactive?: boolean;
+  limit?: number;
+} = {}): Promise<AssetOption[]> {
+  const { includeInactive = true, limit = 2000 } = args;
+
+  let query = supabase
+    .from('v_assets')
+    .select('id,code,name,status,is_active,location_name')
+    .order('code', { ascending: true })
+    .limit(limit);
+
+  if (!includeInactive) {
+    query = query.eq('is_active', true);
+  }
+
+  const { data, error } = await query;
+  return assertOk(data, error, 'No se pudieron obtener las opciones de activos.');
 }
 
 /** Obtener un activo por id (vista) */
@@ -201,6 +227,63 @@ export async function createAssetMaintenanceLog(
     .single();
 
   return assertOk(data, error, 'No se pudo registrar el mantenimiento.');
+}
+
+/** Registra una entrada de mantenimiento al vincular activo+ticket (si no existe ya). */
+export async function ensureMaintenanceLogForTicketAsset(params: {
+  asset_id: BigIntLike;
+  ticket_id: BigIntLike;
+  ticket_title?: string | null;
+  ticket_status?: string | null;
+  requester?: string | null;
+}): Promise<AssetMaintenanceLog | null> {
+  const assetId = toId(params.asset_id);
+  const ticketId = toId(params.ticket_id);
+
+  const { data: existing, error: existingError } = await supabase
+    .from('asset_maintenance_log')
+    .select('id')
+    .eq('asset_id', assetId)
+    .eq('ticket_id', ticketId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(toErrorMessage(existingError));
+  }
+
+  if (existing?.id) return null;
+
+  const title = (params.ticket_title ?? '').trim();
+  const requester = (params.requester ?? '').trim();
+  const status = (params.ticket_status ?? '').trim();
+
+  const summary = title
+    ? `OT #${ticketId} - ${title}`
+    : `OT #${ticketId} vinculada al activo`;
+
+  const details = [
+    `Vinculación automática desde ticket #${ticketId}.`,
+    requester ? `Solicitante: ${requester}.` : null,
+    status ? `Estado del ticket: ${status}.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  return createAssetMaintenanceLog({
+    asset_id: assetId,
+    ticket_id: ticketId,
+    maintenance_type: 'CORRECTIVO',
+    summary,
+    details: details || null,
+    performed_at: new Date().toISOString(),
+    performed_by: null,
+    labor_cost: 0,
+    parts_cost: 0,
+    other_cost: 0,
+    downtime_minutes: 0,
+    created_by: null,
+  });
 }
 
 // (Opcional) eliminar log de mantenimiento

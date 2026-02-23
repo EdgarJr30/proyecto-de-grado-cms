@@ -64,6 +64,11 @@ export interface AssetView extends Asset {
   location_code: string;
 }
 
+export type AssetOption = Pick<
+  AssetView,
+  'id' | 'code' | 'name' | 'status' | 'is_active' | 'location_name'
+>;
+
 // ============ TABLE: public.asset_status_history ============
 export interface AssetStatusHistory {
   id: BigIntLike;
@@ -137,6 +142,13 @@ export type TicketCompat = Record<string, unknown>;
 export interface AssetTicketView extends TicketCompat {
   asset_id: BigIntLike;
   location_name: string | null;
+  id: BigIntLike;
+  title?: string | null;
+  requester?: string | null;
+  status?: string | null;
+  priority?: string | null;
+  created_at?: ISOTimestamp | null;
+  finalized_at?: ISOTimestamp | null;
 }
 
 // ============ UI helpers (opcionales, pero útiles) ============
