@@ -332,7 +332,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
               return (
                 <div
                   key={t.id}
-                  className={`rounded-xl border border-gray-200 bg-white p-4 shadow-sm ${
+                  className={`wr-ticket-card rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-indigo-50/30 transition ${
                     selected ? 'ring-1 ring-indigo-300' : ''
                   }`}
                   onClick={() => setDetailTicket(t)}

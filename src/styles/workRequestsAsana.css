@@ -102,6 +102,18 @@
   border-left-color: var(--wr-accent);
 }
 
+.wr-asana .wr-ticket-card {
+  transition:
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background-color 160ms ease;
+}
+
+.wr-asana .wr-ticket-card:hover {
+  box-shadow: var(--wr-shadow-md);
+  transform: translateY(-1px);
+}
+
 .wr-asana .wr-pagination {
   padding-top: 0.25rem;
 }
@@ -154,6 +166,10 @@
 
 :root.dark .wr-asana .wr-table-row:hover td:first-child {
   border-left-color: var(--wr-accent);
+}
+
+:root.dark .wr-asana .wr-ticket-card:hover {
+  background: color-mix(in srgb, var(--wr-surface-soft) 86%, transparent);
 }
 
 @media (max-width: 1024px) {
