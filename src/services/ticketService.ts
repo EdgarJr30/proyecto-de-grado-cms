@@ -113,10 +113,10 @@ export async function moveWorkOrderStatus(
   status: Ticket['status']
 ): Promise<void> {
   if (!Number.isInteger(workOrderId) || workOrderId <= 0) {
-    throw new Error('ID de work order inválido.');
+    throw new Error('ID de orden de trabajo (OT) inválido.');
   }
   if (!WORK_ORDER_STATUS_SET.has(status)) {
-    throw new Error('Estado de work order inválido.');
+    throw new Error('Estado de orden de trabajo (OT) inválido.');
   }
 
   const { data, error } = await supabase

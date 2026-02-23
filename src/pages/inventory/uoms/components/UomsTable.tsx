@@ -126,7 +126,7 @@ export function UomsTable({
                             <span className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-mono font-semibold text-slate-900">
                               {r.code}
                             </span>
-                            <span className="text-xs text-slate-400">UoM</span>
+                            <span className="text-xs text-slate-400">UdM</span>
                           </div>
                         </td>
 

@@ -178,12 +178,12 @@ export default function ReorderPolicyModal({
 
   const summary = useMemo(() => {
     return [
-      { label: 'Min', val: fmtNum(editor.min_qty), span: 1 },
-      { label: 'Max', val: fmtNum(editor.max_qty), span: 1 },
-      { label: 'Reorder', val: fmtNum(editor.reorder_point), span: 1 },
-      { label: 'Safety', val: fmtNum(editor.safety_stock), span: 1 },
+      { label: 'Mín.', val: fmtNum(editor.min_qty), span: 1 },
+      { label: 'Máx.', val: fmtNum(editor.max_qty), span: 1 },
+      { label: 'Reposición', val: fmtNum(editor.reorder_point), span: 1 },
+      { label: 'Seguridad', val: fmtNum(editor.safety_stock), span: 1 },
       {
-        label: 'Lead time',
+        label: 'Plazo',
         val:
           editor.lead_time_days === null ? '—' : `${editor.lead_time_days} d`,
         span: 2,
@@ -304,7 +304,7 @@ export default function ReorderPolicyModal({
                   {tab === 'context' ? (
                     <div className="mt-5 space-y-4">
                       <Field
-                        label="Repuesto (Part)"
+                        label="Repuesto"
                         rightHint={
                           isCreate ? 'Filtra por categoría' : 'Bloqueado'
                         }
@@ -338,7 +338,7 @@ export default function ReorderPolicyModal({
                                   'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
                                   'focus:outline-none focus:ring-2 focus:ring-blue-400/40'
                                 )}
-                                placeholder="Buscar (code/name).."
+                                placeholder="Buscar (código/nombre)..."
                                 value={partSearch}
                                 onChange={(e) => setPartSearch(e.target.value)}
                               />
@@ -378,7 +378,7 @@ export default function ReorderPolicyModal({
                         )}
                       </Field>
 
-                      <Field label="Warehouse" required>
+                      <Field label="Almacén" required>
                         {isCreate ? (
                           <select
                             className={cx(
@@ -393,7 +393,7 @@ export default function ReorderPolicyModal({
                               }))
                             }
                           >
-                            <option value="">Selecciona un warehouse…</option>
+                            <option value="">Selecciona un almacén…</option>
                             {warehouses.map((w) => (
                               <option key={w.id} value={w.id}>
                                 {w.label}
@@ -414,7 +414,7 @@ export default function ReorderPolicyModal({
                         )}
                       </Field>
 
-                      <Field label="Vendor preferido" rightHint="Opcional">
+                      <Field label="Proveedor preferido" rightHint="Opcional">
                         <select
                           className={cx(
                             'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
@@ -485,12 +485,16 @@ export default function ReorderPolicyModal({
                         Define cantidades objetivo y reglas de abastecimiento.
                       </div>
                     </div>
-                    <Pill tone="info">Quantities</Pill>
+                    <Pill tone="info">Cantidades</Pill>
                   </div>
 
                   <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Field label="Min qty" rightHint="Obligatorio" required>
+                      <Field
+                        label="Cantidad mín."
+                        rightHint="Obligatorio"
+                        required
+                      >
                         <input
                           type="number"
                           step="any"
@@ -508,12 +512,12 @@ export default function ReorderPolicyModal({
                         />
                       </Field>
                       <div className="text-xs text-slate-500">
-                        Umbral mínimo (stock target).
+                        Umbral mínimo (objetivo de stock).
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Field label="Max qty" rightHint="Opcional">
+                      <Field label="Cantidad máx." rightHint="Opcional">
                         <input
                           type="number"
                           step="any"
@@ -531,12 +535,15 @@ export default function ReorderPolicyModal({
                         />
                       </Field>
                       <div className="text-xs text-slate-500">
-                        Compra sugerida hasta Max.
+                        Compra sugerida hasta máximo.
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Field label="Reorder point" rightHint="Opcional">
+                      <Field
+                        label="Punto de reposición"
+                        rightHint="Opcional"
+                      >
                         <input
                           type="number"
                           step="any"
@@ -560,7 +567,10 @@ export default function ReorderPolicyModal({
                     </div>
 
                     <div className="space-y-2">
-                      <Field label="Safety stock" rightHint="Opcional">
+                      <Field
+                        label="Stock de seguridad"
+                        rightHint="Opcional"
+                      >
                         <input
                           type="number"
                           step="any"
@@ -578,12 +588,15 @@ export default function ReorderPolicyModal({
                         />
                       </Field>
                       <div className="text-xs text-slate-500">
-                        Buffer para variabilidad.
+                        Margen para variabilidad.
                       </div>
                     </div>
 
                     <div className="space-y-2 sm:col-span-1">
-                      <Field label="Lead time (días)" rightHint="Opcional">
+                      <Field
+                        label="Tiempo de entrega (días)"
+                        rightHint="Opcional"
+                      >
                         <input
                           type="number"
                           step="1"

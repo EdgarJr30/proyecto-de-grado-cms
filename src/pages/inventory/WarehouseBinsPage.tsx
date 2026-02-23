@@ -140,7 +140,7 @@ export default function WarehouseBinsPage() {
 
     const code = form.code.trim();
     if (!code) {
-      showToastError('Code es requerido.');
+      showToastError('El código es requerido.');
       return;
     }
 
@@ -154,7 +154,7 @@ export default function WarehouseBinsPage() {
           is_active: form.is_active,
         };
         await createWarehouseBin(payload);
-        showToastSuccess('Bin creado');
+        showToastSuccess('Ubicación creada');
       } else {
         const patch: WarehouseBinUpdate = {
           code,
@@ -162,7 +162,7 @@ export default function WarehouseBinsPage() {
           is_active: form.is_active,
         };
         await updateWarehouseBin(editing.id, patch);
-        showToastSuccess('Bin actualizado');
+        showToastSuccess('Ubicación actualizada');
       }
 
       setIsModalOpen(false);
@@ -177,15 +177,15 @@ export default function WarehouseBinsPage() {
   async function onDelete(id: UUID) {
     if (!canWrite) return;
     const ok = await showConfirmAlert({
-      title: 'Eliminar bin',
-      text: 'Se eliminará este bin. La acción puede fallar si existe stock asociado.',
+      title: 'Eliminar ubicación',
+      text: 'Se eliminará esta ubicación. La acción puede fallar si existe inventario asociado.',
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
 
     try {
       await deleteWarehouseBin(id);
-      showToastSuccess('Bin eliminado');
+      showToastSuccess('Ubicación eliminada');
       await refreshBins();
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
@@ -199,7 +199,7 @@ export default function WarehouseBinsPage() {
         <main className="flex-1 h-[100dvh] overflow-hidden">
           <div className="p-6">
             <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
-              No tienes permisos para acceder a Bins.
+              No tienes permisos para acceder a ubicaciones.
             </div>
           </div>
         </main>
@@ -214,7 +214,7 @@ export default function WarehouseBinsPage() {
         <main className="flex-1 h-[100dvh] overflow-hidden">
           <div className="p-6">
             <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
-              Falta warehouseId en la ruta.
+              Falta el ID de almacén en la ruta.
             </div>
           </div>
         </main>
@@ -232,10 +232,10 @@ export default function WarehouseBinsPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-2xl md:text-3xl font-bold truncate">
-                  Bins {warehouse ? `— ${warehouse.code}` : ''}
+                  Ubicaciones {warehouse ? `— ${warehouse.code}` : ''}
                 </h2>
                 <p className="text-sm text-gray-600">
-                  {warehouse ? warehouse.name : 'Bins por warehouse'}
+                  {warehouse ? warehouse.name : 'Ubicaciones por almacén'}
                 </p>
               </div>
 
@@ -244,7 +244,7 @@ export default function WarehouseBinsPage() {
                   to="/inventory/warehouses"
                   className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
                 >
-                  ← Warehouses
+                  ← Almacenes
                 </Link>
                 {canWrite && (
                   <button
@@ -261,7 +261,7 @@ export default function WarehouseBinsPage() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar bin por code o name..."
+                placeholder="Buscar ubicación por código o nombre..."
                 className="w-full sm:max-w-md rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
               />
               <label className="inline-flex items-center gap-2 text-sm text-gray-700">
@@ -286,8 +286,8 @@ export default function WarehouseBinsPage() {
         <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto">
           <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
             <div className="grid grid-cols-12 border-b bg-gray-50 text-xs font-semibold text-gray-600">
-              <div className="col-span-4 px-4 py-3">Code</div>
-              <div className="col-span-6 px-4 py-3">Name</div>
+              <div className="col-span-4 px-4 py-3">Código</div>
+              <div className="col-span-6 px-4 py-3">Nombre</div>
               <div className="col-span-2 px-4 py-3 text-right">Acciones</div>
             </div>
 
@@ -341,16 +341,16 @@ export default function WarehouseBinsPage() {
             <div className="w-full max-w-lg rounded-2xl border bg-white shadow-xl">
               <div className="p-5 border-b">
                 <h3 className="text-lg font-semibold">
-                  {editing ? 'Editar Bin' : 'Nuevo Bin'}
+                  {editing ? 'Editar ubicación' : 'Nueva ubicación'}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Code debe ser único por warehouse.
+                  El código debe ser único por almacén.
                 </p>
               </div>
 
               <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label className="text-sm">
-                  <span className="text-gray-700">Code</span>
+                  <span className="text-gray-700">Código</span>
                   <input
                     value={form.code}
                     onChange={(e) =>
@@ -361,7 +361,7 @@ export default function WarehouseBinsPage() {
                 </label>
 
                 <label className="text-sm">
-                  <span className="text-gray-700">Name (opcional)</span>
+                  <span className="text-gray-700">Nombre (opcional)</span>
                   <input
                     value={form.name}
                     onChange={(e) =>

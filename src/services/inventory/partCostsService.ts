@@ -173,6 +173,6 @@ export async function listPartCosts(
     return { rows, count: count ?? rows.length };
   } catch (error: unknown) {
     if (error instanceof Error) throw error;
-    throw new Error('Error desconocido listando costos (viewer).');
+    throw new Error('Error desconocido listando costos (vista).');
   }
 }

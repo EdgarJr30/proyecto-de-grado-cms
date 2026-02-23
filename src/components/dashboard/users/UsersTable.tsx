@@ -480,9 +480,7 @@ export default function UsersTable({
 
   const renderLocation = (u: DbUser) => {
     if (typeof u.location_id === 'number') {
-      return (
-        locationNameById.get(u.location_id) ?? `Ubicación #${u.location_id}`
-      );
+      return locationNameById.get(u.location_id) ?? 'Sin ubicación';
     }
     return '—';
   };
@@ -490,8 +488,7 @@ export default function UsersTable({
   const selectedLocationLabel =
     selectedLocationId == null
       ? 'TODAS'
-      : (locationNameById.get(selectedLocationId) ??
-        `Ubicación #${selectedLocationId}`);
+      : (locationNameById.get(selectedLocationId) ?? 'Sin ubicación');
 
   return (
     <div className="people-board flex flex-col flex-1 min-h-0">

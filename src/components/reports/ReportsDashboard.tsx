@@ -374,10 +374,10 @@ export default function ReportsDashboard() {
   const tabs = useMemo(() => {
     const all = [
       { id: 'executive' as const, label: 'Resumen Ejecutivo', visible: true },
-      { id: 'work' as const, label: 'Work Management', visible: true },
+      { id: 'work' as const, label: 'Gestión de trabajo', visible: true },
       { id: 'assets' as const, label: 'Activos', visible: canAssets },
       { id: 'parts' as const, label: 'Inventario Repuestos', visible: canInventory },
-      { id: 'admin' as const, label: 'Admin & RBAC', visible: canAdmin },
+      { id: 'admin' as const, label: 'Administración y control de acceso', visible: canAdmin },
     ];
 
     return all.filter((tab) => tab.visible);
@@ -475,7 +475,7 @@ export default function ReportsDashboard() {
       const data = await getWorkManagementReport(filters);
       setWorkState({ data, loading: false, error: null });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error cargando Work Management';
+      const message = error instanceof Error ? error.message : 'Error cargando Gestión de trabajo';
       setWorkState((prev) => ({ ...prev, loading: false, error: message }));
     }
   }, [filters]);
@@ -659,13 +659,13 @@ export default function ReportsDashboard() {
       },
       {
         key: 'openCount',
-        label: 'WO abiertas',
+        label: 'OT abiertas',
         align: 'right',
         render: (row) => formatNumber(row.openCount),
       },
       {
         key: 'closedCount',
-        label: 'WO cerradas',
+        label: 'OT cerradas',
         align: 'right',
         render: (row) => formatNumber(row.closedCount),
       },
@@ -755,10 +755,10 @@ export default function ReportsDashboard() {
     if (!executiveState.data) return [];
 
     return [
-      { id: 'openWorkOrders', label: 'WO abiertas', value: executiveState.data.kpis.openWorkOrders, tone: 'warn' },
+      { id: 'openWorkOrders', label: 'OT abiertas', value: executiveState.data.kpis.openWorkOrders, tone: 'warn' },
       {
         id: 'overdueWorkOrders',
-        label: 'WO vencidas',
+        label: 'OT vencidas',
         value: executiveState.data.kpis.overdueWorkOrders,
         tone: 'danger',
       },
@@ -771,7 +771,7 @@ export default function ReportsDashboard() {
       },
       {
         id: 'needsReorder',
-        label: 'Repuestos a reorden',
+        label: 'Repuestos por reponer',
         value: executiveState.data.kpis.needsReorder,
         tone: 'warn',
       },
@@ -789,13 +789,18 @@ export default function ReportsDashboard() {
     if (!workState.data) return [];
 
     return [
-      { id: 'requestBacklog', label: 'Backlog solicitudes', value: workState.data.kpis.requestBacklog, tone: 'warn' },
-      { id: 'workOrderBacklog', label: 'Backlog WO', value: workState.data.kpis.workOrderBacklog, tone: 'warn' },
-      { id: 'urgentOpen', label: 'WO urgentes', value: workState.data.kpis.urgentOpen, tone: 'danger' },
-      { id: 'overdueOpen', label: 'WO vencidas', value: workState.data.kpis.overdueOpen, tone: 'danger' },
-      { id: 'unassignedOpen', label: 'WO sin asignación', value: workState.data.kpis.unassignedOpen, tone: 'warn' },
+      {
+        id: 'requestBacklog',
+        label: 'Solicitudes pendientes',
+        value: workState.data.kpis.requestBacklog,
+        tone: 'warn',
+      },
+      { id: 'workOrderBacklog', label: 'Pendientes OT', value: workState.data.kpis.workOrderBacklog, tone: 'warn' },
+      { id: 'urgentOpen', label: 'OT urgentes', value: workState.data.kpis.urgentOpen, tone: 'danger' },
+      { id: 'overdueOpen', label: 'OT vencidas', value: workState.data.kpis.overdueOpen, tone: 'danger' },
+      { id: 'unassignedOpen', label: 'OT sin asignación', value: workState.data.kpis.unassignedOpen, tone: 'warn' },
       { id: 'archived', label: 'Tickets archivados', value: workState.data.kpis.archived },
-      { id: 'avgResolutionHours', label: 'Lead time promedio', value: formatHours(workState.data.kpis.avgResolutionHours) },
+      { id: 'avgResolutionHours', label: 'Tiempo de resolución promedio', value: formatHours(workState.data.kpis.avgResolutionHours) },
       {
         id: 'slaOnTimeRate',
         label: 'SLA a tiempo',
@@ -828,7 +833,7 @@ export default function ReportsDashboard() {
         value: formatCurrency(assetsState.data.kpis.maintenanceCostTotal),
         tone: 'good',
       },
-      { id: 'downtimeHoursTotal', label: 'Downtime total', value: formatHours(assetsState.data.kpis.downtimeHoursTotal) },
+      { id: 'downtimeHoursTotal', label: 'Inactividad total', value: formatHours(assetsState.data.kpis.downtimeHoursTotal) },
     ];
   }, [assetsState.data]);
 
@@ -838,12 +843,12 @@ export default function ReportsDashboard() {
     return [
       { id: 'totalParts', label: 'Repuestos', value: partsState.data.kpis.totalParts },
       { id: 'criticalParts', label: 'Críticos', value: partsState.data.kpis.criticalParts, tone: 'warn' },
-      { id: 'onHandQty', label: 'On hand', value: partsState.data.kpis.onHandQty },
+      { id: 'onHandQty', label: 'En existencia', value: partsState.data.kpis.onHandQty },
       { id: 'reservedQty', label: 'Reservado', value: partsState.data.kpis.reservedQty, tone: 'warn' },
       { id: 'availableQty', label: 'Disponible', value: partsState.data.kpis.availableQty, tone: 'good' },
-      { id: 'needsReorder', label: 'Necesitan reorder', value: partsState.data.kpis.needsReorder, tone: 'danger' },
-      { id: 'docsDraft', label: 'Docs DRAFT', value: partsState.data.kpis.docsDraft },
-      { id: 'docsCancelled', label: 'Docs CANCELLED', value: partsState.data.kpis.docsCancelled, tone: 'warn' },
+      { id: 'needsReorder', label: 'Necesitan reposición', value: partsState.data.kpis.needsReorder, tone: 'danger' },
+      { id: 'docsDraft', label: 'Docs borrador', value: partsState.data.kpis.docsDraft },
+      { id: 'docsCancelled', label: 'Docs cancelados', value: partsState.data.kpis.docsCancelled, tone: 'warn' },
       {
         id: 'inventoryValuation',
         label: 'Valorización inventario',
@@ -908,7 +913,10 @@ export default function ReportsDashboard() {
       {
         id: 'topConsumedParts',
         content: (
-          <ReportCard title="Top consumo de repuestos" subtitle="Salidas (OUT) en kardex">
+          <ReportCard
+            title="Mayor consumo de repuestos"
+            subtitle="Salidas en movimientos de inventario"
+          >
             <HorizontalBarList
               items={executiveState.data.topConsumedParts}
               maxItems={10}
@@ -943,7 +951,7 @@ export default function ReportsDashboard() {
       {
         id: 'backlogAging',
         content: (
-          <ReportCard title="Aging del backlog">
+          <ReportCard title="Antigüedad del pendiente">
             <HorizontalBarList items={workState.data.backlogAging} colorClass="bg-rose-500" />
           </ReportCard>
         ),
@@ -951,7 +959,7 @@ export default function ReportsDashboard() {
       {
         id: 'deadlineCompliance',
         content: (
-          <ReportCard title="Cumplimiento de deadline">
+          <ReportCard title="Cumplimiento de plazos">
             <HorizontalBarList
               items={workState.data.deadlineCompliance}
               colorClass="bg-emerald-600"
@@ -1029,7 +1037,7 @@ export default function ReportsDashboard() {
       {
         id: 'topByTickets',
         content: (
-          <ReportCard title="Top activos por tickets">
+          <ReportCard title="Activos con más tickets">
             <ReportTable columns={assetColumns} rows={assetsState.data.topByTickets} />
           </ReportCard>
         ),
@@ -1037,7 +1045,7 @@ export default function ReportsDashboard() {
       {
         id: 'topByCost',
         content: (
-          <ReportCard title="Top activos por costo mantenimiento">
+          <ReportCard title="Activos con mayor costo de mantenimiento">
             <ReportTable columns={assetColumns} rows={assetsState.data.topByCost} />
           </ReportCard>
         ),
@@ -1045,7 +1053,7 @@ export default function ReportsDashboard() {
       {
         id: 'topByDowntime',
         content: (
-          <ReportCard title="Top activos por downtime (min)">
+          <ReportCard title="Activos con mayor inactividad (min)">
             <ReportTable columns={assetColumns} rows={assetsState.data.topByDowntime} />
           </ReportCard>
         ),
@@ -1080,7 +1088,7 @@ export default function ReportsDashboard() {
       {
         id: 'topConsumedParts',
         content: (
-          <ReportCard title="Top consumo de repuestos">
+          <ReportCard title="Mayor consumo de repuestos">
             <ReportTable columns={partsColumns} rows={partsState.data.topConsumedParts} />
           </ReportCard>
         ),
@@ -1088,7 +1096,7 @@ export default function ReportsDashboard() {
       {
         id: 'topReorderParts',
         content: (
-          <ReportCard title="Sugerencias de reorden">
+          <ReportCard title="Sugerencias de reposición">
             <ReportTable columns={partsColumns} rows={partsState.data.topReorderParts} />
           </ReportCard>
         ),
@@ -1096,7 +1104,7 @@ export default function ReportsDashboard() {
       {
         id: 'reservationsByTicket',
         content: (
-          <ReportCard title="Pendiente de entrega por WO">
+          <ReportCard title="Pendiente de entrega por OT">
             <ReportTable columns={partsColumns} rows={partsState.data.reservationsByTicket} />
           </ReportCard>
         ),
@@ -1390,7 +1398,7 @@ export default function ReportsDashboard() {
 
       {activeTab === 'work' ? (
         <section className="space-y-4">
-          {!workState.data && workState.loading ? <SectionLoading title="Work Management" /> : null}
+          {!workState.data && workState.loading ? <SectionLoading title="Gestión de trabajo" /> : null}
 
           {workState.error && !workState.data ? (
             <SectionError
@@ -1411,7 +1419,7 @@ export default function ReportsDashboard() {
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('work', nextOrder);
                 }}
-                ariaLabel="Indicadores work management"
+                ariaLabel="Indicadores gestión de trabajo"
               />
 
               <SortableKpiGrid
@@ -1420,7 +1428,7 @@ export default function ReportsDashboard() {
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('workCards', nextOrder);
                 }}
-                ariaLabel="Bloques work management"
+                ariaLabel="Bloques gestión de trabajo"
               />
             </>
           ) : null}
@@ -1511,7 +1519,7 @@ export default function ReportsDashboard() {
 
       {activeTab === 'admin' ? (
         <section className="space-y-4">
-          {!adminState.data && adminState.loading ? <SectionLoading title="Admin & RBAC" /> : null}
+          {!adminState.data && adminState.loading ? <SectionLoading title="Administración y control de acceso" /> : null}
 
           {adminState.error && !adminState.data ? (
             <SectionError

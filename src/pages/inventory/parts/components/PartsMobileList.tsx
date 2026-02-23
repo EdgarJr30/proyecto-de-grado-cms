@@ -91,7 +91,7 @@ export default function PartsMobileList(props: {
                       {p.is_active ? 'Activo' : 'Inactivo'}
                     </Chip>
                     <Chip tone={p.is_stocked ? 'default' : 'muted'}>
-                      {p.is_stocked ? 'Stocked' : 'No stocked'}
+                      {p.is_stocked ? 'En inventario' : 'Sin inventario'}
                     </Chip>
                     <Chip tone="muted">
                       <Ruler className="h-3.5 w-3.5 mr-1" />

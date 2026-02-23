@@ -11,13 +11,13 @@ export function KardexHeader({ count }: { count: number }) {
               Inventario
             </Link>
             <ChevronRight className="h-3 w-3" />
-            <span className="text-slate-900 font-medium">Auditoría</span>
+            <span className="text-slate-900 font-medium">Movimientos</span>
           </nav>
 
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">
-                Kardex (Auditoría)
+                Movimientos de inventario (Auditoría)
               </h1>
               <p className="mt-1 text-xs md:text-sm text-slate-500">
                 Trazabilidad de movimientos por repuesto, almacén, documento y

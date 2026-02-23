@@ -164,14 +164,26 @@ export const PERMISSIONS: PermissionDef[] = [
     'Acceso total activos (crear/modificar/eliminar/asignar a tickets)'
   ),
 
-  // Inventory (Stock / Parts / Docs / Kardex / Reorder / Requests)
-  p(RESOURCES.inventory, 'read', 'Ver inventario (stock, kardex, docs, etc.)'),
-  p(RESOURCES.inventory, 'create', 'Crear documentos de inventario (DRAFT)'),
-  p(RESOURCES.inventory, 'update', 'Editar documentos de inventario (DRAFT)'),
+  // Inventario (existencias / repuestos / documentos / movimientos / reposición / reservas)
+  p(
+    RESOURCES.inventory,
+    'read',
+    'Ver inventario (existencias, movimientos, documentos, etc.)'
+  ),
+  p(
+    RESOURCES.inventory,
+    'create',
+    'Crear documentos de inventario (BORRADOR)'
+  ),
+  p(
+    RESOURCES.inventory,
+    'update',
+    'Editar documentos de inventario (BORRADOR)'
+  ),
   p(RESOURCES.inventory, 'delete', 'Eliminar documentos/líneas de inventario'),
-  p(RESOURCES.inventory, 'approve', 'Postear documentos de inventario'),
+  p(RESOURCES.inventory, 'approve', 'Publicar documentos de inventario'),
   p(RESOURCES.inventory, 'cancel', 'Cancelar documentos de inventario'),
-  p(RESOURCES.inventory, 'work', 'Reservar repuestos para OT (WO)'),
+  p(RESOURCES.inventory, 'work', 'Reservar repuestos para OT'),
   p(
     RESOURCES.inventory,
     'full_access',

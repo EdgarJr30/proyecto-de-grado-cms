@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
-import { showToastError, showToastSuccess } from '../../../notifications';
+import { showToastError } from '../../../notifications';
 
 import type {
   InventoryDocRow,
@@ -11,12 +11,10 @@ import type {
 } from '../../../types/inventory';
 
 import {
-  createInventoryDoc,
   listInventoryDocs,
   listWarehouses,
   type ListDocsFilters,
 } from '../../../services/inventory';
-import { useNavigate } from 'react-router-dom';
 
 import { Boxes } from 'lucide-react';
 import { PageShell } from './components/PageShell';
@@ -81,11 +79,10 @@ function normalizeIntegerDraft(value: string): string {
 }
 
 export default function InventoryDocsPage() {
-  const navigate = useNavigate();
   const { has } = usePermissions();
 
   const canRead = has('inventory:read');
-  const canWrite = has('inventory:create');
+  const canWrite = has(['inventory:create', 'inventory:full_access']);
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<InventoryDocRow[]>([]);
@@ -183,19 +180,6 @@ export default function InventoryDocsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, ticketId]);
 
-  async function onCreate(type: InventoryDocType) {
-    if (!canWrite) return;
-
-    try {
-      const created = await createInventoryDoc({ doc_type: type });
-      showToastSuccess('Documento creado.');
-      navigate(`/inventory/docs/${created.id}`);
-    } catch (error: unknown) {
-      if (error instanceof Error) showToastError(error.message);
-      else showToastError('No se pudo crear el documento.');
-    }
-  }
-
   if (!canRead) {
     return (
       <PageShell>
@@ -219,7 +203,6 @@ export default function InventoryDocsPage() {
         />
 
         <InventoryDocsToolbar
-          canWrite={canWrite}
           isLoading={loading}
           docType={docType}
           status={status}
@@ -236,7 +219,6 @@ export default function InventoryDocsPage() {
           onCreatedFromChange={setCreatedFrom}
           onCreatedToChange={setCreatedTo}
           onQChange={setQ}
-          onCreate={(type) => void onCreate(type)}
           onRefresh={() => void refresh()}
           onReset={resetFilters}
         />
@@ -258,8 +240,13 @@ export default function InventoryDocsPage() {
 
             <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
               <div className="text-xs text-slate-500">
-                Tip: Post asigna doc_no automáticamente y genera ledger/stock.
-                Cancel crea reversa y luego marca CANCELLED.
+                Tip: usa <span className="font-semibold">Crear documento</span>{' '}
+                para abrir el apartado de creación guiada.
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Tip: publicar asigna doc_no automáticamente y genera
+                movimientos de inventario. Cancelar crea reversa y luego marca
+                el documento como cancelado.
               </div>
             </div>
           </div>

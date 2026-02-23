@@ -13,6 +13,21 @@ function hasBins(binsCount: number) {
   return binsCount > 0;
 }
 
+function docTypeLabel(docType: InventoryDocRow['doc_type']) {
+  switch (docType) {
+    case 'RECEIPT':
+      return 'Entrada';
+    case 'ISSUE':
+      return 'Salida';
+    case 'TRANSFER':
+      return 'Transferencia';
+    case 'ADJUSTMENT':
+      return 'Ajuste';
+    case 'RETURN':
+      return 'Devolución';
+  }
+}
+
 export function validateBeforePost(params: {
   doc: InventoryDocRow;
   lines: InventoryDocLineRow[];
@@ -33,52 +48,54 @@ export function validateBeforePost(params: {
   const warnings: string[] = [];
 
   if (doc.status !== 'DRAFT') {
-    errors.push('Solo se puede postear un documento en estado DRAFT.');
+    errors.push(
+      'Solo se puede publicar un documento en estado borrador.'
+    );
     return { ok: false, errors, warnings };
   }
 
   // Header validations
   if (doc.doc_type === 'RECEIPT') {
     if (!doc.warehouse_id)
-      errors.push('RECEIPT: debes seleccionar un warehouse.');
+      errors.push('Entrada: debes seleccionar un almacén.');
     if (!doc.vendor_id)
-      warnings.push(
-        'RECEIPT: se recomienda seleccionar un proveedor (vendor).'
-      );
+      warnings.push('Entrada: se recomienda seleccionar un proveedor.');
   }
 
   if (doc.doc_type === 'ISSUE' || doc.doc_type === 'RETURN') {
     if (!doc.warehouse_id)
-      errors.push(`${doc.doc_type}: debes seleccionar un warehouse.`);
+      errors.push(`${docTypeLabel(doc.doc_type)}: debes seleccionar un almacén.`);
     // ticket_id “si aplica”: tu SQL solo lo exige si lo usas, pero aquí validamos suavemente
     if (!doc.ticket_id)
       warnings.push(
-        `${doc.doc_type}: si es consumo/devolución por WO, selecciona ticket_id.`
+        `${docTypeLabel(doc.doc_type)}: si es consumo/devolución por OT, selecciona ticket_id.`
       );
   }
 
   if (doc.doc_type === 'ADJUSTMENT') {
     if (!doc.warehouse_id)
-      errors.push('ADJUSTMENT: debes seleccionar un warehouse.');
+      errors.push('Ajuste: debes seleccionar un almacén.');
   }
 
   if (doc.doc_type === 'TRANSFER') {
     if (!doc.from_warehouse_id)
-      errors.push('TRANSFER: debes seleccionar from_warehouse_id.');
+      errors.push('Transferencia: debes seleccionar el almacén de origen.');
     if (!doc.to_warehouse_id)
-      errors.push('TRANSFER: debes seleccionar to_warehouse_id.');
+      errors.push('Transferencia: debes seleccionar el almacén de destino.');
     if (
       doc.from_warehouse_id &&
       doc.to_warehouse_id &&
       doc.from_warehouse_id === doc.to_warehouse_id
     ) {
-      errors.push('TRANSFER: from/to warehouse deben ser distintos.');
+      errors.push(
+        'Transferencia: los almacenes de origen y destino deben ser distintos.'
+      );
     }
   }
 
   // Lines validations
   if (!lines.length) {
-    errors.push('Debes agregar al menos 1 línea para postear.');
+    errors.push('Debes agregar al menos 1 línea para publicar.');
   }
 
   for (const l of lines) {
@@ -87,7 +104,7 @@ export function validateBeforePost(params: {
 
     if (doc.doc_type === 'ADJUSTMENT') {
       if (l.qty === 0)
-        errors.push(`Línea #${l.line_no}: ADJUSTMENT requiere qty != 0.`);
+        errors.push(`Línea #${l.line_no}: ajuste requiere qty != 0.`);
     } else {
       if (l.qty <= 0) errors.push(`Línea #${l.line_no}: qty debe ser > 0.`);
     }
@@ -95,25 +112,27 @@ export function validateBeforePost(params: {
     // Bin requirements (solo si el warehouse tiene bins)
     if (doc.doc_type === 'ISSUE') {
       if (hasBins(binsCountSingleWarehouse) && !l.from_bin_id) {
-        errors.push(`Línea #${l.line_no}: ISSUE requiere from_bin_id.`);
+        errors.push(`Línea #${l.line_no}: salida requiere from_bin_id.`);
       }
     }
 
     if (doc.doc_type === 'RECEIPT' || doc.doc_type === 'RETURN') {
       if (hasBins(binsCountSingleWarehouse) && !l.to_bin_id) {
-        errors.push(`Línea #${l.line_no}: ${doc.doc_type} requiere to_bin_id.`);
+        errors.push(
+          `Línea #${l.line_no}: ${docTypeLabel(doc.doc_type)} requiere to_bin_id.`
+        );
       }
     }
 
     if (doc.doc_type === 'TRANSFER') {
       if (hasBins(binsCountFromWarehouse) && !l.from_bin_id) {
         errors.push(
-          `Línea #${l.line_no}: TRANSFER requiere from_bin_id (from warehouse).`
+          `Línea #${l.line_no}: transferencia requiere from_bin_id (almacén de origen).`
         );
       }
       if (hasBins(binsCountToWarehouse) && !l.to_bin_id) {
         errors.push(
-          `Línea #${l.line_no}: TRANSFER requiere to_bin_id (to warehouse).`
+          `Línea #${l.line_no}: transferencia requiere to_bin_id (almacén de destino).`
         );
       }
     }
@@ -122,7 +141,7 @@ export function validateBeforePost(params: {
       // en SQL usas coalesce(to_bin_id, from_bin_id)
       if (hasBins(binsCountSingleWarehouse) && !l.to_bin_id && !l.from_bin_id) {
         errors.push(
-          `Línea #${l.line_no}: ADJUSTMENT requiere to_bin_id o from_bin_id.`
+          `Línea #${l.line_no}: ajuste requiere to_bin_id o from_bin_id.`
         );
       }
     }

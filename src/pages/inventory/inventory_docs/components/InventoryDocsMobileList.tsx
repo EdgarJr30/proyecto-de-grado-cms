@@ -4,6 +4,8 @@ import {
   docTypeBadgeClass,
   docTypeIcon,
   fmtDate,
+  localizeReference,
+  labelType,
   statusBadge,
 } from './docMeta';
 
@@ -23,20 +25,19 @@ export function InventoryDocsMobileList({
         const TypeIcon = docTypeIcon(row.doc_type);
 
         return (
-          <div
+          <Link
             key={row.id}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            to={`/inventory/docs/${row.id}`}
+            className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:bg-slate-50/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30"
+            aria-label={`Abrir documento ${row.doc_no ?? (row.id as UUID).slice(0, 8)}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <Link
-                  to={`/inventory/docs/${row.id}`}
-                  className="text-sm font-semibold text-slate-900 hover:underline"
-                >
+                <span className="text-sm font-semibold text-slate-900">
                   {row.doc_no ?? (row.id as UUID).slice(0, 8)}
-                </Link>
+                </span>
                 <div className="mt-1 text-xs text-slate-500">
-                  {row.reference ?? 'Sin referencia'}
+                  {localizeReference(row.reference) ?? 'Sin referencia'}
                 </div>
               </div>
 
@@ -61,7 +62,7 @@ export function InventoryDocsMobileList({
                 >
                   <TypeIcon className="h-3.5 w-3.5" />
                 </span>
-                {row.doc_type}
+                {labelType(row.doc_type)}
               </div>
 
               <div className="text-slate-500 text-right">
@@ -70,10 +71,10 @@ export function InventoryDocsMobileList({
 
               <div className="text-slate-500">Creado: {fmtDate(row.created_at)}</div>
               <div className="text-slate-500 text-right">
-                Posteado: {fmtDate(row.posted_at)}
+                Publicado: {fmtDate(row.posted_at)}
               </div>
             </div>
-          </div>
+          </Link>
         );
       })}
     </div>

@@ -95,7 +95,7 @@ export function PartCostsToolbar({
             {/* Warehouse */}
             <div className="md:col-span-3">
               <label className="block text-xs font-medium text-slate-700">
-                Warehouse ID
+                ID de almacén
               </label>
               <input
                 value={warehouseId}
@@ -111,7 +111,7 @@ export function PartCostsToolbar({
             {/* Part */}
             <div className="md:col-span-3">
               <label className="block text-xs font-medium text-slate-700">
-                Part ID
+                ID de repuesto
               </label>
               <input
                 value={partId}

@@ -289,7 +289,7 @@ export default function ReorderPoliciesPage() {
 
     try {
       if (!editor.part_id || !editor.warehouse_id) {
-        showToastError('Selecciona Part y Warehouse');
+        showToastError('Selecciona repuesto y almacén');
         return;
       }
 
@@ -358,14 +358,14 @@ export default function ReorderPoliciesPage() {
     }
   }
 
-  const pageTitle = 'Reorder Policies';
+  const pageTitle = 'Políticas de reposición';
   const pageSubtitle =
     'Define mínimos/máximos y gatillos de reposición por repuesto y almacén para compras y disponibilidad.';
 
   const editorTitle =
-    editor.mode === 'create' ? 'Crear Reorder Policy' : 'Editar Reorder Policy';
+    editor.mode === 'create' ? 'Crear política de reposición' : 'Editar política de reposición';
   const editorSubtitle =
-    'Unique por (part_id, warehouse_id) — se hace upsert por esa llave.';
+    'Único por (part_id, warehouse_id) — se hace upsert por esa llave.';
 
   return (
     <div className="h-screen flex bg-background text-foreground">
@@ -408,7 +408,7 @@ export default function ReorderPoliciesPage() {
                   {!canWrite ? (
                     <HeaderPill tone="warning">Solo lectura</HeaderPill>
                   ) : (
-                    <HeaderPill tone="success">Write</HeaderPill>
+                    <HeaderPill tone="success">Escritura</HeaderPill>
                   )}
 
                   <button
@@ -471,21 +471,21 @@ export default function ReorderPoliciesPage() {
                   iconTone="bg-sky-500/10 text-sky-700 border-sky-500/20"
                 />
                 <StatCard
-                  label="Con Max qty"
+                  label="Con cantidad máx."
                   value={kpis.withMax}
                   sub="Control superior configurado"
                   icon={<TrendingUp className="h-5 w-5" />}
                   iconTone="bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
                 />
                 <StatCard
-                  label="Con Reorder point"
+                  label="Con punto de reposición"
                   value={kpis.withReorderPoint}
                   sub="Gatillo distinto a Min"
                   icon={<AlertTriangle className="h-5 w-5" />}
                   iconTone="bg-amber-500/10 text-amber-800 border-amber-500/20"
                 />
                 <StatCard
-                  label="Con Vendor preferido"
+                  label="Con proveedor preferido"
                   value={kpis.withVendor}
                   sub="Sugerencia de compra"
                   icon={<Truck className="h-5 w-5" />}
@@ -499,7 +499,7 @@ export default function ReorderPoliciesPage() {
                   <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 items-end">
                     <div className="xl:col-span-3">
                       <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                        Warehouse
+                        Almacén
                       </label>
                       <select
                         className={cx(
@@ -532,7 +532,7 @@ export default function ReorderPoliciesPage() {
                               'w-full rounded-xl border bg-background pl-9 pr-3 py-2.5 text-sm',
                               'focus:outline-none focus:ring-2 focus:ring-primary/30'
                             )}
-                            placeholder="Filtra (>= 2 chars). Ej: bomba, 27, vendor..."
+                            placeholder="Filtra (>= 2 caracteres). Ej: bomba, 27, proveedor..."
                             value={q}
                             onChange={(e) => setQ(e.target.value)}
                             onKeyDown={(e) => {
@@ -585,8 +585,8 @@ export default function ReorderPoliciesPage() {
                   <div className="text-sm font-semibold">Listado</div>
                   <HeaderPill>
                     {warehouseId
-                      ? 'Warehouse filtrado'
-                      : 'Todos los warehouses'}
+                      ? 'Almacén filtrado'
+                      : 'Todos los almacenes'}
                   </HeaderPill>
                   {q.trim().length >= 2 ? (
                     <HeaderPill tone="info">Búsqueda activa</HeaderPill>
@@ -615,7 +615,7 @@ export default function ReorderPoliciesPage() {
                   <thead className="bg-muted/30 sticky top-0 z-10">
                     <tr className="text-left">
                       <th className="p-4 font-semibold w-[360px]">Repuesto</th>
-                      <th className="p-4 font-semibold w-[280px]">Warehouse</th>
+                      <th className="p-4 font-semibold w-[280px]">Almacén</th>
                       <th className="p-4 font-semibold text-right w-[110px]">
                         Min
                       </th>
@@ -623,15 +623,15 @@ export default function ReorderPoliciesPage() {
                         Max
                       </th>
                       <th className="p-4 font-semibold text-right w-[130px]">
-                        Reorder
+                        Reposición
                       </th>
                       <th className="p-4 font-semibold text-right w-[120px]">
-                        Safety
+                        Seguridad
                       </th>
                       <th className="p-4 font-semibold text-right w-[110px]">
-                        Lead
+                        Plazo
                       </th>
-                      <th className="p-4 font-semibold w-[260px]">Vendor</th>
+                      <th className="p-4 font-semibold w-[260px]">Proveedor</th>
                       <th className="p-4 font-semibold w-[180px] text-right">
                         Acciones
                       </th>
@@ -773,8 +773,8 @@ export default function ReorderPoliciesPage() {
                   <span className="font-mono">min_qty</span>.
                 </div>
                 <div className="flex items-center gap-2">
-                  <HeaderPill>Sticky header</HeaderPill>
-                  <HeaderPill>ERP layout</HeaderPill>
+                  <HeaderPill>Encabezado fijo</HeaderPill>
+                  <HeaderPill>Diseño ERP</HeaderPill>
                 </div>
               </div>
             </div>

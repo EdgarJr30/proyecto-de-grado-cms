@@ -755,7 +755,7 @@ export async function getExecutiveSummaryReport(
 
     const locLabel =
       typeof row.location_id === 'number'
-        ? locationMap.get(row.location_id) ?? `Ubicación #${row.location_id}`
+        ? locationMap.get(row.location_id) ?? 'Sin ubicación'
         : 'Sin ubicación';
 
     addMapCount(byLocationMap, locLabel);
@@ -918,7 +918,7 @@ export async function getWorkManagementReport(
 
     const locationLabel =
       typeof row.location_id === 'number'
-        ? locationMap.get(row.location_id) ?? `Ubicación #${row.location_id}`
+        ? locationMap.get(row.location_id) ?? 'Sin ubicación'
         : 'Sin ubicación';
     addMapCount(byLocationMap, locationLabel);
 
@@ -1342,7 +1342,7 @@ export async function getInventoryPartsReport(
 
     if (pending <= 0) continue;
 
-    const ticketLabel = `WO #${row.ticket_id}`;
+    const ticketLabel = `OT #${row.ticket_id}`;
     reservationMap.set(ticketLabel, (reservationMap.get(ticketLabel) ?? 0) + pending);
     pendingReservationQty += pending;
   }
@@ -1545,7 +1545,7 @@ export async function getAdminReportsData(
   for (const row of demand) {
     const label =
       typeof row.location_id === 'number'
-        ? (locationNameById.get(row.location_id) ?? `Ubicación #${row.location_id}`)
+        ? (locationNameById.get(row.location_id) ?? 'Sin ubicación')
         : 'Sin ubicación';
 
     addMapCount(locationDemandMap, label);

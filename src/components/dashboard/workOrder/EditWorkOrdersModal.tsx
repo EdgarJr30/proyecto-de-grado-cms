@@ -72,10 +72,7 @@ export default function EditWorkOrdersModal({
       .location_name;
     if (fromTicket) return fromTicket;
     if (typeof edited.location_id === 'number') {
-      return (
-        locationNameById.get(edited.location_id) ??
-        `Ubicación #${edited.location_id}`
-      );
+      return locationNameById.get(edited.location_id) ?? 'Sin ubicación';
     }
     return 'No especificada';
   })();
@@ -641,7 +638,7 @@ export default function EditWorkOrdersModal({
           </h3>
           {!edited.is_accepted && (
             <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-              Disponible al aceptar (WO)
+              Disponible al aceptar (OT)
             </span>
           )}
         </div>
@@ -651,14 +648,14 @@ export default function EditWorkOrdersModal({
             {canInventoryRead ? (
               <>
                 Tienes lectura de inventario, pero no permiso de operación para
-                repuestos de WO (
+                repuestos de OT (
                 <span className="font-mono">inventory:work</span> /{' '}
                 <span className="font-mono">inventory:create</span> /{' '}
                 <span className="font-mono">inventory:full_access</span>).
               </>
             ) : (
               <>
-                No tienes permisos de inventario para operar repuestos de WO (
+                No tienes permisos de inventario para operar repuestos de OT (
                 <span className="font-mono">inventory:read</span> + permisos de
                 trabajo).
               </>

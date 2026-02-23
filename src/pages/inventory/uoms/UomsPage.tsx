@@ -86,7 +86,7 @@ export default function UomsPage() {
       setRows(data);
       setSelectedRows([]);
     } catch (e) {
-      showToastError(e instanceof Error ? e.message : 'Error cargando UoM');
+      showToastError(e instanceof Error ? e.message : 'Error cargando UdM');
     } finally {
       setIsLoading(false);
     }
@@ -151,16 +151,16 @@ export default function UomsPage() {
       if (isEditing) {
         const patch: UomUpdate = { code: payload.code, name: payload.name };
         await updateUom(form.id!, patch);
-        showToastSuccess('UoM actualizada.');
+        showToastSuccess('UdM actualizada.');
       } else {
         await createUom(payload);
-        showToastSuccess('UoM creada.');
+        showToastSuccess('UdM creada.');
       }
 
       setOpenForm(false);
       await reload();
     } catch (e) {
-      showToastError(e instanceof Error ? e.message : 'Error guardando UoM');
+      showToastError(e instanceof Error ? e.message : 'Error guardando UdM');
     } finally {
       setSubmitting(false);
     }
@@ -171,8 +171,8 @@ export default function UomsPage() {
       return showToastError('No tienes permiso para gestionar maestros.');
 
     const ok = await showConfirmAlert({
-      title: 'Eliminar UoM',
-      text: `¿Eliminar la UoM "${row.code}"? Esta acción no se puede deshacer.`,
+      title: 'Eliminar UdM',
+      text: `¿Eliminar la UdM "${row.code}"? Esta acción no se puede deshacer.`,
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
@@ -180,10 +180,10 @@ export default function UomsPage() {
     setIsLoading(true);
     try {
       await deleteUom(row.id);
-      showToastSuccess('UoM eliminada.');
+      showToastSuccess('UdM eliminada.');
       await reload();
     } catch (e) {
-      showToastError(e instanceof Error ? e.message : 'Error eliminando UoM');
+      showToastError(e instanceof Error ? e.message : 'Error eliminando UdM');
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +196,7 @@ export default function UomsPage() {
 
     const ok = await showConfirmAlert({
       title: 'Eliminar selección',
-      text: `¿Eliminar ${selectedRows.length} UoM(s) seleccionada(s)?`,
+      text: `¿Eliminar ${selectedRows.length} UdM(s) seleccionada(s)?`,
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
@@ -204,7 +204,7 @@ export default function UomsPage() {
     setIsLoading(true);
     try {
       for (const r of selectedRows) await deleteUom(r.id);
-      showToastSuccess(`Se eliminaron ${selectedRows.length} UoM(s).`);
+      showToastSuccess(`Se eliminaron ${selectedRows.length} UdM(s).`);
       await reload();
     } catch (e) {
       showToastError(

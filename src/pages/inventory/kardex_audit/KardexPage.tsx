@@ -29,6 +29,7 @@ import { KardexHeader } from './components/KardexHeader';
 import { KardexToolbar } from './components/KardexToolbar';
 import { KardexMobileList } from './components/KardexMobileList';
 import { KardexTable } from './components/KardexTable';
+import { localizeReference } from '../inventory_docs/components/docMeta';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -105,6 +106,38 @@ function formatMoney(value: number | null) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 4,
   });
+}
+
+function labelDocType(type: VInventoryKardexRow['doc_type']) {
+  switch (type) {
+    case 'RECEIPT':
+      return 'Entrada';
+    case 'ISSUE':
+      return 'Salida';
+    case 'TRANSFER':
+      return 'Transferencia';
+    case 'ADJUSTMENT':
+      return 'Ajuste';
+    case 'RETURN':
+      return 'Devolución';
+  }
+}
+
+function labelStatus(status: VInventoryKardexRow['status']) {
+  switch (status) {
+    case 'DRAFT':
+      return 'Borrador';
+    case 'POSTED':
+      return 'Publicado';
+    case 'CANCELLED':
+      return 'Cancelado';
+  }
+}
+
+function labelMovementSide(side: VInventoryKardexRow['movement_side']) {
+  if (side === 'IN') return 'Entrada';
+  if (side === 'OUT') return 'Salida';
+  return '—';
 }
 
 function normalizeIntegerDraft(value: string): string {
@@ -248,7 +281,9 @@ export default function KardexPage() {
       setPage(res.page);
       setPageSize(res.pageSize);
     } catch (e) {
-      showToastError(e instanceof Error ? e.message : 'Error cargando Kardex');
+      showToastError(
+        e instanceof Error ? e.message : 'Error cargando movimientos de inventario'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -521,7 +556,7 @@ export default function KardexPage() {
                     Detalle de movimiento
                   </h3>
                   <p className="mt-1 text-xs text-slate-500">
-                    {detailRow.doc_no ?? 'SIN-NO'} · {detailRow.doc_type} ·{' '}
+                    {detailRow.doc_no ?? 'SIN-NO'} · {labelDocType(detailRow.doc_type)} ·{' '}
                     {new Date(detailRow.occurred_at).toLocaleString()}
                   </p>
                 </div>
@@ -547,15 +582,15 @@ export default function KardexPage() {
                   </div>
                   <div>
                     <span className="font-medium">Tipo:</span>{' '}
-                    {detailRow.doc_type}
+                    {labelDocType(detailRow.doc_type)}
                   </div>
                   <div>
                     <span className="font-medium">Estado:</span>{' '}
-                    {detailRow.status}
+                    {labelStatus(detailRow.status)}
                   </div>
                   <div>
                     <span className="font-medium">Referencia:</span>{' '}
-                    {detailRow.reference ?? '—'}
+                    {localizeReference(detailRow.reference) ?? '—'}
                   </div>
                 </div>
               </div>
@@ -571,7 +606,7 @@ export default function KardexPage() {
                   </div>
                   <div>
                     <span className="font-medium">Lado:</span>{' '}
-                    {detailRow.movement_side ?? '—'}
+                    {labelMovementSide(detailRow.movement_side)}
                   </div>
                   <div>
                     <span className="font-medium">Cantidad:</span>{' '}
@@ -598,7 +633,7 @@ export default function KardexPage() {
                     {detailRow.warehouse_code} — {detailRow.warehouse_name}
                   </div>
                   <div>
-                    <span className="font-medium">Bin:</span>{' '}
+                    <span className="font-medium">Ubicación:</span>{' '}
                     {detailRow.bin_code ?? '—'}
                   </div>
                   <div>

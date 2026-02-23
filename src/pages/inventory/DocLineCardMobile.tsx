@@ -105,7 +105,7 @@ export default function DocLineCardMobile(props: {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Qty
+              Cant.
             </label>
             <input
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-right tabular-nums text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -122,7 +122,7 @@ export default function DocLineCardMobile(props: {
 
           <div>
             <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Unit cost
+              Costo unitario
             </label>
             <input
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-right tabular-nums text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -144,7 +144,7 @@ export default function DocLineCardMobile(props: {
         {showFromBin ? (
           <div>
             <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              From bin
+              Ubicación origen
             </label>
             <select
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -169,7 +169,7 @@ export default function DocLineCardMobile(props: {
         {showToBin ? (
           <div>
             <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              To bin
+              Ubicación destino
             </label>
             <select
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"

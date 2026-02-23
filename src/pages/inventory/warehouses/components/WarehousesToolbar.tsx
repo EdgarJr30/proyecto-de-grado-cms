@@ -61,7 +61,7 @@ export function WarehousesToolbar({
             <input
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
-              placeholder="Buscar por code, name o location..."
+              placeholder="Buscar por código, nombre o ubicación..."
               className="h-10 w-full lg:max-w-md rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
             />
 

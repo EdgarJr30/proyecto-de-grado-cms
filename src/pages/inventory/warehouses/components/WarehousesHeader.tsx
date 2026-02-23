@@ -26,14 +26,14 @@ export function WarehousesHeader({
                 Almacenes y ubicaciones
               </h1>
               <p className="mt-1 text-xs md:text-sm text-slate-500">
-                Configura almacenes base para manejar stock y bins.
+                Configura almacenes base para manejar inventario y ubicaciones.
               </p>
             </div>
 
             <div className="shrink-0 self-start flex items-center gap-2">
               <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                 <Warehouse className="h-3.5 w-3.5 text-blue-700" />
-                {count} warehouse{count === 1 ? '' : 's'}
+                {count} almacén{count === 1 ? '' : 'es'}
               </span>
 
               {canManage ? (

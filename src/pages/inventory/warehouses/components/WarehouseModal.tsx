@@ -31,9 +31,11 @@ export function WarehouseModal({
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                {editing ? 'Editar warehouse' : 'Nuevo warehouse'}
+                {editing ? 'Editar almacén' : 'Nuevo almacén'}
               </h3>
-              <p className="text-sm text-slate-500">Code debe ser único.</p>
+              <p className="text-sm text-slate-500">
+                El código debe ser único.
+              </p>
             </div>
 
             <button
@@ -48,7 +50,7 @@ export function WarehouseModal({
 
           <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="text-sm">
-              <span className="text-slate-700">Code</span>
+              <span className="text-slate-700">Código</span>
               <input
                 value={form.code}
                 onChange={(e) => onChangeForm({ code: e.target.value })}
@@ -57,7 +59,7 @@ export function WarehouseModal({
             </label>
 
             <label className="text-sm">
-              <span className="text-slate-700">Name</span>
+              <span className="text-slate-700">Nombre</span>
               <input
                 value={form.name}
                 onChange={(e) => onChangeForm({ name: e.target.value })}
@@ -66,7 +68,7 @@ export function WarehouseModal({
             </label>
 
             <label className="text-sm md:col-span-2">
-              <span className="text-slate-700">Location label (opcional)</span>
+              <span className="text-slate-700">Etiqueta de ubicación (opcional)</span>
               <input
                 value={form.location_label}
                 onChange={(e) =>

@@ -17,8 +17,8 @@ import AdminSettingsHubPage from '../pages/admin/AdminSettingsHubPage';
 import SpecialIncidentsManagementPage from '../pages/admin/SpecialIncidentsPage';
 import AnnouncementsManagmentPage from '../pages/admin/AnnouncementsManagementPage';
 import SocietiesManagementPage from '../pages/admin/SocietiesManagementPage';
-import AssetsHomePage from '../pages/admin/AssetsHomePage';
 import InventoryHomePage from '../pages/inventory/InventoryHomePage';
+import AssetsPage from '../pages/inventory/AssetsPage';
 import UomsPage from '../pages/inventory/uoms/UomsPage';
 import PartCategoriesPage from '../pages/inventory/parts/part_categories/PartCategoriesPage';
 import PartsPage from '../pages/inventory/parts/PartsPage';
@@ -27,6 +27,7 @@ import WarehouseBinsPage from '../pages/inventory/WarehouseBinsPage';
 import StockOverviewPage from '../pages/inventory/StockOverviewPage';
 import StockByLocationPage from '../pages/inventory/StockByLocationPage';
 import InventoryDocsPage from '../pages/inventory/inventory_docs/InventoryDocsPage';
+import InventoryDocsCreatePage from '../pages/inventory/inventory_docs/InventoryDocsCreatePage';
 import InventoryDocEditorPage from '../pages/inventory/InventoryDocEditorPage';
 import VendorsPage from '../pages/inventory/vendors/VendorsPage';
 import PartVendorsPage from '../pages/inventory/PartVendorsPage';
@@ -345,10 +346,10 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Sociedades',
     showInSidebar: false,
   },
-  // Assests (Activos)
+  // Activos (legacy path, redirige a inventario)
   {
     path: '/admin/assets',
-    element: <AssetsHomePage />,
+    element: <Navigate to="/inventory/assets" replace />,
     allowPerms: [
       'assets:read',
       'assets:create',
@@ -357,7 +358,6 @@ export const APP_ROUTES: AppRoute[] = [
       'assets:disable',
       'assets:full_access',
     ],
-    name: 'Activos',
     showInSidebar: false,
   },
 
@@ -406,6 +406,20 @@ export const APP_ROUTES: AppRoute[] = [
     showInSidebar: false,
   },
   {
+    path: '/inventory/assets',
+    element: <AssetsPage />,
+    allowPerms: [
+      'assets:read',
+      'assets:create',
+      'assets:update',
+      'assets:delete',
+      'assets:disable',
+      'assets:full_access',
+    ],
+    name: 'Activos',
+    showInSidebar: false,
+  },
+  {
     path: '/inventory/stock-by-location',
     element: <StockByLocationPage />,
     allowPerms: ['inventory:read'],
@@ -414,6 +428,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/docs',
     element: <InventoryDocsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/docs/crear',
+    element: <InventoryDocsCreatePage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },
@@ -451,6 +471,7 @@ export const APP_ROUTES: AppRoute[] = [
     path: '/inventory/kardex',
     element: <KardexPage />,
     allowPerms: ['inventory:read'],
+    name: 'Movimientos de inventario',
     showInSidebar: false,
   },
   {

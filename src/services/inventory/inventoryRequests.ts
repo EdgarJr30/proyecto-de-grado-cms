@@ -8,6 +8,22 @@ import type {
   WarehousePick,
 } from '../../types/inventory/inventoryRequests';
 
+function normalizeReferenceLabel(value: string): string {
+  return value
+    .replace(/\bWO\b/gi, 'OT')
+    .replace(/\bISSUE\b/gi, 'SALIDA')
+    .replace(/\bRETURN\b/gi, 'DEVOLUCION')
+    .replace(/\bRECEIPT\b/gi, 'ENTRADA')
+    .replace(/\bTRANSFER\b/gi, 'TRANSFERENCIA')
+    .replace(/\bADJUSTMENT\b/gi, 'AJUSTE');
+}
+
+function buildTicketDocReference(ticketId: number, movement: 'ISSUE' | 'RETURN') {
+  return movement === 'ISSUE'
+    ? `OT #${ticketId} SALIDA`
+    : `OT #${ticketId} DEVOLUCION`;
+}
+
 function toNumber(x: unknown): number {
   // Supabase puede devolver numeric como string
   if (typeof x === 'number') return x;
@@ -137,13 +153,19 @@ export async function issueTicketPart(input: {
   reference?: string | null;
   notes?: string | null;
 }): Promise<string> {
+  const rawReference = input.reference?.trim() ?? '';
+  const reference =
+    rawReference.length > 0
+      ? normalizeReferenceLabel(rawReference)
+      : buildTicketDocReference(input.ticketId, 'ISSUE');
+
   const { data, error } = await supabase.rpc('issue_ticket_part', {
     p_ticket_id: input.ticketId,
     p_part_id: input.partId,
     p_warehouse_id: input.warehouseId,
     p_qty: input.qty,
     p_from_bin_id: input.fromBinId ?? null,
-    p_reference: input.reference ?? null,
+    p_reference: reference,
     p_notes: input.notes ?? null,
   });
 
@@ -160,13 +182,19 @@ export async function returnTicketPart(input: {
   reference?: string | null;
   notes?: string | null;
 }): Promise<string> {
+  const rawReference = input.reference?.trim() ?? '';
+  const reference =
+    rawReference.length > 0
+      ? normalizeReferenceLabel(rawReference)
+      : buildTicketDocReference(input.ticketId, 'RETURN');
+
   const { data, error } = await supabase.rpc('return_ticket_part', {
     p_ticket_id: input.ticketId,
     p_part_id: input.partId,
     p_warehouse_id: input.warehouseId,
     p_qty: input.qty,
     p_to_bin_id: input.toBinId ?? null,
-    p_reference: input.reference ?? null,
+    p_reference: reference,
     p_notes: input.notes ?? null,
   });
 

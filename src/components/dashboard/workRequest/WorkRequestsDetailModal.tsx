@@ -241,7 +241,7 @@ export default function WorkRequestsDetailModal({
                 <dd className="text-gray-900">
                   {locationLabel ??
                     (typeof ticket.location_id === 'number'
-                      ? `Ubicación #${ticket.location_id}`
+                      ? 'Sin ubicación'
                       : '—')}
                 </dd>
               </div>

@@ -237,7 +237,7 @@ export default function StockOverviewPage() {
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Código o nombre del repuesto, warehouse…"
+                  placeholder="Código o nombre del repuesto, almacén…"
                   className={cx(
                     'mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none',
                     'focus:ring-2 focus:ring-gray-200'
@@ -247,7 +247,7 @@ export default function StockOverviewPage() {
 
               <div className="lg:col-span-4">
                 <label className="block text-xs font-medium text-gray-700">
-                  Warehouse
+                  Almacén
                 </label>
                 <select
                   value={warehouseId}
@@ -298,7 +298,7 @@ export default function StockOverviewPage() {
                 </div>
               </div>
               <div className="rounded-2xl border bg-white p-4">
-                <div className="text-xs text-gray-500">On hand (sum)</div>
+                <div className="text-xs text-gray-500">En existencia (suma)</div>
                 <div className="mt-1 text-2xl font-bold text-gray-900">
                   {formatQty(totals.onHand)}
                 </div>
@@ -322,7 +322,7 @@ export default function StockOverviewPage() {
           <div className="mt-4 rounded-2xl border bg-white shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div className="text-sm font-semibold text-gray-900">
-                Disponibilidad por repuesto/warehouse
+                Disponibilidad por repuesto/almacén
               </div>
               <div className="text-xs text-gray-500">
                 {loading ? 'Cargando…' : `${filtered.length} resultados`}
@@ -349,10 +349,10 @@ export default function StockOverviewPage() {
                   <thead className="bg-gray-50">
                     <tr className="text-xs text-gray-600">
                       <th className="px-4 py-3 text-left font-semibold">
-                        Repuesto / Warehouse
+                        Repuesto / Almacén
                       </th>
                       <th className="px-4 py-3 text-right font-semibold">
-                        On hand
+                        En existencia
                       </th>
                       <th className="px-4 py-3 text-right font-semibold">
                         Reservado

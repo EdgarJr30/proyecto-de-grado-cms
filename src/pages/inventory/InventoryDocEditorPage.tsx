@@ -151,15 +151,15 @@ type DocStatus = InventoryDocRow['status'];
 function labelType(t: InventoryDocType) {
   switch (t) {
     case 'RECEIPT':
-      return 'Entrada (RECEIPT)';
+      return 'Entrada';
     case 'ISSUE':
-      return 'Salida (ISSUE)';
+      return 'Salida';
     case 'TRANSFER':
-      return 'Transferencia (TRANSFER)';
+      return 'Transferencia';
     case 'ADJUSTMENT':
-      return 'Ajuste (ADJUSTMENT)';
+      return 'Ajuste';
     case 'RETURN':
-      return 'Devolución (RETURN)';
+      return 'Devolución';
   }
 }
 
@@ -203,7 +203,7 @@ function statusConfig(status: DocStatus) {
       };
     case 'POSTED':
       return {
-        text: 'POSTEADO',
+        text: 'PUBLICADO',
         className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         dot: 'bg-emerald-500',
       };
@@ -213,6 +213,17 @@ function statusConfig(status: DocStatus) {
         className: 'bg-rose-50 text-rose-700 border-rose-200',
         dot: 'bg-rose-500',
       };
+  }
+}
+
+function labelStatus(status: DocStatus) {
+  switch (status) {
+    case 'DRAFT':
+      return 'Borrador';
+    case 'POSTED':
+      return 'Publicado';
+    case 'CANCELLED':
+      return 'Cancelado';
   }
 }
 
@@ -251,7 +262,7 @@ type DocHeaderPatch = Partial<
 function StatusTimeline({ status }: { status: DocStatus }) {
   const steps = [
     { key: 'DRAFT' as const, label: 'Borrador' },
-    { key: 'POSTED' as const, label: 'Posteado' },
+    { key: 'POSTED' as const, label: 'Publicado' },
   ];
   const currentIdx =
     status === 'CANCELLED' ? -1 : steps.findIndex((s) => s.key === status);
@@ -319,7 +330,7 @@ function EmptyLines() {
       </div>
       <h3 className="text-sm font-semibold text-slate-900">Sin líneas</h3>
       <p className="mt-1 text-xs text-slate-500 text-center max-w-xs">
-        Este documento no tiene líneas. Agrega al menos 1 para poder postear.
+        Este documento no tiene líneas. Agrega al menos 1 para poder publicar.
       </p>
     </div>
   );
@@ -498,11 +509,13 @@ export default function InventoryDocEditorPage() {
 
             const qty = Number(l.qty);
             if (!Number.isFinite(qty))
-              throw new Error(`Qty inválido en línea #${l.line_no}`);
+              throw new Error(`Cantidad inválida en línea #${l.line_no}`);
 
             const unitCost = l.unit_cost === null ? null : Number(l.unit_cost);
             if (unitCost !== null && !Number.isFinite(unitCost)) {
-              throw new Error(`Unit cost inválido en línea #${l.line_no}`);
+              throw new Error(
+                `Costo unitario inválido en línea #${l.line_no}`
+              );
             }
 
             await updateInventoryDocLine(id, {
@@ -870,7 +883,7 @@ export default function InventoryDocEditorPage() {
                           Header del documento
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          {doc ? `Estado: ${doc.status}` : 'Cargando…'}
+                          {doc ? `Estado: ${labelStatus(doc.status)}` : 'Cargando…'}
                         </div>
                       </div>
                     </div>
@@ -901,7 +914,7 @@ export default function InventoryDocEditorPage() {
                           <div>
                             <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                               <WarehouseIcon className="h-3.5 w-3.5" />
-                              Warehouse
+                              Almacén
                             </label>
                             <select
                               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -922,7 +935,7 @@ export default function InventoryDocEditorPage() {
                               ))}
                             </select>
                             <p className="mt-1 text-[11px] text-slate-500">
-                              Requerido para {uiDoc.doc_type}.
+                              Requerido para este tipo de documento.
                             </p>
                           </div>
                         ) : null}
@@ -932,7 +945,7 @@ export default function InventoryDocEditorPage() {
                             <div>
                               <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                 <WarehouseIcon className="h-3.5 w-3.5" />
-                                From warehouse
+                                Almacén origen
                               </label>
                               <select
                                 className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -957,7 +970,7 @@ export default function InventoryDocEditorPage() {
                             <div>
                               <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                                 <WarehouseIcon className="h-3.5 w-3.5" />
-                                To warehouse
+                                Almacén destino
                               </label>
                               <select
                                 className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1006,7 +1019,7 @@ export default function InventoryDocEditorPage() {
                               ))}
                             </select>
                             <p className="mt-1 text-[11px] text-slate-500">
-                              Recomendado para RECEIPT.
+                              Recomendado para entrada.
                             </p>
                           </div>
                         ) : null}
@@ -1015,7 +1028,7 @@ export default function InventoryDocEditorPage() {
                           <div>
                             <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                               <Hash className="h-3.5 w-3.5" />
-                              Ticket (WO)
+                              Ticket (OT)
                             </label>
                             <input
                               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1080,10 +1093,10 @@ export default function InventoryDocEditorPage() {
                     Reglas del documento
                   </div>
                   <ul className="mt-2 text-xs text-slate-500 space-y-1.5 list-disc pl-5">
-                    <li>ISSUE/TRANSFER validan stock al postear.</li>
-                    <li>ADJUSTMENT permite qty +/- (distinto de 0).</li>
+                    <li>SALIDA/TRANSFERENCIA validan inventario al publicar.</li>
+                    <li>AJUSTE permite cantidad +/- (distinta de 0).</li>
                     <li>
-                      Guarda el borrador antes de postear si hay cambios
+                      Guarda el borrador antes de publicar si hay cambios
                       pendientes.
                     </li>
                   </ul>
@@ -1103,7 +1116,7 @@ export default function InventoryDocEditorPage() {
                           Líneas del documento
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          Repuesto / Qty / Bins / Unit cost
+                          Repuesto / Cant. / Ubicaciones / Costo unitario
                         </div>
                       </div>
 
@@ -1199,7 +1212,7 @@ export default function InventoryDocEditorPage() {
                           {draftLines.length}
                         </span>
                         {' | '}
-                        Qty total:{' '}
+                        Cant. total:{' '}
                         <span className="font-semibold text-slate-900 tabular-nums">
                           {totalQty.toLocaleString()}
                         </span>
@@ -1216,8 +1229,8 @@ export default function InventoryDocEditorPage() {
                 </div>
 
                 <div className="text-xs text-slate-500">
-                  Regla SQL: ISSUE/TRANSFER validan stock suficiente al postear.
-                  ADJUSTMENT permite qty +/- (≠0).
+                  Regla SQL: SALIDA/TRANSFERENCIA validan inventario suficiente
+                  al publicar. AJUSTE permite cantidad +/- (≠0).
                 </div>
               </div>
             </div>

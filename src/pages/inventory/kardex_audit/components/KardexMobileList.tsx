@@ -1,6 +1,7 @@
 import type { VInventoryKardexRow } from '../../../../types/inventory/inventoryKardex';
 import { ArrowDownLeft, ArrowUpRight, Pencil, FileSearch } from 'lucide-react';
 import { GhostButton } from './buttons';
+import { localizeReference } from '../../inventory_docs/components/docMeta';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -42,6 +43,32 @@ function badgeForStatus(s: VInventoryKardexRow['status']) {
       return 'bg-rose-50 text-rose-700 border-rose-200';
     default:
       return 'bg-slate-50 text-slate-700 border-slate-200';
+  }
+}
+
+function labelDocType(t: VInventoryKardexRow['doc_type']) {
+  switch (t) {
+    case 'RECEIPT':
+      return 'Entrada';
+    case 'ISSUE':
+      return 'Salida';
+    case 'RETURN':
+      return 'Devolución';
+    case 'TRANSFER':
+      return 'Transferencia';
+    case 'ADJUSTMENT':
+      return 'Ajuste';
+  }
+}
+
+function labelStatus(s: VInventoryKardexRow['status']) {
+  switch (s) {
+    case 'POSTED':
+      return 'Publicado';
+    case 'DRAFT':
+      return 'Borrador';
+    case 'CANCELLED':
+      return 'Cancelado';
   }
 }
 
@@ -128,10 +155,10 @@ export function KardexMobileList({
                         {r.bin_code ? (
                           <span className="text-slate-400">
                             {' '}
-                            · Bin {r.bin_code}
+                            · Ubicación {r.bin_code}
                           </span>
                         ) : (
-                          <span className="text-slate-400"> · Bin —</span>
+                          <span className="text-slate-400"> · Ubicación —</span>
                         )}
                       </div>
                     </div>
@@ -157,7 +184,7 @@ export function KardexMobileList({
                         badgeForDocType(r.doc_type)
                       )}
                     >
-                      {r.doc_type}
+                      {labelDocType(r.doc_type)}
                     </span>
 
                     <span
@@ -166,7 +193,7 @@ export function KardexMobileList({
                         badgeForStatus(r.status)
                       )}
                     >
-                      {r.status}
+                      {labelStatus(r.status)}
                     </span>
 
                     <span className="text-[11px] text-slate-500">
@@ -189,7 +216,10 @@ export function KardexMobileList({
                       {r.doc_no ?? 'SIN-NO'}
                     </span>
                     {r.reference ? (
-                      <span className="text-slate-400"> · {r.reference}</span>
+                      <span className="text-slate-400">
+                        {' '}
+                        · {localizeReference(r.reference)}
+                      </span>
                     ) : null}
                     {r.unit_cost != null ? (
                       <span className="text-slate-400">

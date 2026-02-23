@@ -120,10 +120,10 @@ export default function StockByLocationPage() {
                 </div>
                 <div>
                   <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                    Stock por ubicación (bin)
+                    Stock por ubicación
                   </h1>
                   <p className="mt-1 text-xs md:text-sm text-slate-500">
-                    Vista detallada por repuesto, almacén y bin.
+                    Vista detallada por repuesto, almacén y ubicación.
                   </p>
                 </div>
               </div>
@@ -159,7 +159,7 @@ export default function StockByLocationPage() {
                   </label>
                   <input
                     className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                    placeholder="Código, nombre, almacén, bin..."
+                    placeholder="Código, nombre, almacén, ubicación..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                   />
@@ -193,8 +193,8 @@ export default function StockByLocationPage() {
                         <tr>
                           <th className="px-4 py-2.5 text-left font-semibold">Repuesto</th>
                           <th className="px-4 py-2.5 text-left font-semibold">Almacén</th>
-                          <th className="px-4 py-2.5 text-left font-semibold">Bin</th>
-                          <th className="px-4 py-2.5 text-right font-semibold">Qty</th>
+                          <th className="px-4 py-2.5 text-left font-semibold">Ubicación</th>
+                          <th className="px-4 py-2.5 text-right font-semibold">Cant.</th>
                           <th className="px-4 py-2.5 text-left font-semibold">Actualizado</th>
                         </tr>
                       </thead>
@@ -209,7 +209,9 @@ export default function StockByLocationPage() {
                               {r.warehouse_code} — {r.warehouse_name}
                             </td>
                             <td className="px-4 py-3 text-slate-700">
-                              {r.bin_code ? `${r.bin_code}${r.bin_name ? ` — ${r.bin_name}` : ''}` : 'Sin bin'}
+                              {r.bin_code
+                                ? `${r.bin_code}${r.bin_name ? ` — ${r.bin_name}` : ''}`
+                                : 'Sin ubicación'}
                             </td>
                             <td className="px-4 py-3 text-right tabular-nums text-slate-900">
                               {fmtQty(r.qty)}
@@ -238,17 +240,17 @@ export default function StockByLocationPage() {
                         <div className="grid grid-cols-2 gap-2">
                           <div className="rounded-lg bg-slate-50 px-3 py-2">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                              Bin
+                              Ubicación
                             </p>
                             <p className="text-sm text-slate-800">
                               {r.bin_code
                                 ? `${r.bin_code}${r.bin_name ? ` — ${r.bin_name}` : ''}`
-                                : 'Sin bin'}
+                                : 'Sin ubicación'}
                             </p>
                           </div>
                           <div className="rounded-lg bg-slate-50 px-3 py-2">
                             <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                              Qty
+                              Cant.
                             </p>
                             <p className="text-sm font-semibold text-slate-900">
                               {fmtQty(r.qty)}

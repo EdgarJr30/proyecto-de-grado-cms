@@ -82,13 +82,15 @@ export function PartCostsMobileList({
                     </div>
 
                     <span className="shrink-0 inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Avg: {money(r.avg_unit_cost)}
+                      Prom.: {money(r.avg_unit_cost)}
                     </span>
                   </div>
 
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
-                      <div className="text-[11px] text-slate-500">Part ID</div>
+                      <div className="text-[11px] text-slate-500">
+                        ID de repuesto
+                      </div>
                       <div className="mt-0.5 text-xs font-mono text-slate-800 break-all">
                         {r.part_id}
                       </div>
@@ -105,7 +107,7 @@ export function PartCostsMobileList({
 
                     <div className="col-span-2 rounded-xl border border-slate-200 bg-white p-2">
                       <div className="text-[11px] text-slate-500">
-                        Warehouse ID
+                        ID de almacén
                       </div>
                       <div className="mt-0.5 text-xs font-mono text-slate-800 break-all">
                         {r.warehouse_id}
@@ -114,7 +116,7 @@ export function PartCostsMobileList({
                   </div>
 
                   <div className="mt-2 text-[11px] text-slate-400">
-                    Viewer de costo promedio ponderado por almacén (solo
+                    Vista de costo promedio ponderado por almacén (solo
                     lectura).
                   </div>
                 </div>

@@ -128,7 +128,7 @@ export default function PartsForm(props: {
     <Modal
       open={open}
       title={isEditing ? 'Editar repuesto' : 'Nuevo repuesto'}
-      subtitle="Código, UoM y banderas operativas. Mantén el catálogo limpio y consistente."
+      subtitle="Código, UdM y banderas operativas. Mantén el catálogo limpio y consistente."
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-5">
@@ -137,11 +137,11 @@ export default function PartsForm(props: {
             {form.is_active ? 'Activo' : 'Inactivo'}
           </Chip>
           <Chip tone={form.is_stocked ? 'default' : 'muted'}>
-            {form.is_stocked ? 'Stocked' : 'No stocked'}
+            {form.is_stocked ? 'En inventario' : 'Sin inventario'}
           </Chip>
           <CriticalityBadge value={form.criticality} />
           <Chip tone="muted">
-            Code:{' '}
+            Código:{' '}
             <span className="font-mono ml-1">
               {normalizeCode(form.code || '—')}
             </span>
@@ -169,7 +169,7 @@ export default function PartsForm(props: {
               required
             />
             <p className="mt-1 text-[11px] text-slate-500">
-              Se normaliza a <span className="font-mono">UPPERCASE</span>.
+              Se normaliza a <span className="font-mono">MAYÚSCULAS</span>.
             </p>
           </div>
 
@@ -184,7 +184,7 @@ export default function PartsForm(props: {
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Bearing 6203…"
+              placeholder="Rodamiento 6203…"
               required
             />
           </div>
@@ -211,7 +211,7 @@ export default function PartsForm(props: {
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
                 <Ruler className="h-4 w-4 text-blue-700" />
               </span>
-              UoM
+              UdM
             </label>
             <select
               className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
@@ -329,7 +329,7 @@ export default function PartsForm(props: {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-slate-900">
-                    Stocked
+                    Inventariable
                   </div>
                   <div className="text-xs text-slate-500">
                     Marca si este repuesto se maneja por stock.
@@ -355,7 +355,7 @@ export default function PartsForm(props: {
               <div className="mt-3">
                 <Chip tone={form.is_stocked ? 'default' : 'muted'}>
                   <Layers className="h-3.5 w-3.5 mr-1" />
-                  {form.is_stocked ? 'Stocked' : 'No stocked'}
+                  {form.is_stocked ? 'En inventario' : 'Sin inventario'}
                 </Chip>
               </div>
             </div>

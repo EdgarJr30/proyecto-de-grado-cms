@@ -38,6 +38,37 @@
     background-color: var(--app-bg);
     color: var(--app-text);
   }
+
+  :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not(
+        [type='file']
+      ):not([type='color']):not([type='hidden']):not([type='button']):not(
+        [type='submit']
+      ):not([type='reset']):not([type='image']),
+    textarea,
+    select
+  ) {
+    color: var(--app-text);
+    caret-color: currentColor;
+    padding-inline: 0.75rem;
+  }
+
+  :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not(
+        [type='file']
+      ):not([type='color']):not([type='hidden']):not([type='button']):not(
+        [type='submit']
+      ):not([type='reset']):not([type='image']),
+    textarea,
+    select
+  )::placeholder {
+    color: var(--app-text-muted);
+    opacity: 1;
+  }
+
+  textarea {
+    padding-block: 0.5rem;
+  }
 }
 
 @layer utilities {

@@ -81,7 +81,7 @@ export function UomModal({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-base font-semibold text-slate-900">
-                  {isEditing ? 'Editar UoM' : 'Nueva UoM'}
+                  {isEditing ? 'Editar UdM' : 'Nueva UdM'}
                 </div>
                 <div className="mt-1 text-xs text-slate-500">
                   Define un código corto y un nombre descriptivo.

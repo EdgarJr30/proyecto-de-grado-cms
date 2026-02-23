@@ -56,7 +56,7 @@ export function UomsToolbar({
                 }
                 icon={Plus}
               >
-                Nueva UoM
+                Nueva UdM
               </PrimaryButton>
 
               <DangerButton
@@ -66,7 +66,7 @@ export function UomsToolbar({
                   !canManage
                     ? 'No tienes permiso para gestionar maestros'
                     : selectedCount === 0
-                      ? 'Selecciona al menos 1 UoM'
+                      ? 'Selecciona al menos 1 UdM'
                       : undefined
                 }
                 icon={Trash2}

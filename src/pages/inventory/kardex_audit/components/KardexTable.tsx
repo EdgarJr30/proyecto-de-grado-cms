@@ -2,6 +2,7 @@ import { type RefObject } from 'react';
 import type { VInventoryKardexRow } from '../../../../types/inventory/inventoryKardex';
 import { FileSearch, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { GhostButton } from './buttons';
+import { localizeReference } from '../../inventory_docs/components/docMeta';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -65,6 +66,38 @@ function badgeForStatus(s: VInventoryKardexRow['status']) {
   }
 }
 
+function labelDocType(t: VInventoryKardexRow['doc_type']) {
+  switch (t) {
+    case 'RECEIPT':
+      return 'Entrada';
+    case 'ISSUE':
+      return 'Salida';
+    case 'RETURN':
+      return 'Devolución';
+    case 'TRANSFER':
+      return 'Transferencia';
+    case 'ADJUSTMENT':
+      return 'Ajuste';
+  }
+}
+
+function labelStatus(s: VInventoryKardexRow['status']) {
+  switch (s) {
+    case 'POSTED':
+      return 'Publicado';
+    case 'DRAFT':
+      return 'Borrador';
+    case 'CANCELLED':
+      return 'Cancelado';
+  }
+}
+
+function labelMovementSide(side: VInventoryKardexRow['movement_side']) {
+  if (side === 'IN') return 'Entrada';
+  if (side === 'OUT') return 'Salida';
+  return '—';
+}
+
 export function KardexTable({
   rows,
   isLoading,
@@ -120,7 +153,7 @@ export function KardexTable({
                     Repuesto
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Almacén / Bin
+                    Almacén / Ubicación
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
                     Ticket
@@ -206,7 +239,7 @@ export function KardexTable({
                             {r.doc_no ?? 'SIN-NO'}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 line-clamp-1">
-                            {r.reference ?? '—'}
+                            {localizeReference(r.reference) ?? '—'}
                           </div>
                         </td>
 
@@ -218,7 +251,7 @@ export function KardexTable({
                                 badgeForDocType(r.doc_type)
                               )}
                             >
-                              {r.doc_type}
+                              {labelDocType(r.doc_type)}
                             </span>
                             <span
                               className={cx(
@@ -226,14 +259,14 @@ export function KardexTable({
                                 badgeForStatus(r.status)
                               )}
                             >
-                              {r.status}
+                              {labelStatus(r.status)}
                             </span>
                           </div>
                           {r.movement_side ? (
                             <div className="mt-1 text-[11px] text-slate-500">
                               Lado:{' '}
                               <span className="font-semibold text-slate-700">
-                                {r.movement_side}
+                                {labelMovementSide(r.movement_side)}
                               </span>
                             </div>
                           ) : null}
@@ -256,7 +289,7 @@ export function KardexTable({
                             {r.warehouse_name}
                             <span className="text-slate-400">
                               {' '}
-                              · Bin {r.bin_code ?? '—'}
+                              · Ubicación {r.bin_code ?? '—'}
                             </span>
                           </div>
                         </td>

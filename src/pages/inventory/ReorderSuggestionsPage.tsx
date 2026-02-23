@@ -128,12 +128,12 @@ export default function ReorderSuggestionsPage() {
                   </span>
                   <span className="text-xs text-muted-foreground">›</span>
                   <span className="text-xs font-semibold text-foreground/80">
-                    Reorder Suggestions
+                    Sugerencias de reposición
                   </span>
                 </div>
 
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                  Reorder Suggestions
+                  Sugerencias de reposición
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground max-w-3xl">
                   Vista <span className="font-mono">v_reorder_suggestions</span>{' '}
@@ -145,7 +145,7 @@ export default function ReorderSuggestionsPage() {
               <div className="shrink-0 text-xs text-muted-foreground">
                 {loading
                   ? 'Cargando…'
-                  : `${rows.length} filas / needs=${needsCount}`}
+                  : `${rows.length} filas / necesitan=${needsCount}`}
               </div>
             </div>
           </div>
@@ -159,7 +159,7 @@ export default function ReorderSuggestionsPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                 <div className="rounded-xl border p-3 bg-card">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Needs reorder
+                    Requiere reposición
                   </label>
                   <div className="mt-2 flex gap-2">
                     <button
@@ -187,7 +187,7 @@ export default function ReorderSuggestionsPage() {
 
                 <div className="rounded-xl border p-3 bg-card">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Warehouse
+                    Almacén
                   </label>
                   <select
                     className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm"
@@ -227,7 +227,7 @@ export default function ReorderSuggestionsPage() {
 
                 <div className="rounded-xl border p-3 bg-card">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Buscar (code/name)
+                    Buscar (código/nombre)
                   </label>
                   <input
                     className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm"
@@ -270,7 +270,7 @@ export default function ReorderSuggestionsPage() {
                     (
                     {loading
                       ? 'Cargando…'
-                      : `${rows.length} / needs=${needsCount}`}
+                      : `${rows.length} / necesitan=${needsCount}`}
                     )
                   </span>
                 </div>
@@ -280,15 +280,17 @@ export default function ReorderSuggestionsPage() {
                 <table className="min-w-[1060px] w-full text-sm">
                   <thead className="bg-muted/30 sticky top-0 z-10">
                     <tr className="text-left">
-                      <th className="p-4 font-semibold">Part</th>
-                      <th className="p-4 font-semibold">Warehouse</th>
-                      <th className="p-4 font-semibold text-right">On hand</th>
+                      <th className="p-4 font-semibold">Repuesto</th>
+                      <th className="p-4 font-semibold">Almacén</th>
+                      <th className="p-4 font-semibold text-right">
+                        En existencia
+                      </th>
                       <th className="p-4 font-semibold text-right">Min</th>
                       <th className="p-4 font-semibold text-right">
-                        Reorder point
+                        Punto de reposición
                       </th>
                       <th className="p-4 font-semibold text-right">
-                        Suggested replenish
+                        Reposición sugerida
                       </th>
                       <th className="p-4 font-semibold">Status</th>
                     </tr>
@@ -345,7 +347,7 @@ export default function ReorderSuggestionsPage() {
                                 : 'bg-emerald-500/10 border-emerald-500/30'
                             )}
                           >
-                            {r.needs_reorder ? 'Needs reorder' : 'OK'}
+                            {r.needs_reorder ? 'Requiere reposición' : 'OK'}
                           </span>
                         </td>
                       </tr>
@@ -366,8 +368,8 @@ export default function ReorderSuggestionsPage() {
               </div>
 
               <div className="px-4 py-3 border-t text-xs text-muted-foreground">
-                Consejo: “Suggested replenish” normalmente busca llevarte al
-                mínimo (o al target) según tu vista de sugerencias.
+                Consejo: la “reposición sugerida” normalmente busca llevarte al
+                mínimo (u objetivo) según tu vista de sugerencias.
               </div>
             </div>
           </div>

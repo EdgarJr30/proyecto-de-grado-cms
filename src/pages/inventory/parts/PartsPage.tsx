@@ -143,7 +143,7 @@ export default function PartsPage() {
       return;
     }
     if (!form.uom_id) {
-      showToastError('Debes seleccionar una UoM.');
+      showToastError('Debes seleccionar una UdM.');
       return;
     }
 
@@ -301,7 +301,7 @@ export default function PartsPage() {
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">
                 <div className="text-xs text-slate-500">
-                  Tip: Parts code se normaliza a{' '}
+                  Tip: el código del repuesto se normaliza a{' '}
                   <span className="font-mono">UPPERCASE</span>. Usa filtros para
                   encontrar rápido por código/nombre/categoría.
                 </div>

@@ -33,7 +33,7 @@ export default function InventoryReservationsPage() {
       });
     } catch (error: unknown) {
       if (error instanceof Error) showToastError(error.message);
-      else showToastError('No se pudieron cargar las WO aceptadas.');
+      else showToastError('No se pudieron cargar las OT aceptadas.');
     } finally {
       setLoading(false);
     }
@@ -93,7 +93,7 @@ export default function InventoryReservationsPage() {
                   Inventario
                 </Link>
                 <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-900 font-medium">Reservas por WO</span>
+                <span className="text-slate-900 font-medium">Reservas por OT</span>
               </nav>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -103,7 +103,7 @@ export default function InventoryReservationsPage() {
                   </div>
                   <div className="min-w-0">
                     <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                      Reservas por WO (tickets)
+                      Reservas por OT (tickets)
                     </h1>
                     <p className="mt-1 text-xs md:text-sm text-slate-500">
                       Reserva, entrega, devolución y liberación de repuestos por
@@ -124,7 +124,7 @@ export default function InventoryReservationsPage() {
                   )}
                 >
                   <RefreshCcw className={cx('h-4 w-4', loading && 'animate-spin')} />
-                  Actualizar WO
+                  Actualizar OT
                 </button>
               </div>
             </div>
@@ -137,7 +137,7 @@ export default function InventoryReservationsPage() {
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
                 <div className="lg:col-span-4">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Buscar WO aceptada
+                    Buscar OT aceptada
                   </label>
                   <div className="mt-1 relative">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -152,7 +152,7 @@ export default function InventoryReservationsPage() {
 
                 <div className="lg:col-span-5">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    WO seleccionada
+                    OT seleccionada
                   </label>
                   <select
                     className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
@@ -181,7 +181,7 @@ export default function InventoryReservationsPage() {
                         Prioridad: <b>{selectedTicket.priority ?? '—'}</b>
                       </span>
                     ) : (
-                      <span>Selecciona una WO para gestionar reservas.</span>
+                      <span>Selecciona una OT para gestionar reservas.</span>
                     )}
                   </div>
                 </div>
@@ -201,7 +201,7 @@ export default function InventoryReservationsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-base font-semibold text-slate-900">
-                    WO #{selectedTicket.id} — {selectedTicket.title}
+                    OT #{selectedTicket.id} — {selectedTicket.title}
                   </h2>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                     Solicitante: {selectedTicket.requester ?? '—'}
@@ -216,15 +216,15 @@ export default function InventoryReservationsPage() {
                   />
                 ) : (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                    No tienes permisos para operar reservas/consumos en esta WO.
+                    No tienes permisos para operar reservas/consumos en esta OT.
                   </div>
                 )}
               </div>
             ) : (
               <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
                 {loading
-                  ? 'Cargando WO aceptadas...'
-                  : 'No hay WO aceptadas disponibles para operar.'}
+                  ? 'Cargando OT aceptadas...'
+                  : 'No hay OT aceptadas disponibles para operar.'}
               </div>
             )}
           </div>

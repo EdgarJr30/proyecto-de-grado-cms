@@ -28,15 +28,26 @@ export const DOC_STATUSES: InventoryDocStatus[] = [
 export function labelType(type: InventoryDocType) {
   switch (type) {
     case 'RECEIPT':
-      return 'Entrada (RECEIPT)';
+      return 'Entrada';
     case 'ISSUE':
-      return 'Salida (ISSUE)';
+      return 'Salida';
     case 'TRANSFER':
-      return 'Transferencia (TRANSFER)';
+      return 'Transferencia';
     case 'ADJUSTMENT':
-      return 'Ajuste (ADJUSTMENT)';
+      return 'Ajuste';
     case 'RETURN':
-      return 'Devolución (RETURN)';
+      return 'Devolución';
+  }
+}
+
+export function labelStatus(status: InventoryDocStatus) {
+  switch (status) {
+    case 'DRAFT':
+      return 'Borrador';
+    case 'POSTED':
+      return 'Publicado';
+    case 'CANCELLED':
+      return 'Cancelado';
   }
 }
 
@@ -80,7 +91,7 @@ export function statusBadge(status: InventoryDocStatus) {
       };
     case 'POSTED':
       return {
-        text: 'POSTEADO',
+        text: 'PUBLICADO',
         className: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         dot: 'bg-emerald-500',
       };
@@ -96,4 +107,16 @@ export function statusBadge(status: InventoryDocStatus) {
 export function fmtDate(value: string | null) {
   if (!value) return '—';
   return new Date(value).toLocaleString();
+}
+
+export function localizeReference(value: string | null) {
+  if (!value) return value;
+
+  return value
+    .replace(/\bWO\b/gi, 'OT')
+    .replace(/\bISSUE\b/gi, 'SALIDA')
+    .replace(/\bRETURN\b/gi, 'DEVOLUCION')
+    .replace(/\bRECEIPT\b/gi, 'ENTRADA')
+    .replace(/\bTRANSFER\b/gi, 'TRANSFERENCIA')
+    .replace(/\bADJUSTMENT\b/gi, 'AJUSTE');
 }

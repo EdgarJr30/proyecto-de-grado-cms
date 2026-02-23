@@ -149,8 +149,8 @@ export async function listKardex(
       showToastError(error.message);
       throw error;
     }
-    showToastError('Error inesperado cargando Kardex.');
-    throw new Error('Error inesperado cargando Kardex.');
+    showToastError('Error inesperado cargando movimientos de inventario.');
+    throw new Error('Error inesperado cargando movimientos de inventario.');
   }
 }
 

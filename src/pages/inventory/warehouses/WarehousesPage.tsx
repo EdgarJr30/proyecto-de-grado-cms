@@ -125,7 +125,7 @@ export default function WarehousesPage() {
     const name = form.name.trim();
 
     if (!code || !name) {
-      showToastError('Code y Name son requeridos.');
+      showToastError('Código y nombre son requeridos.');
       return;
     }
 
@@ -139,7 +139,7 @@ export default function WarehousesPage() {
           is_active: form.is_active,
         };
         await createWarehouse(payload);
-        showToastSuccess('Warehouse creado.');
+        showToastSuccess('Almacén creado.');
       } else {
         const patch: WarehouseUpdate = {
           code,
@@ -148,7 +148,7 @@ export default function WarehousesPage() {
           is_active: form.is_active,
         };
         await updateWarehouse(editing.id, patch);
-        showToastSuccess('Warehouse actualizado.');
+        showToastSuccess('Almacén actualizado.');
       }
 
       setIsModalOpen(false);
@@ -164,15 +164,15 @@ export default function WarehousesPage() {
     if (!canManage) return;
 
     const ok = await showConfirmAlert({
-      title: 'Eliminar warehouse',
-      text: 'Se eliminará este warehouse. La acción puede fallar si tiene bins o stock asociado.',
+      title: 'Eliminar almacén',
+      text: 'Se eliminará este almacén. La acción puede fallar si tiene ubicaciones o inventario asociado.',
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
 
     try {
       await deleteWarehouse(id);
-      showToastSuccess('Warehouse eliminado.');
+      showToastSuccess('Almacén eliminado.');
       await refresh();
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
@@ -186,7 +186,7 @@ export default function WarehousesPage() {
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyState
             title="Acceso restringido"
-            description="No tienes permisos para acceder al módulo de warehouses."
+            description="No tienes permisos para acceder al módulo de almacenes."
           />
         </main>
       </PageShell>

@@ -4,6 +4,7 @@ import {
   ChevronRight,
   CircleDot,
   FileText,
+  Plus,
   ShieldAlert,
 } from 'lucide-react';
 
@@ -53,8 +54,8 @@ export function InventoryDocsHeader({
                 </div>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  DRAFT - lineas - Post. Cancel crea reversa y marca
-                  CANCELLED.
+                  Borrador: se puede editar y publicar. Cancelar crea una
+                  reversa y marca el documento como cancelado.
                 </p>
               </div>
             </div>
@@ -70,6 +71,16 @@ export function InventoryDocsHeader({
                   Solo lectura
                 </span>
               )}
+
+              {canWrite ? (
+                <Link
+                  to="/inventory/docs/crear"
+                  className="inline-flex items-center h-9 px-3 rounded-md bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear
+                </Link>
+              ) : null}
 
               <Link
                 to="/inventory"

@@ -15,7 +15,6 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import Sidebar from '../../components/layout/Sidebar';
@@ -28,7 +27,6 @@ import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
-import AssetsBoard from '../../components/dashboard/admin/assets/AssetsBoard';
 
 type TabKey =
   | 'general'
@@ -36,8 +34,7 @@ type TabKey =
   | 'permissions'
   | 'incidents'
   | 'announcements'
-  | 'sociedad'
-  | 'assets';
+  | 'sociedad';
 
 type ModuleTone = {
   iconBg: string;
@@ -63,7 +60,6 @@ const TAB_ORDER: TabKey[] = [
   'incidents',
   'announcements',
   'sociedad',
-  'assets',
   'general',
 ];
 
@@ -109,13 +105,6 @@ const TAB_TONES: Record<TabKey, ModuleTone> = {
     selectedBg: 'bg-emerald-50 dark:bg-emerald-500/15',
     selectedBorder: 'border-emerald-200 dark:border-emerald-400/30',
     focusRing: 'focus-visible:ring-emerald-500',
-  },
-  assets: {
-    iconBg: 'bg-slate-200 dark:bg-slate-700',
-    iconColor: 'text-slate-700 dark:text-slate-200',
-    selectedBg: 'bg-slate-100 dark:bg-slate-700/60',
-    selectedBorder: 'border-slate-300 dark:border-slate-500',
-    focusRing: 'focus-visible:ring-slate-500',
   },
   general: {
     iconBg: 'bg-blue-100 dark:bg-blue-500/15',
@@ -309,8 +298,6 @@ export default function AdminSettingsHubPage() {
   const canManageSociety =
     canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
 
-  const canAssetsFull = useCan('assets:full_access');
-
   const modules = useMemo<SettingsModule[]>(
     () => [
       {
@@ -359,15 +346,6 @@ export default function AdminSettingsHubPage() {
         tone: TAB_TONES.sociedad,
       },
       {
-        key: 'assets',
-        label: 'Activos',
-        description: 'Administra activos físicos y su estado operativo.',
-        helper: 'Inventario de activos',
-        icon: Wrench,
-        enabled: canAssetsFull,
-        tone: TAB_TONES.assets,
-      },
-      {
         key: 'general',
         label: 'General',
         description: 'Ajustes transversales del sistema y catálogos base.',
@@ -383,7 +361,6 @@ export default function AdminSettingsHubPage() {
       canManageIncidents,
       canManageAnnouncements,
       canManageSociety,
-      canAssetsFull,
     ]
   );
 
@@ -620,12 +597,6 @@ export default function AdminSettingsHubPage() {
                 {tab === 'sociedad' && (
                   <Can perm="society:read">
                     <SocietySettingsTable />
-                  </Can>
-                )}
-
-                {tab === 'assets' && (
-                  <Can perm="assets:full_access">
-                    <AssetsBoard />
                   </Can>
                 )}
 

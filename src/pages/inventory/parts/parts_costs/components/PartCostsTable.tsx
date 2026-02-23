@@ -147,7 +147,9 @@ export function PartCostsTable({
                             {partLabel}
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 font-mono">
-                            {r.part_code ? `Part: ${r.part_code}` : 'Part: —'}
+                            {r.part_code
+                              ? `Repuesto: ${r.part_code}`
+                              : 'Repuesto: —'}
                           </div>
                         </td>
 
@@ -157,8 +159,8 @@ export function PartCostsTable({
                           </div>
                           <div className="mt-0.5 text-xs text-slate-500 font-mono">
                             {r.warehouse_code
-                              ? `WH: ${r.warehouse_code}`
-                              : 'WH: —'}
+                              ? `ALM: ${r.warehouse_code}`
+                              : 'ALM: —'}
                           </div>
                         </td>
 
@@ -176,7 +178,7 @@ export function PartCostsTable({
                           <div className="grid grid-cols-2 gap-2">
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
                               <div className="text-[11px] text-slate-500">
-                                Part ID
+                                ID de repuesto
                               </div>
                               <div className="mt-0.5 text-xs font-mono text-slate-800 break-all">
                                 {r.part_id}
@@ -184,7 +186,7 @@ export function PartCostsTable({
                             </div>
                             <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
                               <div className="text-[11px] text-slate-500">
-                                Warehouse ID
+                                ID de almacén
                               </div>
                               <div className="mt-0.5 text-xs font-mono text-slate-800 break-all">
                                 {r.warehouse_id}

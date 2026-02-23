@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { InventoryDocRow, UUID } from '../../../../types/inventory';
 import {
   docTypeBadgeClass,
   docTypeIcon,
   fmtDate,
+  localizeReference,
   labelType,
   statusBadge,
 } from './docMeta';
@@ -13,6 +14,12 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
+  const navigate = useNavigate();
+
+  function openDoc(docId: string) {
+    navigate(`/inventory/docs/${docId}`);
+  }
+
   return (
     <div className="hidden md:block">
       <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -24,7 +31,7 @@ export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
               <thead className="bg-slate-50 sticky top-0 z-10">
                 <tr className="border-b border-slate-200">
                   <th className="text-left font-semibold text-slate-600 px-5 py-3">
-                    Doc
+                    Documento
                   </th>
                   <th className="text-left font-semibold text-slate-600 px-5 py-3">
                     Tipo
@@ -42,7 +49,7 @@ export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
                     Creado
                   </th>
                   <th className="text-left font-semibold text-slate-600 px-5 py-3">
-                    Posteado
+                    Publicado
                   </th>
                 </tr>
               </thead>
@@ -51,16 +58,25 @@ export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
                 {rows.map((row) => {
                   const status = statusBadge(row.status);
                   const TypeIcon = docTypeIcon(row.doc_type);
+                  const label = row.doc_no ?? (row.id as UUID).slice(0, 8);
 
                   return (
-                    <tr key={row.id} className="hover:bg-slate-50/70 transition">
+                    <tr
+                      key={row.id}
+                      role="link"
+                      tabIndex={0}
+                      aria-label={`Abrir documento ${label}`}
+                      onClick={() => openDoc(row.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openDoc(row.id);
+                        }
+                      }}
+                      className="transition cursor-pointer hover:bg-slate-50/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/30 focus-visible:ring-inset"
+                    >
                       <td className="px-5 py-3">
-                        <Link
-                          to={`/inventory/docs/${row.id}`}
-                          className="font-semibold text-slate-900 hover:underline"
-                        >
-                          {row.doc_no ?? (row.id as UUID).slice(0, 8)}
-                        </Link>
+                        <span className="font-semibold text-slate-900">{label}</span>
                         <div className="text-[11px] text-slate-500 mt-0.5">
                           {row.doc_no ? (row.id as UUID).slice(0, 8) : '—'}
                         </div>
@@ -77,12 +93,9 @@ export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
                             <TypeIcon className="h-4 w-4" />
                           </span>
                           <span className="font-medium text-slate-800">
-                            {row.doc_type}
+                            {labelType(row.doc_type)}
                           </span>
                         </span>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          {labelType(row.doc_type)}
-                        </div>
                       </td>
 
                       <td className="px-5 py-3">
@@ -105,7 +118,7 @@ export function InventoryDocsTable({ rows }: { rows: InventoryDocRow[] }) {
 
                       <td className="px-5 py-3 max-w-[320px]">
                         <div className="truncate">
-                          {row.reference ?? (
+                          {localizeReference(row.reference) ?? (
                             <span className="text-slate-400">—</span>
                           )}
                         </div>

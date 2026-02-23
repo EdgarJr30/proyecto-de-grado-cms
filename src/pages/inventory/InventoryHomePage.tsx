@@ -18,6 +18,7 @@ import {
   ArrowRight,
   ShieldAlert,
   DollarSign,
+  Wrench,
 } from 'lucide-react';
 
 type InventoryNavCard = {
@@ -181,9 +182,9 @@ export default function InventoryHomePage() {
 
   const cards: InventoryNavCard[] = [
     {
-      title: 'Repuestos (Parts)',
+      title: 'Repuestos',
       description:
-        'Catálogo de repuestos, UoM, criticidad, estado y categorías.',
+        'Catálogo de repuestos, UdM, criticidad, estado y categorías.',
       to: '/inventory/parts',
       perm: 'inventory:read',
       icon: PackageSearch,
@@ -197,8 +198,9 @@ export default function InventoryHomePage() {
       icon: Tags,
     },
     {
-      title: 'Unidades de medida (UoM)',
-      description: 'Mantén las unidades (code/name) para consumo e inventario.',
+      title: 'Unidades de medida (UdM)',
+      description:
+        'Mantén las unidades (código/nombre) para consumo e inventario.',
       to: '/inventory/uoms',
       perm: 'inventory:read',
       icon: Ruler,
@@ -206,30 +208,37 @@ export default function InventoryHomePage() {
     {
       title: 'Proveedores',
       description:
-        'Proveedores y relación repuesto–proveedor (lead time, moq, precio).',
+        'Proveedores y relación repuesto-proveedor (tiempo de entrega, cantidad mínima, precio).',
       to: '/inventory/vendors',
       perm: 'inventory:read',
       icon: Truck,
     },
     {
-      title: 'Almacenes y ubicaciones (Bins)',
+      title: 'Almacenes y ubicaciones',
       description:
-        'Configura warehouses y bins (pasillos/estantes) para stock.',
+        'Configura almacenes y ubicaciones (pasillos/estantes) para inventario.',
       to: '/inventory/warehouses',
       perm: 'inventory:read',
       icon: Warehouse,
     },
     {
+      title: 'Activos',
+      description: 'Inventario de activos físicos y su estado operativo.',
+      to: '/inventory/assets',
+      perm: ['assets:read', 'assets:full_access'],
+      icon: Wrench,
+    },
+    {
       title: 'Disponibilidad',
       description:
-        'On hand vs reservado (vista v_available_stock) para consumo real.',
+        'En existencia vs reservado (vista v_available_stock) para consumo real.',
       to: '/inventory/availability',
       perm: 'inventory:read',
       icon: Layers,
     },
     {
       title: 'Stock por ubicación',
-      description: 'Detalle por warehouse/bin (vista v_stock_by_location).',
+      description: 'Detalle por almacén/ubicación (vista v_stock_by_location).',
       to: '/inventory/stock-by-location',
       perm: 'inventory:read',
       icon: MapPinned,
@@ -237,23 +246,23 @@ export default function InventoryHomePage() {
     {
       title: 'Documentos de inventario',
       description:
-        'Crear y gestionar RECEIPT/ISSUE/TRANSFER/ADJUSTMENT/RETURN (DRAFT/POSTED).',
+        'Crear y gestionar entradas/salidas/transferencias/ajustes/devoluciones (borrador/publicado).',
       to: '/inventory/docs',
       perm: 'inventory:read',
       icon: FileText,
     },
     {
-      title: 'Kárdex',
+      title: 'Movimientos de inventario',
       description:
-        'Movimientos por fecha y documento (vista v_inventory_kardex).',
+        'Historial de movimientos por fecha y documento (entradas/salidas/ajustes).',
       to: '/inventory/kardex',
       perm: 'inventory:read',
       icon: ListOrdered,
     },
     {
-      title: 'Políticas de reorden',
+      title: 'Políticas de reposición',
       description:
-        'Reorder policies + sugerencias automáticas (vista v_reorder_suggestions).',
+        'Políticas de reposición + sugerencias automáticas (vista v_reorder_suggestions).',
       to: '/inventory/reorder',
       perm: 'inventory:read',
       icon: Repeat,
@@ -266,7 +275,7 @@ export default function InventoryHomePage() {
       icon: DollarSign,
     },
     {
-      title: 'Reservas por WO (tickets)',
+      title: 'Reservas por OT (tickets)',
       description:
         'Reservar repuestos para tickets aceptados (reserve_ticket_part).',
       to: '/inventory/reservations',
@@ -314,7 +323,7 @@ export default function InventoryHomePage() {
                     Inventario
                   </h1>
                   <p className="mt-1 text-xs md:text-sm text-slate-500 dark:text-slate-300">
-                    Acceso rápido a maestros, stock, documentos, kárdex y
+                    Acceso rápido a maestros, stock, documentos, movimientos y
                     reorden.
                   </p>
                 </div>

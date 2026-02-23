@@ -26,7 +26,7 @@ export function PartCostsHeader({
                 Costeo promedio por almacén
               </h1>
               <p className="mt-1 text-xs md:text-sm text-slate-500">
-                Viewer de{' '}
+                Vista de{' '}
                 <span className="font-medium">costo promedio ponderado</span> (
                 <span className="font-mono">part_costs</span>) por repuesto y
                 almacén.

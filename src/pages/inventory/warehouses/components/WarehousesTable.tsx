@@ -28,9 +28,9 @@ export function WarehousesTable({
         <div className="-mt-6 p-4">
           <div className="overflow-auto rounded-xl ring-1 ring-slate-200 bg-white">
             <div className="grid grid-cols-12 gap-0 border-b bg-slate-50 text-xs font-semibold text-slate-600">
-              <div className="col-span-3 px-4 py-3">Code</div>
-              <div className="col-span-4 px-4 py-3">Name</div>
-              <div className="col-span-3 px-4 py-3">Location</div>
+              <div className="col-span-3 px-4 py-3">Código</div>
+              <div className="col-span-4 px-4 py-3">Nombre</div>
+              <div className="col-span-3 px-4 py-3">Ubicación</div>
               <div className="col-span-2 px-4 py-3 text-right">Acciones</div>
             </div>
 
@@ -64,7 +64,7 @@ export function WarehousesTable({
                         to={`/inventory/warehouses/${warehouse.id}/bins`}
                         className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       >
-                        Bins
+                        Ubicaciones
                       </Link>
 
                       <GhostButton

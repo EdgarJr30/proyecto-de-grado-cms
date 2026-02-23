@@ -73,7 +73,7 @@ export default function PartsTable(props: {
               Nombre
             </th>
             <th className="text-left font-semibold text-slate-600 px-5 py-3">
-              UoM
+              UdM
             </th>
             <th className="text-left font-semibold text-slate-600 px-5 py-3">
               Categoría
@@ -196,7 +196,7 @@ export default function PartsTable(props: {
                   <td className="px-5 py-3">
                     <Chip tone={p.is_stocked ? 'default' : 'muted'}>
                       <Layers className="h-3.5 w-3.5 mr-1" />
-                      {p.is_stocked ? 'Stocked' : 'No stocked'}
+                      {p.is_stocked ? 'En inventario' : 'Sin inventario'}
                     </Chip>
                   </td>
 

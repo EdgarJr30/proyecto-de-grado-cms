@@ -87,7 +87,7 @@ export default function DocLinesTableDesktop(props: Props) {
                 className="px-3 py-3 text-left text-xs font-semibold text-slate-500"
                 style={{ minWidth: 200 }}
               >
-                From bin
+                Ubicación origen
               </th>
             ) : null}
             {showToBin ? (
@@ -95,7 +95,7 @@ export default function DocLinesTableDesktop(props: Props) {
                 className="px-3 py-3 text-left text-xs font-semibold text-slate-500"
                 style={{ minWidth: 200 }}
               >
-                To bin
+                Ubicación destino
               </th>
             ) : null}
             <th

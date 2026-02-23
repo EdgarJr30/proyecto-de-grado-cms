@@ -62,7 +62,7 @@ export function WarehousesMobileList({
                 to={`/inventory/warehouses/${warehouse.id}/bins`}
                 className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
               >
-                Bins
+                Ubicaciones
               </Link>
 
               <GhostButton

@@ -15,6 +15,32 @@ type DocType = VInventoryKardexRow['doc_type'];
 type Status = VInventoryKardexRow['status'];
 type Side = Exclude<VInventoryKardexRow['movement_side'], null>;
 
+function labelDocType(type: DocType) {
+  switch (type) {
+    case 'RECEIPT':
+      return 'Entrada';
+    case 'ISSUE':
+      return 'Salida';
+    case 'TRANSFER':
+      return 'Transferencia';
+    case 'ADJUSTMENT':
+      return 'Ajuste';
+    case 'RETURN':
+      return 'Devolución';
+  }
+}
+
+function labelStatus(status: Status) {
+  switch (status) {
+    case 'DRAFT':
+      return 'Borrador';
+    case 'POSTED':
+      return 'Publicado';
+    case 'CANCELLED':
+      return 'Cancelado';
+  }
+}
+
 export function KardexToolbar({
   isLoading,
   optionsLoading,
@@ -175,7 +201,7 @@ export function KardexToolbar({
               <input
                 value={q}
                 onChange={(e) => onChangeQ(e.target.value)}
-                placeholder="doc_no, referencia, repuesto, almacén, bin..."
+                placeholder="doc_no, referencia, repuesto, almacén, ubicación..."
                 className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
             </div>
@@ -285,7 +311,7 @@ export function KardexToolbar({
                 <option value="">Todos</option>
                 {docTypes.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {labelDocType(t)}
                   </option>
                 ))}
               </select>
@@ -327,7 +353,7 @@ export function KardexToolbar({
                 <option value="">Todos</option>
                 {statuses.map((st) => (
                   <option key={st} value={st}>
-                    {st}
+                    {labelStatus(st)}
                   </option>
                 ))}
               </select>
@@ -483,7 +509,7 @@ export function KardexToolbar({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-xs text-slate-500">
               Consejo: escribe en “Búsqueda” para filtrar por doc_no,
-              referencia, repuesto, almacén o bin.
+              referencia, repuesto, almacén o ubicación.
             </div>
 
             <div className="flex items-center gap-2 sm:justify-end">

@@ -43,7 +43,7 @@ export default function PartsHeader(props: {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                    Repuestos (Parts)
+                    Repuestos
                   </h1>
 
                   <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -58,7 +58,7 @@ export default function PartsHeader(props: {
                 </div>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Catálogo de repuestos con UoM, categoría, criticidad y
+                  Catálogo de repuestos con UdM, categoría, criticidad y
                   banderas operativas.
                 </p>
               </div>

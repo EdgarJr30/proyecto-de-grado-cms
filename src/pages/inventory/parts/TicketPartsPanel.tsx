@@ -270,7 +270,7 @@ export default function TicketPartsPanel({
         });
       } catch (error: unknown) {
         if (error instanceof Error) showToastError(error.message);
-        else showToastError('Error cargando bins de almacén');
+        else showToastError('Error cargando ubicaciones del almacén');
       }
     })();
 
@@ -281,7 +281,7 @@ export default function TicketPartsPanel({
 
   async function onReserve() {
     if (!isAccepted) {
-      showToastError('Este ticket no está aceptado (no es WO).');
+      showToastError('Este ticket no está aceptado (no es OT).');
       return;
     }
     if (!partId || !warehouseId) {
@@ -443,7 +443,7 @@ export default function TicketPartsPanel({
   if (!isAccepted) {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        Repuestos: disponible solo cuando el ticket está <b>aceptado</b> (WO).
+        Repuestos: disponible solo cuando el ticket está <b>aceptado</b> (OT).
       </div>
     );
   }
@@ -530,7 +530,7 @@ export default function TicketPartsPanel({
               <>
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                    OnHand
+                    En existencia
                   </p>
                   <p className="text-base font-semibold text-slate-900">
                     {fmt(avail.on_hand_qty)}
@@ -538,7 +538,7 @@ export default function TicketPartsPanel({
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                    Reserved
+                    Reservado
                   </p>
                   <p className="text-base font-semibold text-slate-900">
                     {fmt(avail.reserved_qty)}
@@ -546,7 +546,7 @@ export default function TicketPartsPanel({
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                   <p className="text-[11px] uppercase tracking-wide text-slate-500">
-                    Available
+                    Disponible
                   </p>
                   <p className="text-base font-semibold text-emerald-700">
                     {fmt(avail.available_qty)}
@@ -569,7 +569,7 @@ export default function TicketPartsPanel({
                 onChange={(e) => setAllowBackorder(e.target.checked)}
                 disabled={loading}
               />
-              Permitir backorder si no hay disponibilidad inmediata
+              Permitir pedido pendiente si no hay disponibilidad inmediata
             </label>
 
             <button
@@ -587,7 +587,7 @@ export default function TicketPartsPanel({
       {!enableWorkflowActions ? (
         <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
           Entregas, devoluciones y liberación de reservas se gestionan en{' '}
-          <b>Inventario → Reservas por WO</b>.
+          <b>Inventario → Reservas por OT</b>.
         </div>
       ) : null}
 
@@ -631,7 +631,7 @@ export default function TicketPartsPanel({
                     </th>
                     {enableWorkflowActions ? (
                       <th className="px-4 py-2.5 text-left font-semibold">
-                        Flujo WO
+                        Flujo OT
                       </th>
                     ) : null}
                   </tr>
@@ -669,7 +669,7 @@ export default function TicketPartsPanel({
                             <div className="space-y-2 min-w-[280px]">
                               <div className="rounded-lg border border-slate-200 p-2">
                                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                  Entregar (ISSUE) · Pendiente: {fmt(pendingIssue)}
+                                  Entregar (SALIDA) · Pendiente: {fmt(pendingIssue)}
                                 </div>
                                 {hasBins ? (
                                   <select
@@ -683,7 +683,7 @@ export default function TicketPartsPanel({
                                     }
                                     disabled={isActionBusy(r.id, 'ISSUE')}
                                   >
-                                    <option value="">Auto bin</option>
+                                    <option value="">Auto ubicación</option>
                                     {bins.map((b) => (
                                       <option key={b.id} value={b.id}>
                                         {b.code} {b.name ? `— ${b.name}` : ''}
@@ -727,7 +727,7 @@ export default function TicketPartsPanel({
 
                               <div className="rounded-lg border border-slate-200 p-2">
                                 <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                                  Devolver (RETURN) · Pendiente: {fmt(pendingReturn)}
+                                  Devolver (DEVOLUCIÓN) · Pendiente: {fmt(pendingReturn)}
                                 </div>
                                 {hasBins ? (
                                   <select
@@ -741,7 +741,7 @@ export default function TicketPartsPanel({
                                     }
                                     disabled={isActionBusy(r.id, 'RETURN')}
                                   >
-                                    <option value="">Auto bin</option>
+                                    <option value="">Auto ubicación</option>
                                     {bins.map((b) => (
                                       <option key={b.id} value={b.id}>
                                         {b.code} {b.name ? `— ${b.name}` : ''}
@@ -903,7 +903,7 @@ export default function TicketPartsPanel({
                               }
                               disabled={isActionBusy(r.id, 'ISSUE')}
                             >
-                              <option value="">Auto bin</option>
+                              <option value="">Auto ubicación</option>
                               {bins.map((b) => (
                                 <option key={b.id} value={b.id}>
                                   {b.code} {b.name ? `— ${b.name}` : ''}
@@ -958,7 +958,7 @@ export default function TicketPartsPanel({
                               }
                               disabled={isActionBusy(r.id, 'RETURN')}
                             >
-                              <option value="">Auto bin</option>
+                              <option value="">Auto ubicación</option>
                               {bins.map((b) => (
                                 <option key={b.id} value={b.id}>
                                   {b.code} {b.name ? `— ${b.name}` : ''}

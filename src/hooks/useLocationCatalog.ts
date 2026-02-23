@@ -78,7 +78,7 @@ export function useLocationCatalog(args: UseLocationCatalogArgs = {}) {
   const getLocationLabel = useCallback(
     (locationId: number | null | undefined, fallback = '—') => {
       if (typeof locationId !== 'number') return fallback;
-      return locationNameById.get(locationId) ?? `Ubicación #${locationId}`;
+      return locationNameById.get(locationId) ?? fallback;
     },
     [locationNameById]
   );
