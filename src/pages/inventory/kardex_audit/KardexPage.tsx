@@ -107,6 +107,12 @@ function formatMoney(value: number | null) {
   });
 }
 
+function normalizeIntegerDraft(value: string): string {
+  const digitsOnly = value.replace(/[^\d]/g, '');
+  if (!digitsOnly) return '';
+  return digitsOnly.replace(/^0+(?=\d)/, '');
+}
+
 export default function KardexPage() {
   const { has } = usePermissions();
   const canRead = has('inventory:read');
@@ -270,6 +276,10 @@ export default function KardexPage() {
     showToastSuccess('Filtros reiniciados.');
   }
 
+  function handleTicketIdChange(nextValue: string) {
+    setTicketId(normalizeIntegerDraft(nextValue));
+  }
+
   // sync selection state + checkbox indeterminate
   useEffect(() => {
     const total = rows.length;
@@ -398,7 +408,7 @@ export default function KardexPage() {
           onChangeQ={setQ}
           onChangePartId={setPartId}
           onChangeWarehouseId={setWarehouseId}
-          onChangeTicketId={setTicketId}
+          onChangeTicketId={handleTicketIdChange}
           onChangeDocType={setDocType}
           onChangeMovementSide={setMovementSide}
           onChangeStatus={setStatus}

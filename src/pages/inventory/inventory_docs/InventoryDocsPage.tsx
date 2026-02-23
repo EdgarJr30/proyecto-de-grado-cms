@@ -74,6 +74,12 @@ function dateOnlyToISOEnd(dateOnly: string): string {
   return dt.toISOString();
 }
 
+function normalizeIntegerDraft(value: string): string {
+  const digitsOnly = value.replace(/[^\d]/g, '');
+  if (!digitsOnly) return '';
+  return digitsOnly.replace(/^0+(?=\d)/, '');
+}
+
 export default function InventoryDocsPage() {
   const navigate = useNavigate();
   const { has } = usePermissions();
@@ -140,6 +146,10 @@ export default function InventoryDocsPage() {
     setCreatedFrom('');
     setCreatedTo('');
     setQ('');
+  }
+
+  function handleTicketIdChange(nextValue: string) {
+    setTicketId(normalizeIntegerDraft(nextValue));
   }
 
   async function refresh() {
@@ -222,7 +232,7 @@ export default function InventoryDocsPage() {
           onDocTypeChange={setDocType}
           onStatusChange={setStatus}
           onWarehouseIdChange={setWarehouseId}
-          onTicketIdChange={setTicketId}
+          onTicketIdChange={handleTicketIdChange}
           onCreatedFromChange={setCreatedFrom}
           onCreatedToChange={setCreatedTo}
           onQChange={setQ}

@@ -493,7 +493,7 @@ export default function ReorderPolicyModal({
                       <Field label="Min qty" rightHint="Obligatorio" required>
                         <input
                           type="number"
-                          step="0.001"
+                          step="any"
                           className={cx(
                             'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
                             'focus:outline-none focus:ring-2 focus:ring-blue-400/40'
@@ -516,7 +516,7 @@ export default function ReorderPolicyModal({
                       <Field label="Max qty" rightHint="Opcional">
                         <input
                           type="number"
-                          step="0.001"
+                          step="any"
                           className={cx(
                             'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
                             'focus:outline-none focus:ring-2 focus:ring-blue-400/40'
@@ -539,7 +539,7 @@ export default function ReorderPolicyModal({
                       <Field label="Reorder point" rightHint="Opcional">
                         <input
                           type="number"
-                          step="0.001"
+                          step="any"
                           className={cx(
                             'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
                             'focus:outline-none focus:ring-2 focus:ring-blue-400/40'
@@ -563,7 +563,7 @@ export default function ReorderPolicyModal({
                       <Field label="Safety stock" rightHint="Opcional">
                         <input
                           type="number"
-                          step="0.001"
+                          step="any"
                           className={cx(
                             'h-11 w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 text-sm',
                             'focus:outline-none focus:ring-2 focus:ring-blue-400/40'

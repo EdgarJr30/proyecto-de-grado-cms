@@ -152,7 +152,7 @@ export default function DocLinesTableDesktop(props: Props) {
                   className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-right tabular-nums text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                   disabled={!editable}
                   type="number"
-                  step="0.001"
+                  step="any"
                   value={Number.isFinite(l.qty) ? l.qty : 0}
                   onChange={(e) =>
                     onChangeLine(l.id, { qty: Number(e.target.value) })
@@ -213,7 +213,7 @@ export default function DocLinesTableDesktop(props: Props) {
                   className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-right tabular-nums text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-60 disabled:cursor-not-allowed"
                   disabled={!editable}
                   type="number"
-                  step="0.0001"
+                  step="any"
                   value={l.unit_cost ?? ''}
                   onChange={(e) => {
                     const raw = e.target.value.trim();

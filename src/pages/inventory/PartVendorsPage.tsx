@@ -329,7 +329,7 @@ function PartVendorsContent({ embedded }: Props) {
             <input
               type="number"
               min={0}
-              step="0.001"
+              step="any"
               value={form.moq ?? ''}
               disabled={isReadOnly || !partId}
               onChange={(e) =>
@@ -350,7 +350,7 @@ function PartVendorsContent({ embedded }: Props) {
             <input
               type="number"
               min={0}
-              step="0.0001"
+              step="any"
               value={form.last_price ?? ''}
               disabled={isReadOnly || !partId}
               onChange={(e) =>

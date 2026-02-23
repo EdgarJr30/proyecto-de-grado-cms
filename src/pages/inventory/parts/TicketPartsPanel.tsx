@@ -45,6 +45,16 @@ function toQty(value: string): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+function normalizeNumericDraft(value: string): string {
+  const normalized = value.trim().replace(',', '.');
+  if (!normalized) return '';
+
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed)) return '';
+
+  return String(Object.is(parsed, -0) ? 0 : parsed);
+}
+
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   if (
@@ -113,6 +123,22 @@ export default function TicketPartsPanel({
     const warehouse = warehouseMap.get(id);
     return warehouse ? `${warehouse.code} - ${warehouse.name}` : id;
   }
+
+  const normalizeQty = () => {
+    setQty((prev) => normalizeNumericDraft(prev));
+  };
+
+  const normalizeActionQtyByRow = (
+    rowId: string,
+    setDraft: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  ) => {
+    setDraft((prev) => {
+      const current = prev[rowId] ?? '';
+      const normalized = normalizeNumericDraft(current);
+      if (normalized === current) return prev;
+      return { ...prev, [rowId]: normalized };
+    });
+  };
 
   function syncActionDrafts(nextRows: TicketPartRequestRow[]) {
     const rowIds = new Set(nextRows.map((r) => r.id));
@@ -481,10 +507,11 @@ export default function TicketPartsPanel({
             <input
               className={INPUT_BASE_CLASS}
               type="number"
-              min="0.001"
-              step="0.001"
+              min="0"
+              step="any"
               value={qty}
               onChange={(e) => setQty(e.target.value)}
+              onBlur={normalizeQty}
               inputMode="decimal"
               disabled={loading}
             />
@@ -668,14 +695,20 @@ export default function TicketPartsPanel({
                                   <input
                                     className={ACTION_INPUT_CLASS}
                                     type="number"
-                                    min="0.001"
-                                    step="0.001"
+                                    min="0"
+                                    step="any"
                                     value={issueQtyByRow[r.id] ?? ''}
                                     onChange={(e) =>
                                       setIssueQtyByRow((prev) => ({
                                         ...prev,
                                         [r.id]: e.target.value,
                                       }))
+                                    }
+                                    onBlur={() =>
+                                      normalizeActionQtyByRow(
+                                        r.id,
+                                        setIssueQtyByRow
+                                      )
                                     }
                                     disabled={isActionBusy(r.id, 'ISSUE')}
                                   />
@@ -720,14 +753,20 @@ export default function TicketPartsPanel({
                                   <input
                                     className={ACTION_INPUT_CLASS}
                                     type="number"
-                                    min="0.001"
-                                    step="0.001"
+                                    min="0"
+                                    step="any"
                                     value={returnQtyByRow[r.id] ?? ''}
                                     onChange={(e) =>
                                       setReturnQtyByRow((prev) => ({
                                         ...prev,
                                         [r.id]: e.target.value,
                                       }))
+                                    }
+                                    onBlur={() =>
+                                      normalizeActionQtyByRow(
+                                        r.id,
+                                        setReturnQtyByRow
+                                      )
                                     }
                                     disabled={isActionBusy(r.id, 'RETURN')}
                                   />
@@ -753,14 +792,20 @@ export default function TicketPartsPanel({
                                   <input
                                     className={ACTION_INPUT_CLASS}
                                     type="number"
-                                    min="0.001"
-                                    step="0.001"
+                                    min="0"
+                                    step="any"
                                     value={releaseQtyByRow[r.id] ?? ''}
                                     onChange={(e) =>
                                       setReleaseQtyByRow((prev) => ({
                                         ...prev,
                                         [r.id]: e.target.value,
                                       }))
+                                    }
+                                    onBlur={() =>
+                                      normalizeActionQtyByRow(
+                                        r.id,
+                                        setReleaseQtyByRow
+                                      )
                                     }
                                     disabled={isActionBusy(r.id, 'RELEASE')}
                                   />
@@ -870,14 +915,17 @@ export default function TicketPartsPanel({
                             <input
                               className={ACTION_INPUT_CLASS}
                               type="number"
-                              min="0.001"
-                              step="0.001"
+                              min="0"
+                              step="any"
                               value={issueQtyByRow[r.id] ?? ''}
                               onChange={(e) =>
                                 setIssueQtyByRow((prev) => ({
                                   ...prev,
                                   [r.id]: e.target.value,
                                 }))
+                              }
+                              onBlur={() =>
+                                normalizeActionQtyByRow(r.id, setIssueQtyByRow)
                               }
                               disabled={isActionBusy(r.id, 'ISSUE')}
                             />
@@ -922,14 +970,17 @@ export default function TicketPartsPanel({
                             <input
                               className={ACTION_INPUT_CLASS}
                               type="number"
-                              min="0.001"
-                              step="0.001"
+                              min="0"
+                              step="any"
                               value={returnQtyByRow[r.id] ?? ''}
                               onChange={(e) =>
                                 setReturnQtyByRow((prev) => ({
                                   ...prev,
                                   [r.id]: e.target.value,
                                 }))
+                              }
+                              onBlur={() =>
+                                normalizeActionQtyByRow(r.id, setReturnQtyByRow)
                               }
                               disabled={isActionBusy(r.id, 'RETURN')}
                             />
@@ -954,14 +1005,20 @@ export default function TicketPartsPanel({
                             <input
                               className={ACTION_INPUT_CLASS}
                               type="number"
-                              min="0.001"
-                              step="0.001"
+                              min="0"
+                              step="any"
                               value={releaseQtyByRow[r.id] ?? ''}
                               onChange={(e) =>
                                 setReleaseQtyByRow((prev) => ({
                                   ...prev,
                                   [r.id]: e.target.value,
                                 }))
+                              }
+                              onBlur={() =>
+                                normalizeActionQtyByRow(
+                                  r.id,
+                                  setReleaseQtyByRow
+                                )
                               }
                               disabled={isActionBusy(r.id, 'RELEASE')}
                             />

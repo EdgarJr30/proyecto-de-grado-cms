@@ -534,7 +534,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </label>
         <input
           type="number"
-          step="0.01"
+          step="any"
           value={numToInput(form.purchase_cost)}
           onChange={(e) => {
             if (isLocked('purchase_cost')) return;
@@ -564,7 +564,7 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </label>
         <input
           type="number"
-          step="0.01"
+          step="any"
           value={numToInput(form.salvage_value)}
           onChange={(e) => {
             if (isLocked('salvage_value')) return;
