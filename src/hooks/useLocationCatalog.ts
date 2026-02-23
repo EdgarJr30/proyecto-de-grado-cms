@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listLocations } from '../services/locationService';
 import type { Location } from '../types/Location';
 import { onDataInvalidated } from '../lib/dataInvalidation';
+import { normalizeLocationId, type LocationIdLike } from '../utils/locationId';
 
 export type LocationFilterOption = {
   label: string;
@@ -59,7 +60,10 @@ export function useLocationCatalog(args: UseLocationCatalogArgs = {}) {
   const locationNameById = useMemo(() => {
     const map = new Map<number, string>();
     for (const location of locations) {
-      map.set(location.id, location.name);
+      const locationId = normalizeLocationId(location.id);
+      if (locationId != null) {
+        map.set(locationId, location.name);
+      }
     }
     return map;
   }, [locations]);
@@ -68,17 +72,23 @@ export function useLocationCatalog(args: UseLocationCatalogArgs = {}) {
     () =>
       locations
         .filter((location) => (activeOnlyOptions ? location.is_active : true))
-        .map((location) => ({
-          label: location.name,
-          value: String(location.id),
-        })),
+        .map((location) => {
+          const locationId = normalizeLocationId(location.id);
+          if (locationId == null) return null;
+          return {
+            label: location.name,
+            value: String(locationId),
+          };
+        })
+        .filter((option): option is LocationFilterOption => option != null),
     [activeOnlyOptions, locations]
   );
 
   const getLocationLabel = useCallback(
-    (locationId: number | null | undefined, fallback = '—') => {
-      if (typeof locationId !== 'number') return fallback;
-      return locationNameById.get(locationId) ?? fallback;
+    (locationId: LocationIdLike, fallback = '—') => {
+      const normalizedId = normalizeLocationId(locationId);
+      if (normalizedId == null) return fallback;
+      return locationNameById.get(normalizedId) ?? fallback;
     },
     [locationNameById]
   );

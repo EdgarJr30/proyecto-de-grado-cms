@@ -31,6 +31,17 @@ function toNumber(x: unknown): number {
   return 0;
 }
 
+function resolveRequesterName(
+  requester: string | null | undefined,
+  createdByName: string | null | undefined
+): string | null {
+  const byCreator =
+    typeof createdByName === 'string' ? createdByName.trim() : '';
+  if (byCreator) return byCreator;
+  const byTicket = typeof requester === 'string' ? requester.trim() : '';
+  return byTicket || null;
+}
+
 export async function listTicketPartRequests(
   ticketId: number
 ): Promise<TicketPartRequestRow[]> {
@@ -77,9 +88,9 @@ export async function listAcceptedWorkOrders(
   limit = 200
 ): Promise<TicketWoPick[]> {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('v_tickets_compat')
     .select(
-      'id,title,status,priority,requester,is_accepted,is_archived,created_at'
+      'id,title,status,priority,requester,created_by_name,is_accepted,is_archived,created_at'
     )
     .eq('is_accepted', true)
     .eq('is_archived', false)
@@ -87,7 +98,12 @@ export async function listAcceptedWorkOrders(
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []) as TicketWoPick[];
+  return ((data ?? []) as Array<
+    TicketWoPick & { created_by_name?: string | null }
+  >).map((row) => ({
+    ...row,
+    requester: resolveRequesterName(row.requester, row.created_by_name),
+  }));
 }
 
 export async function listWarehouseBinsPick(

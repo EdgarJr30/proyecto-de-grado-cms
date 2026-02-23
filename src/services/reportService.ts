@@ -62,6 +62,7 @@ type TicketReportRow = {
   is_archived: boolean | null;
   special_incident_id?: number | null;
   special_incident_name?: string | null;
+  created_by_name?: string | null;
 };
 
 type AssetRow = {
@@ -267,6 +268,17 @@ function coalesceLabel(value: string | number | null | undefined, fallback: stri
   return txt.length > 0 ? txt : fallback;
 }
 
+function resolveRequesterName(
+  requester: string | null | undefined,
+  createdByName: string | null | undefined
+): string | null {
+  const byCreator =
+    typeof createdByName === 'string' ? createdByName.trim() : '';
+  if (byCreator) return byCreator;
+  const byRequester = typeof requester === 'string' ? requester.trim() : '';
+  return byRequester || null;
+}
+
 function isFinalized(status: string | null | undefined) {
   return (status ?? '').trim().toLowerCase() === 'finalizadas';
 }
@@ -424,6 +436,7 @@ async function listTicketRows(
       primary_assignee_name,
       effective_assignee_id,
       requester,
+      created_by_name,
       created_at,
       finalized_at,
       deadline_date,
@@ -439,7 +452,10 @@ async function listTicketRows(
   const { data: fromView, error: viewError } = await viewQuery;
 
   if (!viewError) {
-    return (fromView ?? []) as TicketReportRow[];
+    return ((fromView ?? []) as TicketReportRow[]).map((row) => ({
+      ...row,
+      requester: resolveRequesterName(row.requester, row.created_by_name),
+    }));
   }
 
   let tableQuery = supabase.from('tickets').select(
@@ -486,6 +502,7 @@ async function listTicketRows(
 
   return rows.map((row) => ({
     ...row,
+    requester: resolveRequesterName(row.requester, null),
     primary_assignee_name: row.assignee,
     effective_assignee_id: row.assignee_id,
     special_incident_name: null,

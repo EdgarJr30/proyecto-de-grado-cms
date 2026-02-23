@@ -3,7 +3,8 @@ export type DataDomain =
   | 'assignees'
   | 'branding'
   | 'locations'
-  | 'permissions';
+  | 'permissions'
+  | 'users';
 
 type DataInvalidationDetail = {
   domains: DataDomain[];

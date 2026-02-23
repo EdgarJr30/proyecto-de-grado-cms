@@ -18,6 +18,22 @@ type Paginated = {
   count: number;
 };
 
+type RpcErrorLike = {
+  code?: string;
+  message?: string;
+} | null;
+
+function isMissingRpcError(error: RpcErrorLike): boolean {
+  if (!error) return false;
+  const msg = (error.message ?? '').toLowerCase();
+  return (
+    error.code === 'PGRST202' ||
+    error.code === '42883' ||
+    msg.includes('could not find the function') ||
+    msg.includes('does not exist')
+  );
+}
+
 /* =========================
    Lista general
    ========================= */
@@ -58,26 +74,70 @@ export async function getUsersPaginated(opts: {
 }
 
 export async function updateUser(userId: string, patch: Partial<DbUser>) {
-  const { error } = await supabase
-    .from('users')
-    .update({
-      name: patch.name ?? null,
-      last_name: patch.last_name ?? null,
-      email: patch.email ?? null,
-      location_id: patch.location_id ?? null,
-      rol_id:
-        typeof patch.rol_id === 'number'
-          ? patch.rol_id
-          : patch.rol_id === null
-            ? null
-            : undefined,
-    })
-    .eq('id', userId);
+  const roleProvided = typeof patch.rol_id !== 'undefined';
 
-  if (error) throw error;
+  const { error: rpcError } = await supabase.rpc('admin_update_user_profile', {
+    p_id: userId,
+    p_email: patch.email ?? null,
+    p_name: patch.name ?? null,
+    p_last_name: patch.last_name ?? null,
+    p_location: patch.location_id ?? null,
+    p_rol_id:
+      typeof patch.rol_id === 'number'
+        ? patch.rol_id
+        : patch.rol_id === null
+          ? null
+          : null,
+    p_update_role: roleProvided,
+  });
+
+  if (rpcError && !isMissingRpcError(rpcError)) {
+    throw rpcError;
+  }
+
+  // Compatibilidad para entornos donde la nueva RPC aún no fue aplicada.
+  if (rpcError && isMissingRpcError(rpcError)) {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        name: patch.name ?? null,
+        last_name: patch.last_name ?? null,
+        email: patch.email ?? null,
+        location_id: patch.location_id ?? null,
+        rol_id:
+          typeof patch.rol_id === 'number'
+            ? patch.rol_id
+            : patch.rol_id === null
+              ? null
+              : undefined,
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    if (roleProvided) {
+      const { error: clearRoleError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+      if (clearRoleError) throw clearRoleError;
+
+      if (typeof patch.rol_id === 'number') {
+        const { error: assignRoleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role_id: patch.rol_id,
+          });
+        if (assignRoleError) throw assignRoleError;
+      }
+    }
+  }
+
   if (typeof patch.rol_id !== 'undefined') {
     invalidateData('permissions');
   }
+  invalidateData('users');
 }
 
 export async function setUserActive(userId: string, active: boolean) {
@@ -86,6 +146,7 @@ export async function setUserActive(userId: string, active: boolean) {
     .update({ is_active: active })
     .eq('id', userId);
   if (error) throw error;
+  invalidateData('users');
 }
 
 export async function bulkSetUserActive(ids: string[], active: boolean) {
@@ -95,11 +156,13 @@ export async function bulkSetUserActive(ids: string[], active: boolean) {
     .update({ is_active: active })
     .in('id', ids);
   if (error) throw error;
+  invalidateData('users');
 }
 
 export async function deleteUser(userId: string) {
   const { error } = await supabase.from('users').delete().eq('id', userId);
   if (error) throw error;
+  invalidateData('users');
 }
 
 /* =========================================

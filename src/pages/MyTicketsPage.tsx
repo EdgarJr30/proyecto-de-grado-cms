@@ -146,6 +146,13 @@ export default function MyTicketsPage() {
     };
   }, []);
 
+  // Refresca perfil al entrar a la pantalla para evitar estado cacheado
+  // cuando el usuario fue editado desde el módulo de administración.
+  useEffect(() => {
+    void refresh({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 2) Carga tickets del usuario actual
   useEffect(() => {
     let active = true;

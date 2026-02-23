@@ -15,6 +15,7 @@ import {
   type UserProfilePatch,
 } from '../services/userService';
 import { supabase } from '../lib/supabaseClient';
+import { onDataInvalidated } from '../lib/dataInvalidation';
 
 type RefreshOptions = { silent?: boolean };
 
@@ -104,6 +105,14 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       sub.subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    return onDataInvalidated('users', () => {
+      if (!isAuthenticated) return;
+      void refresh({ silent: true });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 

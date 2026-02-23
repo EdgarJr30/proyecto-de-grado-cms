@@ -11,6 +11,32 @@ export type TicketCounts = Record<Status, number>;
 export type AcceptTicketItem = { id: number; assignee_id: number };
 export type AcceptTicketsInput = string[] | AcceptTicketItem[];
 
+type TicketRequesterRow = {
+  requester?: string | null;
+  created_by_name?: string | null;
+};
+
+function normalizeRequesterInRow<T extends TicketRequesterRow>(row: T): T {
+  const createdByName =
+    typeof row.created_by_name === 'string' ? row.created_by_name.trim() : '';
+  const requesterName =
+    typeof row.requester === 'string' ? row.requester.trim() : '';
+  const resolvedRequester = createdByName || requesterName;
+
+  if (!resolvedRequester || resolvedRequester === row.requester) {
+    return row;
+  }
+
+  return {
+    ...row,
+    requester: resolvedRequester,
+  };
+}
+
+function normalizeRequesterInRows<T extends TicketRequesterRow>(rows: T[]): T[] {
+  return rows.map((row) => normalizeRequesterInRow(row));
+}
+
 /**
  * Normaliza el rango de fechas a límites del día (00:00:00 / 23:59:59).
  */
@@ -73,7 +99,7 @@ export async function getAllTickets(page: number): Promise<Ticket[]> {
   const to = from + PAGE_SIZE - 1;
 
   const { data, error } = await supabase
-    .from('tickets')
+    .from('v_tickets_compat')
     .select('*')
     .eq('is_archived', false)
     .order('id', { ascending: false })
@@ -84,7 +110,9 @@ export async function getAllTickets(page: number): Promise<Ticket[]> {
     return [];
   }
 
-  return data as Ticket[];
+  return normalizeRequesterInRows(
+    (data ?? []) as Array<Ticket & { created_by_name?: string | null }>
+  ) as Ticket[];
 }
 
 export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
@@ -141,13 +169,16 @@ export async function moveWorkOrderStatus(
 
 export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
   const { data, error } = await supabase
-    .from('tickets')
+    .from('v_tickets_compat')
     .select('*')
+    .eq('is_archived', false)
     .eq('created_by', userId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data as Ticket[];
+  return normalizeRequesterInRows(
+    (data ?? []) as Array<Ticket & { created_by_name?: string | null }>
+  ) as Ticket[];
 }
 
 export async function getTicketsByStatusPaginated(
@@ -184,7 +215,9 @@ export async function getTicketsByStatusPaginated(
     );
     return [];
   }
-  return data as unknown as WorkOrder[];
+  return normalizeRequesterInRows(
+    (data ?? []) as Array<WorkOrder & { created_by_name?: string | null }>
+  ) as WorkOrder[];
 }
 
 export async function getFilteredTickets(
@@ -208,7 +241,11 @@ export async function getFilteredTickets(
   }
 
   if (term.length >= 2) {
-    const filters = [`title.ilike.%${term}%`, `requester.ilike.%${term}%`];
+    const filters = [
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+      `created_by_name.ilike.%${term}%`,
+    ];
     if (!isNaN(Number(term))) filters.push(`id.eq.${term}`);
     query = query.or(filters.join(','));
   }
@@ -218,7 +255,9 @@ export async function getFilteredTickets(
     console.error('❌ Error buscando tickets:', error.message);
     return [];
   }
-  return (data ?? []) as unknown as WorkOrder[];
+  return normalizeRequesterInRows(
+    (data ?? []) as Array<Ticket & { created_by_name?: string | null }>
+  ) as Ticket[];
 }
 
 export async function getUnacceptedTicketsPaginated(
@@ -230,7 +269,7 @@ export async function getUnacceptedTicketsPaginated(
   const to = from + pageSize - 1;
 
   let query = supabase
-    .from('tickets')
+    .from('v_tickets_compat')
     .select('*', { count: 'exact' })
     .eq('is_accepted', false)
     .eq('is_archived', false)
@@ -249,7 +288,12 @@ export async function getUnacceptedTicketsPaginated(
     return { data: [], count: 0 };
   }
 
-  return { data: data as Ticket[], count: count || 0 };
+  return {
+    data: normalizeRequesterInRows(
+      (data ?? []) as Array<Ticket & { created_by_name?: string | null }>
+    ) as Ticket[],
+    count: count || 0,
+  };
 }
 
 /**
@@ -384,13 +428,18 @@ export async function getTicketsByFiltersPaginated(
   const to = from + pageSize - 1;
 
   let q = supabase
-    .from('tickets')
+    .from('v_tickets_compat')
     .select('*', { count: 'exact' })
-    .eq('is_accepted', false);
+    .eq('is_accepted', false)
+    .eq('is_archived', false);
 
   const term = typeof values.q === 'string' ? values.q.trim() : '';
   if (term.length >= 2) {
-    const ors = [`title.ilike.%${term}%`, `requester.ilike.%${term}%`];
+    const ors = [
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+      `created_by_name.ilike.%${term}%`,
+    ];
     const n = Number(term);
     if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
     q = q.or(ors.join(','));
@@ -439,7 +488,12 @@ export async function getTicketsByFiltersPaginated(
     console.error('❌ getTicketsByFiltersPaginated error:', error.message);
     return { data: [], count: 0 };
   }
-  return { data: (data ?? []) as Ticket[], count: count ?? 0 };
+  return {
+    data: normalizeRequesterInRows(
+      (data ?? []) as Array<Ticket & { created_by_name?: string | null }>
+    ) as Ticket[],
+    count: count ?? 0,
+  };
 }
 
 /** Filtrado para WorkOrders (aceptados) */
@@ -463,7 +517,11 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
   const termRaw = (values as Record<string, unknown>)['q'];
   const term = typeof termRaw === 'string' ? termRaw.trim() : '';
   if (term.length >= 2) {
-    const ors = [`title.ilike.%${term}%`, `requester.ilike.%${term}%`];
+    const ors = [
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+      `created_by_name.ilike.%${term}%`,
+    ];
     const n = Number(term);
     if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
     q = q.or(ors.join(','));
@@ -522,7 +580,12 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
     );
     return { data: [], count: 0 };
   }
-  return { data: (data ?? []) as WorkOrder[], count: count ?? 0 };
+  return {
+    data: normalizeRequesterInRows(
+      (data ?? []) as Array<WorkOrder & { created_by_name?: string | null }>
+    ) as WorkOrder[],
+    count: count ?? 0,
+  };
 }
 
 export async function archiveTicket(id: number): Promise<void> {

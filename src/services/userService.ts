@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
+import { normalizeLocationId } from '../utils/locationId';
+import { invalidateData } from '../lib/dataInvalidation';
 
 export type RoleName = string;
 
@@ -11,6 +13,32 @@ export type UserProfile = {
   location_id: number | null;
   is_active?: boolean;
 };
+
+type AuthMeta = {
+  name?: unknown;
+  last_name?: unknown;
+  phone?: unknown;
+  location_id?: unknown;
+};
+
+function asTrimmedString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function resolveLocationId(
+  primary: unknown,
+  fallback: unknown
+): number | null {
+  const fromPrimary = normalizeLocationId(
+    primary as number | string | bigint | null | undefined
+  );
+  if (fromPrimary != null) return fromPrimary;
+  return normalizeLocationId(
+    fallback as number | string | bigint | null | undefined
+  );
+}
 
 export async function getCurrentUserRole(): Promise<RoleName | null> {
   const {
@@ -56,9 +84,20 @@ export async function getCurrentUserRole(): Promise<RoleName | null> {
 }
 
 export async function getCurrentUserProfile(): Promise<UserProfile | null> {
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id;
+  const {
+    data: { user: authUser },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error('Error fetching auth user:', authError.message);
+    return null;
+  }
+
+  const userId = authUser?.id;
   if (!userId) return null;
+
+  const authMeta = (authUser?.user_metadata ?? {}) as AuthMeta;
 
   const { data, error } = await supabase
     .from('users')
@@ -68,9 +107,42 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
 
   if (error) {
     console.error('Error fetching user profile:', error.message);
-    return null;
+    return {
+      id: userId,
+      name: asTrimmedString(authMeta.name) ?? '',
+      last_name: asTrimmedString(authMeta.last_name) ?? '',
+      email: authUser?.email ?? null,
+      phone: asTrimmedString(authMeta.phone),
+      location_id: resolveLocationId(null, authMeta.location_id),
+      is_active: true,
+    };
   }
-  return (data ?? null) as UserProfile | null;
+
+  if (!data) {
+    return {
+      id: userId,
+      name: asTrimmedString(authMeta.name) ?? '',
+      last_name: asTrimmedString(authMeta.last_name) ?? '',
+      email: authUser?.email ?? null,
+      phone: asTrimmedString(authMeta.phone),
+      location_id: resolveLocationId(null, authMeta.location_id),
+      is_active: true,
+    };
+  }
+
+  const dbRow = data as Partial<UserProfile> & {
+    location_id?: number | string | bigint | null;
+  };
+
+  return {
+    id: dbRow.id ?? userId,
+    name: (dbRow.name ?? asTrimmedString(authMeta.name) ?? '').trim(),
+    last_name: (dbRow.last_name ?? asTrimmedString(authMeta.last_name) ?? '').trim(),
+    email: dbRow.email ?? authUser?.email ?? null,
+    phone: dbRow.phone ?? asTrimmedString(authMeta.phone),
+    location_id: resolveLocationId(dbRow.location_id, authMeta.location_id),
+    is_active: dbRow.is_active,
+  };
 }
 
 export async function getCurrentUserId(): Promise<string | null> {
@@ -95,6 +167,29 @@ export async function updateCurrentUserProfile(
   const userId = await getCurrentUserId();
   if (!userId) return null;
 
+  const authDataPatch: Record<string, unknown> = {};
+  if (typeof patch.name === 'string') {
+    authDataPatch.name = patch.name.trim();
+  }
+  if (typeof patch.last_name === 'string') {
+    authDataPatch.last_name = patch.last_name.trim();
+  }
+  if (typeof patch.phone === 'string' || patch.phone === null) {
+    authDataPatch.phone = patch.phone;
+  }
+  if (typeof patch.location_id === 'number' || patch.location_id === null) {
+    authDataPatch.location_id = normalizeLocationId(patch.location_id);
+  }
+
+  if (Object.keys(authDataPatch).length > 0) {
+    const { error: authUpdateError } = await supabase.auth.updateUser({
+      data: authDataPatch,
+    });
+    if (authUpdateError) {
+      console.warn('Error syncing auth user metadata:', authUpdateError.message);
+    }
+  }
+
   const { data, error } = await supabase
     .from('users')
     .update(patch)
@@ -106,6 +201,7 @@ export async function updateCurrentUserProfile(
     console.error('Error updating user profile:', error.message);
     return null;
   }
+  invalidateData('users');
   return data as UserProfile;
 }
 

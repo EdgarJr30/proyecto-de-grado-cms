@@ -401,6 +401,28 @@ export default function UsersTable({
     resetCreate();
   };
 
+  useEffect(() => {
+    if (!detail && !openCreate) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (openCreate) {
+        if (submittingCreate) return;
+        setOpenCreate(false);
+        setNameC('');
+        setLastNameC('');
+        setEmailC('');
+        setLocationIdC('');
+        setPasswordC('');
+        setRolIdC('');
+        setMsgCreate(null);
+        return;
+      }
+      setDetail(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [detail, openCreate, submittingCreate]);
+
   const openCreateModal = () => {
     resetCreate();
     setCreateFormVersion((prev) => prev + 1);
@@ -431,7 +453,13 @@ export default function UsersTable({
         await supabaseNoPersist.auth.signUp({
           email: emailC.trim(),
           password: passwordC,
-          options: { data: { name: nameC.trim() } },
+          options: {
+            data: {
+              name: nameC.trim(),
+              last_name: lastNameC.trim(),
+              location_id: typeof locationIdC === 'number' ? locationIdC : null,
+            },
+          },
         });
 
       if (signUpErr) throw signUpErr;
@@ -920,8 +948,11 @@ export default function UsersTable({
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Detalle del usuario</h2>
                 <button
+                  type="button"
                   onClick={() => setDetail(null)}
                   className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
                 >
                   ✕
                 </button>
@@ -997,7 +1028,13 @@ export default function UsersTable({
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Crear usuario</h2>
-                <button onClick={closeCreate} className="text-gray-500">
+                <button
+                  type="button"
+                  onClick={closeCreate}
+                  className="text-gray-500"
+                  aria-label="Cerrar"
+                  title="Cerrar"
+                >
                   ✕
                 </button>
               </div>
@@ -1187,7 +1224,7 @@ export default function UsersTable({
           setEditingUser(null);
         }}
         onSaved={async () => {
-          await reload(false);
+          await Promise.all([reload(false), refreshUser({ silent: true })]);
         }}
         roles={roles}
         locations={locations}
