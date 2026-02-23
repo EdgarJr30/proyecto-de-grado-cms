@@ -116,10 +116,9 @@ export default function WorkRequestsBoard({ filters }: Props) {
 
   const ticketsToShow = tickets;
   const renderLocation = (ticket: Ticket) => {
-    const fromRow = (ticket as Ticket & { location_name?: string | null })
-      .location_name;
+    const fromRow = ticket.location_name?.trim();
     if (fromRow) return fromRow;
-    return getLocationLabel(ticket.location_id);
+    return getLocationLabel(ticket.location_id, 'Sin ubicación');
   };
 
   // Checkbox maestro

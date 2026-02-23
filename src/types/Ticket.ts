@@ -8,6 +8,7 @@ export interface Ticket {
   status: 'Pendiente' | 'En Ejecución' | 'Finalizadas';
   requester: string;
   location_id: number | null;
+  location_name?: string | null;
   assignee?: string;
   assignee_id?: number;
   incident_date: string;

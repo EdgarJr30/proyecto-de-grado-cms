@@ -114,10 +114,29 @@ export default function MyTicketsPage() {
     () => (roles.length > 0 ? roles.join(', ') : 'Sin roles asignados'),
     [roles]
   );
-  const locationLabel = useMemo(
-    () => getLocationLabel(profile?.location_id, 'Sin ubicación'),
-    [getLocationLabel, profile?.location_id]
-  );
+  const profileLocationNameFromTickets = useMemo(() => {
+    const profileLocationId = profile?.location_id;
+    if (profileLocationId == null) return '';
+    const byTicket = tickets.find(
+      (ticket) =>
+        ticket.location_id === profileLocationId &&
+        typeof ticket.location_name === 'string' &&
+        ticket.location_name.trim().length > 0
+    );
+    return byTicket?.location_name?.trim() ?? '';
+  }, [profile?.location_id, tickets]);
+
+  const locationLabel = useMemo(() => {
+    const profileLocationId = profile?.location_id;
+    if (profileLocationId == null) return 'Sin ubicación';
+
+    if (profileLocationNameFromTickets) return profileLocationNameFromTickets;
+
+    const fromCatalog = getLocationLabel(profileLocationId, '').trim();
+    if (fromCatalog) return fromCatalog;
+
+    return `ID ${profileLocationId}`;
+  }, [getLocationLabel, profile?.location_id, profileLocationNameFromTickets]);
 
   const initialName = (profile?.name ?? '').trim();
   const initialLastName = (profile?.last_name ?? '').trim();
@@ -258,10 +277,9 @@ export default function MyTicketsPage() {
   }, [filteredTickets, safePage]);
 
   const renderLocation = (ticket: TicketRow) => {
-    const fromRow = (ticket as TicketRow & { location_name?: string | null })
-      .location_name;
+    const fromRow = ticket.location_name?.trim();
     if (fromRow) return fromRow;
-    return getLocationLabel(ticket.location_id);
+    return getLocationLabel(ticket.location_id, 'Sin ubicación');
   };
 
   const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {

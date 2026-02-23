@@ -239,10 +239,7 @@ export default function WorkRequestsDetailModal({
               <div>
                 <dt className="text-gray-500">Ubicación</dt>
                 <dd className="text-gray-900">
-                  {locationLabel ??
-                    (typeof ticket.location_id === 'number'
-                      ? 'Sin ubicación'
-                      : '—')}
+                  {(locationLabel && locationLabel.trim()) || 'Sin ubicación'}
                 </dd>
               </div>
               <div>

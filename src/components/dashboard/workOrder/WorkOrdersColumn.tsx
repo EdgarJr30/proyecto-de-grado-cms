@@ -30,7 +30,10 @@ interface Props {
   selectedLocation?: number;
   isFiltering: boolean;
   count?: number;
-  getLocationLabel: (locationId: number | null | undefined) => string;
+  getLocationLabel: (
+    locationId: number | string | bigint | null | undefined,
+    fallback?: string
+  ) => string;
   getSpecialIncidentAdornment?: (t: Ticket) => JSX.Element | null;
   canDragDrop?: boolean;
   draggedTicketId?: number | null;
@@ -474,8 +477,8 @@ export default function WorkOrdersColumn({
                       </svg>
                       <span className="truncate break-words">
                         Ubicación:{' '}
-                        {(ticket as Ticket & { location_name?: string | null })
-                          .location_name ?? getLocationLabel(ticket.location_id)}
+                        {ticket.location_name?.trim() ||
+                          getLocationLabel(ticket.location_id, 'Sin ubicación')}
                       </span>
                     </div>
 

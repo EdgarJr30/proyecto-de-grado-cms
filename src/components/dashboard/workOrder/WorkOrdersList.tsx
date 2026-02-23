@@ -285,8 +285,8 @@ export default function WorkOrdersList({
                       </td>
 
                       <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-600 whitespace-nowrap">
-                        {(t as WorkOrder & { location_name?: string | null })
-                          .location_name ?? getLocationLabel(t.location_id)}
+                        {t.location_name?.trim() ||
+                          getLocationLabel(t.location_id, 'Sin ubicación')}
                       </td>
 
                       <td className="px-4 py-2.5 border-b border-gray-100 text-sm text-gray-700 whitespace-nowrap">
