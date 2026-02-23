@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import DefaultLogo from '../assets/logo.png';
 import DefaultCollage from '../assets/login_img.png';
 import AppVersion from '../components/ui/AppVersion';
-import { getSession, signInWithPassword } from '../utils/auth';
-import { usePermissions } from '../rbac/PermissionsContext';
+import { signInWithPassword } from '../utils/auth';
 import { useBranding } from '../context/BrandingContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -16,7 +16,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
-  const { refresh } = usePermissions();
+  const { loading, isAuthenticated } = useAuth();
 
   const { societyName, logoSrc, loginImgSrc } = useBranding();
 
@@ -25,33 +25,10 @@ export default function LoginPage() {
 
   // Si ya está autenticado, redirige
   useEffect(() => {
-    let active = true;
-
-    const run = async () => {
-      try {
-        const { data, error } = await getSession();
-        if (!active) return;
-
-        if (error) {
-          console.error('[LoginPage] getSession error:', error.message);
-          return;
-        }
-
-        const user = data.session?.user;
-        if (user) {
-          await refresh({ silent: false });
-          navigate('/inicio', { replace: true });
-        }
-      } catch (e) {
-        console.error('[LoginPage] getSession threw:', e);
-      }
-    };
-
-    void run();
-    return () => {
-      active = false;
-    };
-  }, [navigate, refresh]);
+    if (!loading && isAuthenticated) {
+      navigate('/inicio', { replace: true });
+    }
+  }, [loading, isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +51,6 @@ export default function LoginPage() {
 
       if (data.session?.user) {
         showToastSuccess('Inicio de sesión exitoso. Bienvenido.');
-        await refresh({ silent: false });
         navigate('/inicio', { replace: true });
       }
     } catch (err: unknown) {

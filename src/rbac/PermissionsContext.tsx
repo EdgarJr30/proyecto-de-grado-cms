@@ -48,6 +48,18 @@ function debounce<F extends (...a: unknown[]) => void>(fn: F, ms: number) {
 const shallowEq = (a: string[], b: string[]) =>
   a.length === b.length && a.every((x, i) => x === b[i]);
 
+function getErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  return '';
+}
+
+function isAuthSessionMissingError(error: unknown): boolean {
+  return getErrorMessage(error).toLowerCase().includes('auth session missing');
+}
+
 // cache en módulo (permisos)
 let cachedPerms: string[] | null = null;
 let inflightPerms: Promise<string[]> | null = null;
@@ -227,6 +239,20 @@ export function PermissionsProvider({
       const silent = Boolean(opts?.silent);
       if (!silent) setReady(false);
       try {
+        const {
+          data: { session },
+          error: sessionErr,
+        } = await supabase.auth.getSession();
+        if (sessionErr) throw sessionErr;
+
+        // Estado esperado en login/visitante: no hay sesión aún.
+        if (!session) {
+          invalidatePermissionCaches();
+          setLocalPerms([]);
+          setLocalRoles([]);
+          return;
+        }
+
         const [permList, roleList] = await Promise.all([
           fetchPermsOnce(),
           fetchUserRolesOnce(),
@@ -234,7 +260,10 @@ export function PermissionsProvider({
         setLocalPerms(permList);
         setLocalRoles(roleList);
       } catch (e) {
-        console.error('[Permissions] refresh error:', (e as Error).message);
+        if (!isAuthSessionMissingError(e)) {
+          console.error('[Permissions] refresh error:', getErrorMessage(e));
+        }
+        invalidatePermissionCaches();
         setLocalPerms([]);
         setLocalRoles([]);
       } finally {
@@ -356,7 +385,7 @@ export function PermissionsProvider({
       roles,
       ready,
       has,
-      refresh: (opts?: { silent?: boolean }) => _refresh(opts),
+      refresh: _refresh,
     }),
     [setObj, codes, roles, ready, has, _refresh]
   );
