@@ -279,8 +279,21 @@ function resolveRequesterName(
   return byRequester || null;
 }
 
+function normalizeTicketStatus(status: string | null | undefined): string {
+  return (status ?? '').trim().toLowerCase();
+}
+
 function isFinalized(status: string | null | undefined) {
-  return (status ?? '').trim().toLowerCase() === 'finalizadas';
+  return normalizeTicketStatus(status) === 'finalizadas';
+}
+
+function isOpenWorkOrder(status: string | null | undefined) {
+  const normalized = normalizeTicketStatus(status);
+  return (
+    normalized === 'pendiente' ||
+    normalized === 'en ejecución' ||
+    normalized === 'en ejecucion'
+  );
 }
 
 function hoursBetween(from: string | null | undefined, to: string | null | undefined): number | null {
@@ -720,11 +733,18 @@ export async function getExecutiveSummaryReport(
   const now = new Date();
 
   const openWorkOrders = tickets.filter(
-    (t) => asBool(t.is_accepted) && !asBool(t.is_archived) && !isFinalized(t.status)
+    (t) =>
+      asBool(t.is_accepted) &&
+      !asBool(t.is_archived) &&
+      isOpenWorkOrder(t.status)
   ).length;
 
   const overdueWorkOrders = tickets.filter((t) => {
-    if (!asBool(t.is_accepted) || asBool(t.is_archived) || isFinalized(t.status)) {
+    if (
+      !asBool(t.is_accepted) ||
+      asBool(t.is_archived) ||
+      !isOpenWorkOrder(t.status)
+    ) {
       return false;
     }
 
@@ -736,7 +756,7 @@ export async function getExecutiveSummaryReport(
     (t) =>
       asBool(t.is_accepted) &&
       !asBool(t.is_archived) &&
-      !isFinalized(t.status) &&
+      isOpenWorkOrder(t.status) &&
       asBool(t.is_urgent)
   ).length;
 
@@ -876,6 +896,7 @@ export async function getWorkManagementReport(
   for (const row of rows) {
     const accepted = asBool(row.is_accepted);
     const isArchived = asBool(row.is_archived);
+    const isOpen = isOpenWorkOrder(row.status);
     const finalized = isFinalized(row.status);
 
     if (isArchived) {
@@ -884,7 +905,7 @@ export async function getWorkManagementReport(
     }
 
     if (!accepted) {
-      if (!finalized) requestBacklog += 1;
+      if (isOpen) requestBacklog += 1;
     } else {
       const statusLabel = coalesceLabel(row.status, 'Sin estado');
       addMapCount(byStatusMap, statusLabel);
@@ -892,7 +913,7 @@ export async function getWorkManagementReport(
       const priorityLabel = coalesceLabel(row.priority, 'Sin prioridad');
       addMapCount(byPriorityMap, priorityLabel);
 
-      if (!finalized) {
+      if (isOpen) {
         workOrderBacklog += 1;
 
         if (asBool(row.is_urgent)) urgentOpen += 1;
@@ -926,7 +947,7 @@ export async function getWorkManagementReport(
           closedResolutionHours += hours;
           closedResolutionRows += 1;
         }
-      } else {
+      } else if (isOpen) {
         tech.openCount += 1;
       }
 
@@ -958,10 +979,10 @@ export async function getWorkManagementReport(
         } else {
           addMapCount(deadlineBuckets, 'Tarde');
         }
-      } else if (!finalized && deadline.getTime() < now.getTime()) {
+      } else if (isOpen && deadline.getTime() < now.getTime()) {
         addMapCount(deadlineBuckets, 'Abierta vencida');
         if (accepted) overdueOpen += 1;
-      } else {
+      } else if (isOpen) {
         addMapCount(deadlineBuckets, 'Abierta dentro de plazo');
       }
     }

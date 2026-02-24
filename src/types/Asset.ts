@@ -16,6 +16,8 @@ export type AssetStatus =
   | 'FUERA_DE_SERVICIO'
   | 'RETIRADO';
 
+export type AssetPreventiveFrequencyUnit = 'DAY' | 'WEEK' | 'MONTH' | 'YEAR';
+
 // ============ TABLE: public.assets ============
 export interface Asset {
   id: number;
@@ -59,9 +61,28 @@ export type AssetUpdate = Partial<
 };
 
 // ============ VIEW: public.v_assets ============
-export interface AssetView extends Asset {
+export interface AssetPreventivePlan {
+  preventive_plan_id: BigIntLike | null;
+  preventive_is_active: boolean | null;
+  preventive_frequency_value: number | null;
+  preventive_frequency_unit: AssetPreventiveFrequencyUnit | null;
+  preventive_start_on: ISODate | null;
+  preventive_next_due_on: ISODate | null;
+  preventive_lead_days: number | null;
+  preventive_priority: 'Baja' | 'Media' | 'Alta' | null;
+  preventive_title_template: string | null;
+  preventive_instructions: string | null;
+  preventive_allow_open_work_orders: boolean | null;
+  preventive_auto_assign_assignee_id: BigIntLike | null;
+  preventive_last_generated_at: ISOTimestamp | null;
+  preventive_last_generated_ticket_id: BigIntLike | null;
+  preventive_last_completed_at: ISOTimestamp | null;
+}
+
+export interface AssetView extends Asset, AssetPreventivePlan {
   location_name: string;
   location_code: string;
+  category_name?: string | null;
 }
 
 export type AssetOption = Pick<
@@ -166,4 +187,27 @@ export interface AssetListRow {
   next_maintenance?: ISODate | null; // si luego lo calculas por view/rpc
   cost_ytd?: number | null; // si luego lo calculas por view/rpc
   image_url?: string | null;
+}
+
+export interface AssetPreventivePlanUpsertInput {
+  asset_id: BigIntLike;
+  is_active: boolean;
+  frequency_value: number;
+  frequency_unit: AssetPreventiveFrequencyUnit;
+  start_on: ISODate;
+  lead_days?: number;
+  default_priority?: 'Baja' | 'Media' | 'Alta';
+  title_template?: string | null;
+  instructions?: string | null;
+  allow_open_work_orders?: boolean;
+  auto_assign_assignee_id?: BigIntLike | null;
+}
+
+export interface AssetPreventiveSchedulerResult {
+  status: 'ok' | 'skipped_lock';
+  run_at?: ISOTimestamp;
+  run_date?: ISODate;
+  generated?: number;
+  skipped_open_work_order?: number;
+  skipped_duplicate?: number;
 }

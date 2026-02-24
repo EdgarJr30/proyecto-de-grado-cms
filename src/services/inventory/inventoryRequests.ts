@@ -94,6 +94,7 @@ export async function listAcceptedWorkOrders(
     )
     .eq('is_accepted', true)
     .eq('is_archived', false)
+    .in('status', ['Pendiente', 'En Ejecución'])
     .order('created_at', { ascending: false })
     .limit(limit);
 

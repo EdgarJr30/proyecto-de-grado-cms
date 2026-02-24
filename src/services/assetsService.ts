@@ -4,6 +4,8 @@ import type {
   Asset,
   AssetInsert,
   AssetOption,
+  AssetPreventivePlanUpsertInput,
+  AssetPreventiveSchedulerResult,
   AssetUpdate,
   AssetView,
   AssetStatus,
@@ -93,6 +95,38 @@ export async function createAsset(payload: AssetInsert): Promise<Asset> {
     .single();
 
   return assertOk(data, error, 'No se pudo crear el activo.');
+}
+
+export async function upsertAssetPreventivePlan(
+  payload: AssetPreventivePlanUpsertInput
+): Promise<void> {
+  const { error } = await supabase.rpc('upsert_asset_preventive_plan', {
+    p_asset_id: toId(payload.asset_id),
+    p_is_active: payload.is_active,
+    p_frequency_value: payload.frequency_value,
+    p_frequency_unit: payload.frequency_unit,
+    p_start_on: payload.start_on,
+    p_lead_days: payload.lead_days ?? 0,
+    p_default_priority: payload.default_priority ?? 'Media',
+    p_title_template: payload.title_template ?? null,
+    p_instructions: payload.instructions ?? null,
+    p_allow_open_work_orders: payload.allow_open_work_orders ?? false,
+    p_auto_assign_assignee_id:
+      payload.auto_assign_assignee_id == null
+        ? null
+        : toId(payload.auto_assign_assignee_id),
+  });
+
+  if (error) throw new Error(toErrorMessage(error));
+}
+
+export async function runAssetPreventiveSchedulerNow(): Promise<AssetPreventiveSchedulerResult> {
+  const { data, error } = await supabase.rpc('run_asset_preventive_scheduler');
+  return assertOk(
+    data as AssetPreventiveSchedulerResult | null,
+    error,
+    'No se pudo ejecutar el scheduler preventivo.'
+  );
 }
 
 /** Actualizar activo (tabla assets) */
