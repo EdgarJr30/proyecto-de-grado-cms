@@ -8,7 +8,7 @@ import {
   getPublicImageUrl,
 } from '../../../services/storageService';
 import { MAX_COMMENTS_LENGTH } from '../../../utils/validators';
-import { archiveTicket } from '../../../services/ticketService';
+import { archiveTicket, unarchiveTicket } from '../../../services/ticketService';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import type { Assignee } from '../../../types/Assignee';
 import { useCan } from '../../../rbac/PermissionsContext';
@@ -35,6 +35,7 @@ interface EditWorkOrdersModalProps {
   showFullImage: boolean;
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
   getSpecialIncidentAdornment?: (t: WorkOrder) => JSX.Element | null;
+  forceReadOnly?: boolean;
 }
 
 export default function EditWorkOrdersModal({
@@ -43,6 +44,7 @@ export default function EditWorkOrdersModal({
   onSave,
   setShowFullImage,
   getSpecialIncidentAdornment,
+  forceReadOnly = false,
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
@@ -59,7 +61,7 @@ export default function EditWorkOrdersModal({
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   const canFullAccess = useCan('work_orders:full_access');
-  const isReadOnly = !canFullAccess;
+  const isReadOnly = forceReadOnly || !canFullAccess;
   const canInventoryRead = useCan('inventory:read');
   const canInventoryOperate = useCan([
     'inventory:work',
@@ -762,7 +764,7 @@ export default function EditWorkOrdersModal({
         </button>
 
         {/* ACEPTAR (si aún no aceptada) */}
-        {canFullAccess && !edited.is_accepted && (
+        {canFullAccess && !forceReadOnly && !edited.is_accepted && (
           <button
             type="button"
             onClick={handleAcceptWithPrimary}
@@ -775,6 +777,7 @@ export default function EditWorkOrdersModal({
 
         {/* Archivar: solo en Finalizadas y no archivada */}
         {canFullAccess &&
+          !forceReadOnly &&
           edited.status === 'Finalizadas' &&
           !edited.is_archived && (
             <button
@@ -799,18 +802,42 @@ export default function EditWorkOrdersModal({
             </button>
           )}
 
+        {/* Desarchivar: solo usuarios con full_access */}
+        {canFullAccess && edited.is_archived && (
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await unarchiveTicket(Number(edited.id));
+                await onSave({ ...edited, is_archived: false });
+                showToastSuccess('Orden desarchivada.');
+                onClose();
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                showToastError(`No se pudo desarchivar: ${msg}`);
+              }
+            }}
+            className="bg-emerald-700 text-white px-4 py-2 rounded hover:bg-emerald-800 cursor-pointer"
+            title="Sacar de archivadas"
+          >
+            Desarchivar
+          </button>
+        )}
+
         {/* Guardar (ediciones generales y secundarios si ya es OT) */}
-        <button
-          type="submit"
-          disabled={!canFullAccess}
-          title={!canFullAccess ? 'No tienes permiso para editar' : undefined}
-          className={
-            'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer' +
-            (!canFullAccess ? ' opacity-50 cursor-not-allowed' : '')
-          }
-        >
-          Guardar Cambios
-        </button>
+        {!forceReadOnly && (
+          <button
+            type="submit"
+            disabled={!canFullAccess}
+            title={!canFullAccess ? 'No tienes permiso para editar' : undefined}
+            className={
+              'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer' +
+              (!canFullAccess ? ' opacity-50 cursor-not-allowed' : '')
+            }
+          >
+            Guardar Cambios
+          </button>
+        )}
       </div>
     </form>
   );

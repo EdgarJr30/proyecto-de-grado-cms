@@ -588,6 +588,97 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
   };
 }
 
+/** Filtrado para WorkOrders archivadas (solo aceptados archivados) */
+export async function getArchivedWorkOrdersByFiltersPaginated<
+  TKeys extends string,
+>(
+  values: FilterState<TKeys>,
+  page: number,
+  pageSize: number
+): Promise<{ data: WorkOrder[]; count: number }> {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  let q = supabase
+    .from('v_tickets_compat')
+    .select('*', { count: 'exact' })
+    .eq('is_accepted', true)
+    .eq('is_archived', true);
+
+  const termRaw = (values as Record<string, unknown>)['q'];
+  const term = typeof termRaw === 'string' ? termRaw.trim() : '';
+  if (term.length >= 2) {
+    const ors = [
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+      `created_by_name.ilike.%${term}%`,
+    ];
+    const n = Number(term);
+    if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
+    q = q.or(ors.join(','));
+  }
+
+  const locationRaw = (values as Record<string, unknown>)['location_id'];
+  const locationFilter = parseLocationFilter(locationRaw);
+  if (locationFilter != null) q = q.eq('location_id', locationFilter);
+
+  const assigneeIdRaw = (values as Record<string, unknown>)['assignee_id'];
+  if (
+    assigneeIdRaw !== undefined &&
+    assigneeIdRaw !== null &&
+    assigneeIdRaw !== ''
+  ) {
+    q = q.filter(
+      'id',
+      'in',
+      `(
+      select work_order_id from v_work_order_assignees_current
+      where assignee_id = ${Number(assigneeIdRaw)}
+    )`
+    );
+  }
+
+  const createdRaw = (values as Record<string, unknown>)['created_at'];
+  if (createdRaw && typeof createdRaw === 'object') {
+    const { from: dFrom, to: dTo } = createdRaw as {
+      from?: string;
+      to?: string;
+    };
+    if (dFrom) q = q.gte('created_at', `${dFrom} 00:00:00`);
+    if (dTo) q = q.lte('created_at', `${dTo} 23:59:59`);
+  }
+
+  if ((values as Record<string, unknown>)['has_image'] === true) {
+    q = q.neq('image', '');
+  }
+
+  const prw = (values as Record<string, unknown>)['priority'];
+  const priorities = Array.isArray(prw) ? prw.map(String) : [];
+  if (priorities.length) q = q.in('priority', priorities);
+
+  const stw = (values as Record<string, unknown>)['status'];
+  const statuses = Array.isArray(stw) ? stw.map(String) : [];
+  if (statuses.length) q = q.in('status', statuses);
+
+  const { data, error, count } = await q
+    .order('id', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error(
+      '❌ getArchivedWorkOrdersByFiltersPaginated error:',
+      error.message
+    );
+    return { data: [], count: 0 };
+  }
+  return {
+    data: normalizeRequesterInRows(
+      (data ?? []) as Array<WorkOrder & { created_by_name?: string | null }>
+    ) as WorkOrder[],
+    count: count ?? 0,
+  };
+}
+
 export async function archiveTicket(id: number): Promise<void> {
   const { error } = await supabase
     .from('tickets')
@@ -596,6 +687,16 @@ export async function archiveTicket(id: number): Promise<void> {
     .eq('is_archived', false);
 
   if (error) throw new Error(`No se pudo archivar: ${error.message}`);
+}
+
+export async function unarchiveTicket(id: number): Promise<void> {
+  const { error } = await supabase
+    .from('tickets')
+    .update({ is_archived: false })
+    .eq('id', id)
+    .eq('is_archived', true);
+
+  if (error) throw new Error(`No se pudo desarchivar: ${error.message}`);
 }
 
 export async function acceptWorkOrderWithPrimary(
