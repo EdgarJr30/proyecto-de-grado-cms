@@ -1,5 +1,12 @@
 // components/dashboard/technicians/AssigneesTable.tsx
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Assignee, AssigneeSection } from '../../../types/Assignee';
 import {
   getAssigneesPaginated,
@@ -90,6 +97,7 @@ export default function AssigneesTable({
   sectionFilter,
   includeInactive,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const checkbox = useRef<HTMLInputElement>(null);
 
   const [assignees, setAssignees] = useState<Assignee[]>([]);
@@ -416,15 +424,32 @@ export default function AssigneesTable({
               Sin responsables.
             </div>
           ) : (
-            assignees.map((a) => {
+            assignees.map((a, index) => {
               const selected = selectedRows.includes(a);
               return (
-                <div
+                <motion.div
                   key={a.id}
                   className={cx(
                     'rounded-xl border border-gray-200 bg-white p-4 shadow-sm',
                     selected && 'ring-1 ring-indigo-300'
                   )}
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 12, scale: 0.996 }
+                  }
+                  animate={
+                    prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : {
+                          duration: 0.33,
+                          ease: [0.2, 0.8, 0.2, 1],
+                          delay: 0.08 + index * 0.03,
+                        }
+                  }
                   onClick={() => setDetail(a)}
                 >
                   <div className="flex items-start gap-3">
@@ -519,7 +544,7 @@ export default function AssigneesTable({
                       Eliminar
                     </button>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -593,15 +618,34 @@ export default function AssigneesTable({
                       </td>
                     </tr>
                   ) : (
-                    assignees.map((a) => {
+                    assignees.map((a, index) => {
                       const selected = selectedRows.includes(a);
                       return (
-                        <tr
+                        <motion.tr
                           key={a.id}
                           className={cx(
                             'people-table-row hover:bg-indigo-50/40 transition cursor-pointer',
                             selected && 'bg-indigo-50/70'
                           )}
+                          initial={
+                            prefersReducedMotion
+                              ? false
+                              : { opacity: 0, y: 10, scale: 0.997 }
+                          }
+                          animate={
+                            prefersReducedMotion
+                              ? undefined
+                              : { opacity: 1, y: 0, scale: 1 }
+                          }
+                          transition={
+                            prefersReducedMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 0.3,
+                                  ease: [0.2, 0.8, 0.2, 1],
+                                  delay: 0.07 + index * 0.024,
+                                }
+                          }
                           onClick={() => setDetail(a)}
                         >
                           <td
@@ -702,7 +746,7 @@ export default function AssigneesTable({
                               </button>
                             </div>
                           </td>
-                        </tr>
+                        </motion.tr>
                       );
                     })
                   )}

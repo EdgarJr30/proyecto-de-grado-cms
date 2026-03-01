@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { supabase } from '../../../lib/supabaseClient';
 import { onDataInvalidated } from '../../../lib/dataInvalidation';
 import EditTicketModal from './EditWorkOrdersModal';
@@ -182,6 +183,7 @@ export default function WorkOrdersBoard({
   groupMode,
   showArchivedColumn,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const { getLocationLabel } = useLocationCatalog({
     includeInactive: true,
     activeOnlyOptions: false,
@@ -734,11 +736,21 @@ export default function WorkOrdersBoard({
   }, [boardTickets]);
 
   return (
-    <div className="wo-board-layout flex gap-3 h-full w-full overflow-x-auto pb-2">
-      {boardColumns.map((status) => (
+    <motion.div
+      className="wo-board-layout flex gap-3 h-full w-full overflow-x-auto pb-2"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10, scale: 0.997 }}
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.34, ease: [0.2, 0.8, 0.2, 1], delay: 0.08 }
+      }
+    >
+      {boardColumns.map((status, columnIndex) => (
         <WorkOrdersColumn
           key={status}
           status={status}
+          columnIndex={columnIndex}
           isLoading={isLoading}
           tickets={
             status === 'Archivadas'
@@ -828,6 +840,6 @@ export default function WorkOrdersBoard({
           />
         )}
       </Modal>
-    </div>
+    </motion.div>
   );
 }

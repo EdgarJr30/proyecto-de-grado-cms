@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   KeyRound,
   Loader2,
@@ -27,6 +28,7 @@ import { useUser } from '../context/UserContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
 import { onDataInvalidated } from '../lib/dataInvalidation';
+import { MotionSpin } from '../components/ui/motionPrimitives';
 import '../styles/peopleAsana.css';
 
 const PAGE_SIZE = 8;
@@ -78,6 +80,7 @@ function TabButton({
 }
 
 export default function MyTicketsPage() {
+  const prefersReducedMotion = useReducedMotion();
   const { getLocationLabel } = useLocationCatalog();
   const { profile, update, refresh } = useUser();
   const { roles } = usePermissions();
@@ -400,7 +403,20 @@ export default function MyTicketsPage() {
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
         <section className="people-content flex-1 overflow-auto px-4 md:px-6 lg:px-8 pt-3 pb-6">
-          <div className="people-filters">
+          <motion.div
+            className="people-filters"
+            initial={
+              prefersReducedMotion ? false : { opacity: 0, y: 8, scale: 0.998 }
+            }
+            animate={
+              prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+            }
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.3, ease: [0.2, 0.8, 0.2, 1], delay: 0.04 }
+            }
+          >
             <MyTicketsFiltersBar
               onApply={(vals) => {
                 setFilters((prev) =>
@@ -410,10 +426,27 @@ export default function MyTicketsPage() {
               moduleTabs={profileTabs}
               showFilters={activeTab === 'tickets'}
             />
-          </div>
+          </motion.div>
 
           {activeTab === 'tickets' && (
-            <div className="mt-3">
+            <motion.div
+              className="mt-3"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, y: 10, scale: 0.998 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.34, ease: [0.2, 0.8, 0.2, 1], delay: 0.08 }
+              }
+            >
               <div className="people-table-toolbar flex items-center gap-3 rounded-xl border border-gray-200 bg-white/85 px-3 py-2 shadow-sm">
                 <p className="text-sm font-medium text-gray-700">
                   Mis tickets - Página {safePage + 1} de {totalPages} -{' '}
@@ -432,12 +465,31 @@ export default function MyTicketsPage() {
               ) : (
                 <div className="mt-3">
                   <div className="md:hidden space-y-3">
-                    {visibleTickets.map((ticket) => {
+                    {visibleTickets.map((ticket, index) => {
                       const firstImage = getTicketImagePaths(ticket.image ?? '')[0];
                       return (
-                        <article
+                        <motion.article
                           key={ticket.id}
                           className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                          initial={
+                            prefersReducedMotion
+                              ? false
+                              : { opacity: 0, y: 12, scale: 0.996 }
+                          }
+                          animate={
+                            prefersReducedMotion
+                              ? undefined
+                              : { opacity: 1, y: 0, scale: 1 }
+                          }
+                          transition={
+                            prefersReducedMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 0.33,
+                                  ease: [0.2, 0.8, 0.2, 1],
+                                  delay: 0.08 + index * 0.03,
+                                }
+                          }
                         >
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
@@ -476,13 +528,13 @@ export default function MyTicketsPage() {
                             <span>Solicitante: {ticket.requester || '—'}</span>
                             <span>Fecha: {ticket.incident_date || '—'}</span>
                           </div>
-                        </article>
+                        </motion.article>
                       );
                     })}
                   </div>
 
                   <div className="hidden md:block">
-                    <div className="overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+                    <div className="people-table-shell overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
                       <table className="people-table min-w-full border-separate border-spacing-0">
                         <thead className="people-table-head bg-white sticky top-0 z-10">
                           <tr>
@@ -513,12 +565,31 @@ export default function MyTicketsPage() {
                           </tr>
                         </thead>
                         <tbody className="bg-white">
-                          {visibleTickets.map((ticket) => {
+                          {visibleTickets.map((ticket, index) => {
                             const firstImage = getTicketImagePaths(ticket.image ?? '')[0];
                             return (
-                              <tr
+                              <motion.tr
                                 key={ticket.id}
                                 className="people-table-row hover:bg-indigo-50/40 transition"
+                                initial={
+                                  prefersReducedMotion
+                                    ? false
+                                    : { opacity: 0, y: 10, scale: 0.997 }
+                                }
+                                animate={
+                                  prefersReducedMotion
+                                    ? undefined
+                                    : { opacity: 1, y: 0, scale: 1 }
+                                }
+                                transition={
+                                  prefersReducedMotion
+                                    ? { duration: 0 }
+                                    : {
+                                        duration: 0.3,
+                                        ease: [0.2, 0.8, 0.2, 1],
+                                        delay: 0.07 + index * 0.024,
+                                      }
+                                }
                               >
                                 <td className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-900 whitespace-nowrap">
                                   #{ticket.id}
@@ -573,7 +644,7 @@ export default function MyTicketsPage() {
                                     <span className="text-sm text-gray-400">—</span>
                                   )}
                                 </td>
-                              </tr>
+                              </motion.tr>
                             );
                           })}
                         </tbody>
@@ -605,11 +676,28 @@ export default function MyTicketsPage() {
                   </button>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
           {activeTab === 'profile' && (
-            <section className="mt-4 rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-sm">
+            <motion.section
+              className="mt-4 rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-sm"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, y: 10, scale: 0.998 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.32, ease: [0.2, 0.8, 0.2, 1], delay: 0.08 }
+              }
+            >
               <div className="flex items-center gap-2">
                 <UserRound className="h-5 w-5 text-indigo-600" />
                 <h3 className="text-xl font-bold text-gray-900">Datos personales</h3>
@@ -720,7 +808,9 @@ export default function MyTicketsPage() {
                     className="inline-flex min-w-[180px] items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {savingProfile ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <MotionSpin className="inline-flex h-4 w-4">
+                        <Loader2 className="h-4 w-4" />
+                      </MotionSpin>
                     ) : (
                       <Save className="h-4 w-4" />
                     )}
@@ -728,11 +818,28 @@ export default function MyTicketsPage() {
                   </button>
                 </div>
               </form>
-            </section>
+            </motion.section>
           )}
 
           {activeTab === 'security' && (
-            <section className="mt-4 rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-sm">
+            <motion.section
+              className="mt-4 rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-sm"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, y: 10, scale: 0.998 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.32, ease: [0.2, 0.8, 0.2, 1], delay: 0.08 }
+              }
+            >
               <div className="flex items-center gap-2">
                 <KeyRound className="h-5 w-5 text-indigo-600" />
                 <h3 className="text-xl font-bold text-gray-900">Cambiar contraseña</h3>
@@ -805,7 +912,9 @@ export default function MyTicketsPage() {
                     className="inline-flex min-w-[210px] items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {savingPassword ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <MotionSpin className="inline-flex h-4 w-4">
+                        <Loader2 className="h-4 w-4" />
+                      </MotionSpin>
                     ) : (
                       <KeyRound className="h-4 w-4" />
                     )}
@@ -815,7 +924,7 @@ export default function MyTicketsPage() {
                   </button>
                 </div>
               </form>
-            </section>
+            </motion.section>
           )}
         </section>
       </main>

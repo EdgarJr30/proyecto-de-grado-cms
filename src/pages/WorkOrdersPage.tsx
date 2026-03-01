@@ -11,12 +11,14 @@ import type { FilterState } from '../types/filters';
 import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters';
 import type { WorkOrder } from '../types/Ticket';
 import { toTicketUpdate } from '../utils/toTicketUpdate';
+import { motion, useReducedMotion } from 'framer-motion';
 import '../styles/workOrdersAsana.css';
 
 type ViewMode = 'board' | 'list';
 type GroupMode = 'manual' | 'dateAsc' | 'dateDesc';
 
 export default function WorkOrdersPage() {
+  const prefersReducedMotion = useReducedMotion();
   // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
   const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
     {} as Record<WorkOrdersFilterKey, unknown>
@@ -182,7 +184,20 @@ export default function WorkOrdersPage() {
     <div className="wo-asana h-screen flex bg-[#f3f4f8] dark:bg-slate-950">
       <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <div className="wo-filters px-4 md:px-6 lg:px-8 pt-3">
+        <motion.div
+          className="wo-filters px-4 md:px-6 lg:px-8 pt-3"
+          initial={
+            prefersReducedMotion ? false : { opacity: 0, y: 8, scale: 0.998 }
+          }
+          animate={
+            prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+          }
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { duration: 0.32, ease: [0.2, 0.8, 0.2, 1], delay: 0.05 }
+          }
+        >
           <WorkOrdersFiltersBar
             onApply={(vals) => {
               // ✅ ÚNICA sincronización de filtros
@@ -192,9 +207,22 @@ export default function WorkOrdersPage() {
             }}
             moduleActions={viewSwitcher}
           />
-        </div>
+        </motion.div>
 
-        <section className="wo-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-3 pb-6">
+        <motion.section
+          className="wo-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-3 pb-6"
+          initial={
+            prefersReducedMotion ? false : { opacity: 0, y: 10, scale: 0.998 }
+          }
+          animate={
+            prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+          }
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { duration: 0.35, ease: [0.2, 0.8, 0.2, 1], delay: 0.1 }
+          }
+        >
           {view === 'board' ? (
             <WorkOrdersBoard
               filters={mergedFilters}
@@ -212,7 +240,7 @@ export default function WorkOrdersPage() {
               lastUpdatedTicket={lastUpdatedTicket}
             />
           )}
-        </section>
+        </motion.section>
 
         {/* Modal (LISTA) */}
         <Modal

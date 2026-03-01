@@ -6,12 +6,14 @@ import {
   type DragEvent,
   type JSX,
 } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Ticket, WorkOrderExtras } from '../../../types/Ticket';
 import {
   getPublicImageUrl,
   getTicketImagePaths,
 } from '../../../services/storageService';
 import AssigneeBadge from '../../common/AssigneeBadge';
+import { MotionPulse } from '../../ui/motionPrimitives';
 
 type TicketDropTarget = {
   targetStatus: Ticket['status'] | 'Archivadas';
@@ -23,6 +25,7 @@ type ColumnStatus = Ticket['status'] | 'Archivadas';
 interface Props {
   tickets: Ticket[];
   status: ColumnStatus;
+  columnIndex?: number;
   onOpenModal: (ticket: Ticket) => void;
   getPriorityStyles: (priority: Ticket['priority']) => string;
   getStatusStyles: (status: ColumnStatus) => string;
@@ -44,6 +47,7 @@ interface Props {
 export default function WorkOrdersColumn({
   tickets,
   status,
+  columnIndex = 0,
   onOpenModal,
   getPriorityStyles,
   getStatusStyles,
@@ -58,6 +62,7 @@ export default function WorkOrdersColumn({
   onDragEndTicket,
   onDropTicketAt,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   const columnBodyRef = useRef<HTMLDivElement | null>(null);
@@ -128,7 +133,7 @@ export default function WorkOrdersColumn({
   }, [status, ticketIdsKey]);
 
   return (
-    <div
+    <motion.div
       onDragOver={handleDragOverColumn}
       onDragEnter={handleDragOverColumn}
       onDragLeave={handleDragLeaveColumn}
@@ -136,6 +141,21 @@ export default function WorkOrdersColumn({
       className={`wo-board-column rounded-xl border border-gray-200 bg-gray-100/70 p-2.5 flex-[0_0_280px] w-[280px] min-w-[280px] max-w-[280px] flex flex-col h-full min-h-[420px] overflow-hidden transition-colors ${
         isDragOver ? 'ring-2 ring-indigo-300 bg-indigo-50/60' : ''
       }`}
+      initial={
+        prefersReducedMotion
+          ? false
+          : { opacity: 0, y: 14, scale: 0.995 }
+      }
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : {
+              duration: 0.38,
+              ease: [0.2, 0.8, 0.2, 1],
+              delay: 0.1 + columnIndex * 0.06,
+            }
+      }
     >
       <h3 className="wo-board-column-head font-semibold text-sm mb-2 flex items-center gap-2">
         <span
@@ -164,9 +184,9 @@ export default function WorkOrdersColumn({
       >
         {showSkeleton ? (
           Array.from({ length: 5 }).map((_, idx) => (
-            <div
+            <MotionPulse
               key={idx}
-              className="bg-white/70 animate-pulse border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col gap-2"
+              className="bg-white/70 border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col gap-2"
             >
               <div className="w-3/4 h-4 bg-gray-200 rounded mb-2" />
               <div className="w-full h-3 bg-gray-200 rounded mb-1" />
@@ -175,7 +195,7 @@ export default function WorkOrdersColumn({
                 <div className="w-12 h-4 bg-gray-200 rounded" />
                 <div className="w-12 h-4 bg-gray-200 rounded" />
               </div>
-            </div>
+            </MotionPulse>
           ))
         ) : (
           <>
@@ -187,7 +207,27 @@ export default function WorkOrdersColumn({
                 canDrop && dropIndex != null && dropIndex === index;
 
               return (
-                <div key={ticket.id} className="relative">
+                <motion.div
+                  key={ticket.id}
+                  className="relative"
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 12, scale: 0.996 }
+                  }
+                  animate={
+                    prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : {
+                          duration: 0.34,
+                          ease: [0.2, 0.8, 0.2, 1],
+                          delay: 0.08 + index * 0.03,
+                        }
+                  }
+                >
                   {showDropLine && <div className="wo-drop-line" aria-hidden="true" />}
 
                   <div
@@ -369,7 +409,7 @@ export default function WorkOrdersColumn({
                       className="mt-1.5"
                     />
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 
@@ -395,6 +435,6 @@ export default function WorkOrdersColumn({
           </>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

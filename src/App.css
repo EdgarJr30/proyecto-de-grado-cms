@@ -422,4 +422,5 @@
   .dark .hover\:bg-blue-50:hover {
     background-color: color-mix(in srgb, #2563eb 24%, var(--app-surface) 76%);
   }
+
 }

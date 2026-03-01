@@ -3,6 +3,7 @@
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
 import { Check, ChevronDown } from "lucide-react"
+import { motion, useReducedMotion } from "framer-motion"
 import { cn } from "../../utils/cn"
 
 export const Select = SelectPrimitive.Root
@@ -34,20 +35,34 @@ SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 export const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white shadow-md animate-in fade-in-80",
-        className
-      )}
-      {...props}
-    >
-      <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-))
+>(({ className, children, ...props }, ref) => {
+  const prefersReducedMotion = useReducedMotion()
+
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
+        className={cn(
+          "z-50 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white shadow-md",
+          className
+        )}
+        {...props}
+      >
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, y: -4, scale: 0.985 }}
+          animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : { duration: 0.18, ease: [0.2, 0.8, 0.2, 1] }
+          }
+        >
+          <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+        </motion.div>
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  )
+})
 SelectContent.displayName = SelectPrimitive.Content.displayName
 
 export const SelectLabel = React.forwardRef<

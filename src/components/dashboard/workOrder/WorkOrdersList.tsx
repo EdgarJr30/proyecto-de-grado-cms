@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Ticket, WorkOrder, WorkOrderExtras } from '../../../types/Ticket';
 import type { FilterState } from '../../../types/filters';
 import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFilters';
@@ -202,6 +203,7 @@ export default function WorkOrdersList({
   onOpen,
   lastUpdatedTicket,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const { getLocationLabel } = useLocationCatalog({
     includeInactive: true,
     activeOnlyOptions: false,
@@ -404,6 +406,7 @@ export default function WorkOrdersList({
   }, [page, reload]);
 
   const canRowDrag = canMoveCards && movingTicketId === null;
+  const baseEase: [number, number, number, number] = [0.2, 0.8, 0.2, 1];
 
   const clearDragState = () => {
     setDraggedTicket(null);
@@ -483,7 +486,16 @@ export default function WorkOrdersList({
   };
 
   return (
-    <div className="wo-list overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm">
+    <motion.div
+      className="wo-list overflow-auto rounded-2xl ring-1 ring-gray-200 bg-white shadow-sm"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10, scale: 0.996 }}
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.36, ease: baseEase, delay: 0.1 }
+      }
+    >
       <table className="min-w-full border-separate border-spacing-0">
         <thead className="wo-list-head bg-white sticky top-0 z-10">
           <tr>
@@ -591,10 +603,29 @@ export default function WorkOrdersList({
                         </tr>
                       )}
 
-                      <tr
+                      <motion.tr
                         className={`wo-list-row hover:bg-indigo-50/40 transition cursor-pointer ${
                           isDragged ? 'opacity-60' : ''
                         }`}
+                        initial={
+                          prefersReducedMotion
+                            ? false
+                            : { opacity: 0, y: 10, scale: 0.997 }
+                        }
+                        animate={
+                          prefersReducedMotion
+                            ? undefined
+                            : { opacity: 1, y: 0, scale: 1 }
+                        }
+                        transition={
+                          prefersReducedMotion
+                            ? { duration: 0 }
+                            : {
+                                duration: 0.32,
+                                ease: baseEase,
+                                delay: 0.08 + idx * 0.028,
+                              }
+                        }
                         onClick={() => {
                           if (Date.now() < suppressClickUntilRef.current) return;
                           onOpen?.(t);
@@ -782,7 +813,7 @@ export default function WorkOrdersList({
                             size="xs"
                           />
                         </td>
-                      </tr>
+                      </motion.tr>
                     </Fragment>
                   );
                 })}
@@ -838,6 +869,6 @@ export default function WorkOrdersList({
           Siguiente
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }

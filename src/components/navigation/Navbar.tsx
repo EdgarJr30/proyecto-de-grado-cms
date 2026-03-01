@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Disclosure } from '@headlessui/react';
 import { MagnifyingGlassIcon } from '@heroicons/react/20/solid';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import GlobalAnnouncementBanner from '../common/GlobalAnnouncementBanner';
 import { useLocationCatalog } from '../../hooks/useLocationCatalog';
 
@@ -35,6 +36,7 @@ export default function Navbar({
   selectedLocation,
   onFilterLocation,
 }: NavbarProps) {
+  const prefersReducedMotion = useReducedMotion();
   const { filterOptions } = useLocationCatalog({
     includeInactive: false,
     activeOnlyOptions: true,
@@ -131,39 +133,63 @@ export default function Navbar({
               >
                 <FilterIcon />
               </button>
-              {showDropdown && (
-                <div className="absolute top-12 right-0 z-20 bg-white rounded shadow-lg w-48 border border-gray-200 animate-fade-in-down">
-                  <button
-                    className={`w-full px-4 py-2 text-left hover:bg-indigo-50 ${
-                      selectedLocation === ''
-                        ? 'font-semibold text-indigo-600'
-                        : 'text-gray-700'
-                    }`}
-                    onClick={() => {
-                      onFilterLocation('');
-                      setShowDropdown(false);
-                    }}
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div
+                    initial={
+                      prefersReducedMotion
+                        ? false
+                        : { opacity: 0, y: -8, scale: 0.985 }
+                    }
+                    animate={
+                      prefersReducedMotion
+                        ? undefined
+                        : { opacity: 1, y: 0, scale: 1 }
+                    }
+                    exit={
+                      prefersReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: -6, scale: 0.985 }
+                    }
+                    transition={
+                      prefersReducedMotion
+                        ? { duration: 0 }
+                        : { duration: 0.2, ease: [0.2, 0.8, 0.2, 1] }
+                    }
+                    className="absolute top-12 right-0 z-20 bg-white rounded shadow-lg w-48 border border-gray-200"
                   >
-                    Todas las ubicaciones
-                  </button>
-                  {filterOptions.map((loc) => (
                     <button
-                      key={loc.value}
                       className={`w-full px-4 py-2 text-left hover:bg-indigo-50 ${
-                        selectedLocation === loc.value
+                        selectedLocation === ''
                           ? 'font-semibold text-indigo-600'
                           : 'text-gray-700'
                       }`}
                       onClick={() => {
-                        onFilterLocation(loc.value);
+                        onFilterLocation('');
                         setShowDropdown(false);
                       }}
                     >
-                      {loc.label}
+                      Todas las ubicaciones
                     </button>
-                  ))}
-                </div>
-              )}
+                    {filterOptions.map((loc) => (
+                      <button
+                        key={loc.value}
+                        className={`w-full px-4 py-2 text-left hover:bg-indigo-50 ${
+                          selectedLocation === loc.value
+                            ? 'font-semibold text-indigo-600'
+                            : 'text-gray-700'
+                        }`}
+                        onClick={() => {
+                          onFilterLocation(loc.value);
+                          setShowDropdown(false);
+                        }}
+                      >
+                        {loc.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

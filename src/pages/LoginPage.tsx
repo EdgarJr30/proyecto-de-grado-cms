@@ -8,6 +8,7 @@ import { useBranding } from '../context/BrandingContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
 import { useAuth } from '../context/AuthContext';
+import { MotionPulse } from '../components/ui/motionPrimitives';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -78,7 +79,7 @@ export default function LoginPage() {
                 className="h-14 sm:h-16 lg:h-20 w-auto mb-2"
               />
             ) : (
-              <div className="h-14 w-40 rounded bg-gray-200 animate-pulse mb-2" />
+              <MotionPulse className="h-14 w-40 rounded bg-gray-200 mb-2" />
             )}
 
             <h2 className="mt-8 text-2xl/9 font-bold tracking-tight text-gray-900">

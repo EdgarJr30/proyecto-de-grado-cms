@@ -6,6 +6,7 @@ import { syncPermissions } from '../../../rbac/syncPermissions';
 import { Plus, RefreshCw, ShieldCheck } from 'lucide-react';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import AnimatedDialog from '../../ui/AnimatedDialog';
+import { MotionPulse, MotionSpin } from '../../ui/motionPrimitives';
 
 export type Role = { id: number; name: string; description?: string | null };
 
@@ -86,9 +87,13 @@ export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
               className="cursor-pointer inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium bg-white hover:bg-gray-50 active:scale-[0.99] transition disabled:opacity-60"
               disabled={syncing}
             >
-              <RefreshCw
-                className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
-              />
+              {syncing ? (
+                <MotionSpin className="inline-flex h-4 w-4">
+                  <RefreshCw className="h-4 w-4" />
+                </MotionSpin>
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               <span className="whitespace-nowrap">
                 {syncing ? 'Sincronizando…' : 'Sincronizar permisos'}
               </span>
@@ -117,7 +122,7 @@ export default function RoleList({ searchTerm = '', onOpenUsers }: Props) {
         {loading ? (
           <div className="p-6 grid gap-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+              <MotionPulse key={i} className="h-10 bg-gray-100 rounded" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -359,7 +364,7 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
                 className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
               >
                 {submitting && (
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-b-transparent" />
+                  <MotionSpin className="inline-block h-4 w-4 rounded-full border-2 border-white border-b-transparent" />
                 )}
                 {submitting ? 'Creando…' : 'Crear rol'}
               </button>

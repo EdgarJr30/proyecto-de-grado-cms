@@ -32,6 +32,7 @@ import { inv } from '../../services/inventory/inventoryClient';
 
 import DocLinesTableDesktop from './DocLinesTableDesktop';
 import DocLineCardMobile from './DocLineCardMobile';
+import { MotionPulse } from '../../components/ui/motionPrimitives';
 
 import {
   confirmCancelDoc,
@@ -311,14 +312,14 @@ function StatusTimeline({ status }: { status: DocStatus }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-3 animate-pulse">
+    <MotionPulse className="space-y-3">
       <div className="h-4 w-32 bg-slate-200 rounded" />
       <div className="h-10 w-full bg-slate-200 rounded" />
       <div className="h-4 w-24 bg-slate-200 rounded" />
       <div className="h-10 w-full bg-slate-200 rounded" />
       <div className="h-4 w-28 bg-slate-200 rounded" />
       <div className="h-24 w-full bg-slate-200 rounded" />
-    </div>
+    </MotionPulse>
   );
 }
 
@@ -1148,11 +1149,11 @@ export default function InventoryDocEditorPage() {
                   </div>
 
                   {loading ? (
-                    <div className="p-5 animate-pulse space-y-3">
+                    <MotionPulse className="p-5 space-y-3">
                       <div className="h-10 bg-slate-200 rounded" />
                       <div className="h-10 bg-slate-200 rounded" />
                       <div className="h-10 bg-slate-200 rounded" />
-                    </div>
+                    </MotionPulse>
                   ) : !uiDoc ? (
                     <div className="p-5 text-sm text-slate-500">Cargando…</div>
                   ) : draftLines.length === 0 ? (

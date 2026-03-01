@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '../../../context/AuthContext';
 import { useUser } from '../../../context/UserContext';
 import { useCan } from '../../../rbac/PermissionsContext';
@@ -91,6 +98,7 @@ export default function UsersTable({
   selectedLocation,
   includeInactive,
 }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const checkbox = useRef<HTMLInputElement>(null);
 
   const [roles, setRoles] = useState<Role[]>([]);
@@ -601,18 +609,35 @@ export default function UsersTable({
           ) : rows.length === 0 ? (
             <div className="py-8 text-center text-gray-400">Sin usuarios.</div>
           ) : (
-            rows.map((u) => {
+            rows.map((u, index) => {
               const selected = selectedRows.includes(u);
               const roleName =
                 roles.find((r) => r.id === u.rol_id)?.name ?? '—';
 
               return (
-                <div
+                <motion.div
                   key={u.id}
                   className={cx(
                     'rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer',
                     selected && 'ring-1 ring-indigo-300'
                   )}
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 12, scale: 0.996 }
+                  }
+                  animate={
+                    prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : {
+                          duration: 0.33,
+                          ease: [0.2, 0.8, 0.2, 1],
+                          delay: 0.08 + index * 0.03,
+                        }
+                  }
                   onClick={() => setDetail(u)}
                 >
                   <div className="flex items-start gap-3">
@@ -730,7 +755,7 @@ export default function UsersTable({
                       Eliminar
                     </button>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -808,18 +833,37 @@ export default function UsersTable({
                       </td>
                     </tr>
                   ) : (
-                    rows.map((u) => {
+                    rows.map((u, index) => {
                       const selected = selectedRows.includes(u);
                       const roleName =
                         roles.find((r) => r.id === u.rol_id)?.name ?? '—';
 
                       return (
-                        <tr
+                        <motion.tr
                           key={u.id}
                           className={cx(
                             'people-table-row hover:bg-indigo-50/40 transition cursor-pointer',
                             selected && 'bg-indigo-50/70'
                           )}
+                          initial={
+                            prefersReducedMotion
+                              ? false
+                              : { opacity: 0, y: 10, scale: 0.997 }
+                          }
+                          animate={
+                            prefersReducedMotion
+                              ? undefined
+                              : { opacity: 1, y: 0, scale: 1 }
+                          }
+                          transition={
+                            prefersReducedMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 0.3,
+                                  ease: [0.2, 0.8, 0.2, 1],
+                                  delay: 0.07 + index * 0.024,
+                                }
+                          }
                           onClick={() => setDetail(u)}
                         >
                           <td
@@ -917,7 +961,7 @@ export default function UsersTable({
                               </button>
                             </div>
                           </td>
-                        </tr>
+                        </motion.tr>
                       );
                     })
                   )}

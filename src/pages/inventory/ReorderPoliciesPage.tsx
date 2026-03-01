@@ -31,6 +31,7 @@ import {
 import ReorderPolicyModal, {
   type PolicyEditorState,
 } from './ReorderPolicyModal';
+import { MotionSpin } from '../../components/ui/motionPrimitives';
 
 import {
   Filter,
@@ -602,9 +603,13 @@ export default function ReorderPoliciesPage() {
                   )}
                   type="button"
                 >
-                  <RefreshCcw
-                    className={cx('h-4 w-4', loading && 'animate-spin')}
-                  />
+                  {loading ? (
+                    <MotionSpin className="inline-flex h-4 w-4">
+                      <RefreshCcw className="h-4 w-4" />
+                    </MotionSpin>
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
                   Refrescar
                 </button>
               </div>

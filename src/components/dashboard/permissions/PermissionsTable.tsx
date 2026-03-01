@@ -4,6 +4,7 @@ import { PERMISSIONS } from '../../../rbac/permissionRegistry';
 import { Can } from '../../../rbac/PermissionsContext';
 import { syncPermissions } from '../../../rbac/syncPermissions';
 import { ChevronDown, Info, ListChecks, RefreshCw, Shield } from 'lucide-react';
+import { MotionPulse, MotionSpin } from '../../ui/motionPrimitives';
 
 type DbPerm = {
   id: string;
@@ -221,9 +222,13 @@ export default function PermissionsTable({ searchTerm = '' }: Props) {
               }}
               type="button"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
-              />
+              {syncing ? (
+                <MotionSpin className="inline-flex h-4 w-4">
+                  <RefreshCw className="h-4 w-4" />
+                </MotionSpin>
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
               <span className="whitespace-nowrap">
                 {syncing ? 'Sincronizando…' : 'Sincronizar'}
               </span>
@@ -235,9 +240,9 @@ export default function PermissionsTable({ searchTerm = '' }: Props) {
       {loading ? (
         <div className="grid gap-3">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div
+            <MotionPulse
               key={index}
-              className="h-20 rounded-2xl border border-slate-200 bg-white/70 animate-pulse"
+              className="h-20 rounded-2xl border border-slate-200 bg-white/70"
             />
           ))}
         </div>

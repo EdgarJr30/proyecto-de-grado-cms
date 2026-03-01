@@ -22,6 +22,7 @@ import { InventoryDocsHeader } from './components/InventoryDocsHeader';
 import { InventoryDocsToolbar } from './components/InventoryDocsToolbar';
 import { InventoryDocsMobileList } from './components/InventoryDocsMobileList';
 import { InventoryDocsTable } from './components/InventoryDocsTable';
+import { MotionPulse } from '../../../components/ui/motionPrimitives';
 
 function EmptyState({ loading }: { loading: boolean }) {
   return (
@@ -43,12 +44,12 @@ function EmptyState({ loading }: { loading: boolean }) {
 
 function LoadingRows() {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 animate-pulse space-y-3">
+    <MotionPulse className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3">
       <div className="h-10 bg-slate-200 rounded-xl" />
       <div className="h-10 bg-slate-200 rounded-xl" />
       <div className="h-10 bg-slate-200 rounded-xl" />
       <div className="h-10 bg-slate-200 rounded-xl" />
-    </div>
+    </MotionPulse>
   );
 }
 

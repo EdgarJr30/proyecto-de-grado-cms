@@ -1,5 +1,6 @@
 // src/components/ui/filters/FilterBar.tsx
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type {
   FilterSchema,
   FilterField,
@@ -266,6 +267,7 @@ export default function FilterBar<T extends string>({
   moduleTabs,
   showFilters = true,
 }: Props<T>) {
+  const prefersReducedMotion = useReducedMotion();
   const { values, setValue, reset, activeCount } = useFilters(schema);
 
   // ✅ Un solo estado para móvil y desktop:
@@ -348,14 +350,40 @@ export default function FilterBar<T extends string>({
   }
 
   const hasModuleTabs = Boolean(moduleTabs);
+  const fieldMotion = (index: number) =>
+    prefersReducedMotion
+      ? { duration: 0 }
+      : {
+          duration: 0.32,
+          ease: [0.2, 0.8, 0.2, 1] as [number, number, number, number],
+          delay: 0.04 + index * 0.045,
+        };
 
   return (
     <div className={`${sticky ? 'sticky top-0 z-10' : ''}`}>
-      <div className={toolbar}>
+      <motion.div
+        className={toolbar}
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8, scale: 0.997 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : { duration: 0.28, ease: [0.2, 0.8, 0.2, 1], delay: 0.04 }
+        }
+      >
         {hasModuleTabs && <div className="mb-2">{moduleTabs}</div>}
 
         {showFilters && (
-          <div className="mb-1 flex items-center gap-2 overflow-x-auto pb-1">
+          <motion.div
+            className="mb-1 flex items-center gap-2 overflow-x-auto pb-1"
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+            animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.24, ease: [0.2, 0.8, 0.2, 1], delay: 0.06 }
+            }
+          >
             <button
               type="button"
               onClick={() => setIsOpen((s) => !s)}
@@ -397,16 +425,52 @@ export default function FilterBar<T extends string>({
                 Aplicar
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* ===== Contenido completo: controlado por isOpen en todos los breakpoints ===== */}
-        {showFilters && isOpen && (
-          <div id="filters-content">
+        <AnimatePresence initial={false}>
+          {showFilters && isOpen && (
+            <motion.div
+              id="filters-content"
+              initial={
+                prefersReducedMotion
+                  ? false
+                  : { opacity: 0, y: 8, scale: 0.997 }
+              }
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : { opacity: 1, y: 0, scale: 1 }
+              }
+              exit={
+                prefersReducedMotion
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: 6, scale: 0.997 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }
+              }
+            >
             {/* fila principal */}
             <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-              {barFields.slice(0, 4).map((f: FilterField<T>) => (
-                <div key={f.key}>
+              {barFields.slice(0, 4).map((f: FilterField<T>, index) => (
+                <motion.div
+                  key={f.key}
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 8, scale: 0.998 }
+                  }
+                  animate={
+                    prefersReducedMotion
+                      ? undefined
+                      : { opacity: 1, y: 0, scale: 1 }
+                  }
+                  transition={fieldMotion(index)}
+                >
                   <FieldRenderer
                     f={f}
                     value={(values as Record<T, unknown>)[f.key]}
@@ -422,12 +486,17 @@ export default function FilterBar<T extends string>({
                       onApply(merged);
                     }}
                   />
-                </div>
+                </motion.div>
               ))}
             </div>
 
             {/* fila secundaria: presets + acciones */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <motion.div
+              className="mt-3 flex flex-wrap items-center gap-2"
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+              transition={fieldMotion(4)}
+            >
               {/* presets de fecha */}
               {dateField && (
                 <DateRangePreset
@@ -477,10 +546,15 @@ export default function FilterBar<T extends string>({
               >
                 Guardar Vista
               </button>
-            </div>
+            </motion.div>
 
             {/* chips activos */}
-            <div className="mt-3 flex flex-wrap gap-2">
+            <motion.div
+              className="mt-3 flex flex-wrap gap-2"
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+              transition={fieldMotion(5)}
+            >
               {schema.fields.map((f: FilterField<T>) => {
                 if (f.hidden) return null;
                 const v = (values as Record<T, unknown>)[f.key];
@@ -518,11 +592,16 @@ export default function FilterBar<T extends string>({
                   </span>
                 );
               })}
-            </div>
+            </motion.div>
 
             {/* vistas guardadas (pills) */}
             {views.length > 0 && (
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+              <motion.div
+                className="mt-3 flex flex-wrap items-center gap-2"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 5 }}
+                animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+                transition={fieldMotion(6)}
+              >
                 <span className="text-sm text-gray-600">Vistas:</span>
                 {views.map((v) => (
                   <span key={v.id} className={chipCls}>
@@ -541,86 +620,113 @@ export default function FilterBar<T extends string>({
                     </button>
                   </span>
                 ))}
-              </div>
+              </motion.div>
             )}
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* ===== Drawer móvil ===== */}
-        {showFilters && openDrawer && (
-          <div
-            className="fixed inset-0 z-50 md:hidden"
-            onClick={() => setOpenDrawer(false)}
-          >
-            <div className="absolute inset-0 bg-black/30" />
-            <div
-              className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
+        <AnimatePresence>
+          {showFilters && openDrawer && (
+            <motion.div
+              className="fixed inset-0 z-50 md:hidden"
+              onClick={() => setOpenDrawer(false)}
+              initial={prefersReducedMotion ? false : { opacity: 0 }}
+              animate={prefersReducedMotion ? undefined : { opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.18 }}
             >
-              <div className="mx-auto max-w-xl">
-                <div className="mb-3 h-1 w-10 rounded bg-gray-300 mx-auto" />
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <h3 className="text-base font-semibold">Filtros</h3>
-                  <button
-                    type="button"
-                    onClick={() => setOpenDrawer(false)}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                    aria-label="Cerrar"
-                    title="Cerrar"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 gap-3">
-                  {schema.fields
-                    .filter(
-                      (f: FilterField<T>) =>
-                        !f.hidden &&
-                        (f.responsive === 'drawer' || f.responsive === 'both')
-                    )
-                    .map((f: FilterField<T>) => (
-                      <div key={f.key}>
-                        <div className="mb-1 text-xs font-medium text-gray-600">
-                          {f.label}
+              <motion.div
+                className="absolute inset-0 bg-black/30"
+                initial={prefersReducedMotion ? false : { opacity: 0 }}
+                animate={prefersReducedMotion ? undefined : { opacity: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.18 }}
+              />
+              <motion.div
+                className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white p-4 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+                initial={
+                  prefersReducedMotion ? false : { opacity: 0, y: 24, scale: 0.995 }
+                }
+                animate={
+                  prefersReducedMotion
+                    ? undefined
+                    : { opacity: 1, y: 0, scale: 1 }
+                }
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0 }
+                    : { duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }
+                }
+              >
+                <div className="mx-auto max-w-xl">
+                  <div className="mb-3 h-1 w-10 rounded bg-gray-300 mx-auto" />
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold">Filtros</h3>
+                    <button
+                      type="button"
+                      onClick={() => setOpenDrawer(false)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                      aria-label="Cerrar"
+                      title="Cerrar"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3">
+                    {schema.fields
+                      .filter(
+                        (f: FilterField<T>) =>
+                          !f.hidden &&
+                          (f.responsive === 'drawer' || f.responsive === 'both')
+                      )
+                      .map((f: FilterField<T>) => (
+                        <div key={f.key}>
+                          <div className="mb-1 text-xs font-medium text-gray-600">
+                            {f.label}
+                          </div>
+                          <FieldRenderer
+                            f={f}
+                            value={(values as Record<T, unknown>)[f.key]}
+                            onChange={(v) =>
+                              setValue(f.key, v as FilterValue | undefined)
+                            }
+                            onSearchImmediate={(nextValue) => {
+                              if (!onApply) return;
+                              const merged = {
+                                ...(values as Record<T, unknown>),
+                                [f.key]: nextValue,
+                              } as Record<T, unknown>;
+                              onApply(merged);
+                            }}
+                          />
                         </div>
-                        <FieldRenderer
-                          f={f}
-                          value={(values as Record<T, unknown>)[f.key]}
-                          onChange={(v) =>
-                            setValue(f.key, v as FilterValue | undefined)
-                          }
-                          onSearchImmediate={(nextValue) => {
-                            if (!onApply) return;
-                            const merged = {
-                              ...(values as Record<T, unknown>),
-                              [f.key]: nextValue,
-                            } as Record<T, unknown>;
-                            onApply(merged);
-                          }}
-                        />
-                      </div>
-                    ))}
-                </div>
+                      ))}
+                  </div>
 
-                <div className="mt-4 flex items-center justify-end gap-2">
-                  <button className={pillBtn} onClick={reset}>
-                    Limpiar
-                  </button>
-                  <button
-                    className={primaryBtn}
-                    onClick={() => {
-                      setOpenDrawer(false);
-                      apply();
-                    }}
-                  >
-                    Aplicar
-                  </button>
+                  <div className="mt-4 flex items-center justify-end gap-2">
+                    <button className={pillBtn} onClick={reset}>
+                      Limpiar
+                    </button>
+                    <button
+                      className={primaryBtn}
+                      onClick={() => {
+                        setOpenDrawer(false);
+                        apply();
+                      }}
+                    >
+                      Aplicar
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </div>
   );
 }

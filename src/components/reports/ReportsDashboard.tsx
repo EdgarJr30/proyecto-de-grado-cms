@@ -28,6 +28,7 @@ import ReportTable from '../dashboard/reports/ReportTable';
 import type { ReportTableColumn } from '../dashboard/reports/ReportTable';
 import ReportTabs from '../dashboard/reports/ReportTabs';
 import SortableKpiGrid from '../dashboard/reports/SortableKpiGrid';
+import { MotionPulse } from '../ui/motionPrimitives';
 
 type TabId = 'executive' | 'work' | 'assets' | 'parts' | 'admin';
 type ReportCardGroupId =
@@ -309,9 +310,9 @@ function SectionLoading({ title }: { title: string }) {
   return (
     <ReportCard title={title} subtitle="Cargando datos...">
       <div className="space-y-3">
-        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
-        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
-        <div className="h-3 rounded bg-gray-200 animate-pulse dark:bg-slate-700" />
+        <MotionPulse className="h-3 rounded bg-gray-200 dark:bg-slate-700" />
+        <MotionPulse className="h-3 rounded bg-gray-200 dark:bg-slate-700" />
+        <MotionPulse className="h-3 rounded bg-gray-200 dark:bg-slate-700" />
       </div>
     </ReportCard>
   );

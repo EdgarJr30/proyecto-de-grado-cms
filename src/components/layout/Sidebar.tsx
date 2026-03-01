@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
+import { MotionPulse } from '../ui/motionPrimitives';
 import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
 import { useAuth } from '../../context/AuthContext';
@@ -164,12 +165,12 @@ function SidebarContent() {
         }`}
       >
         <div className="h-16 px-4 border-b border-gray-700 flex items-center">
-          <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
+          <MotionPulse className="h-7 w-32 rounded bg-gray-800" />
         </div>
         <div className="p-4 space-y-2">
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
-          <div className="h-9 rounded bg-gray-800 animate-pulse" />
+          <MotionPulse className="h-9 rounded bg-gray-800" />
+          <MotionPulse className="h-9 rounded bg-gray-800" />
+          <MotionPulse className="h-9 rounded bg-gray-800" />
         </div>
       </aside>
     );
@@ -209,7 +210,7 @@ function SidebarContent() {
               className={isDesktopCollapsed ? 'h-8 w-8 object-contain' : 'h-7 w-auto'}
             />
           ) : (
-            <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
+            <MotionPulse className="h-7 w-32 rounded bg-gray-800" />
           )}
 
           <button

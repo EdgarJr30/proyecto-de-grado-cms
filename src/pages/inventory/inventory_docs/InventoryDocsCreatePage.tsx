@@ -22,6 +22,7 @@ import {
   docTypeIcon,
   labelType,
 } from './components/docMeta';
+import { MotionSpin } from '../../../components/ui/motionPrimitives';
 
 type DocGuide = {
   summary: string;
@@ -223,7 +224,9 @@ export default function InventoryDocsCreatePage() {
                             <span className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white">
                               {isCreating ? (
                                 <>
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <MotionSpin className="inline-flex h-3.5 w-3.5">
+                                    <Loader2 className="h-3.5 w-3.5" />
+                                  </MotionSpin>
                                   Creando...
                                 </>
                               ) : (

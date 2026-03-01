@@ -7,6 +7,7 @@ import { showToastError } from '../../notifications';
 import { listAcceptedWorkOrders } from '../../services/inventory/inventoryRequests';
 import TicketPartsPanel from './parts/TicketPartsPanel';
 import type { TicketWoPick } from '../../types/inventory/inventoryRequests';
+import { MotionSpin } from '../../components/ui/motionPrimitives';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -123,7 +124,13 @@ export default function InventoryReservationsPage() {
                       : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
                   )}
                 >
-                  <RefreshCcw className={cx('h-4 w-4', loading && 'animate-spin')} />
+                  {loading ? (
+                    <MotionSpin className="inline-flex h-4 w-4">
+                      <RefreshCcw className="h-4 w-4" />
+                    </MotionSpin>
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
                   Actualizar OT
                 </button>
               </div>

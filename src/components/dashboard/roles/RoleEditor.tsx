@@ -6,6 +6,7 @@ import type { PermissionDef } from '../../../rbac/permissionRegistry';
 import { Can, useCan } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import { invalidateData } from '../../../lib/dataInvalidation';
+import { MotionPulse } from '../../ui/motionPrimitives';
 
 type Role = { id: number; name: string; description?: string | null };
 type RPIdRow = { permission_id: string };
@@ -134,9 +135,9 @@ export default function RoleEditor() {
   if (!role)
     return (
       <div className="space-y-3">
-        <div className="h-9 w-48 bg-gray-200 rounded animate-pulse" />
-        <div className="h-5 w-72 bg-gray-100 rounded animate-pulse" />
-        <div className="h-40 bg-gray-50 rounded animate-pulse" />
+        <MotionPulse className="h-9 w-48 bg-gray-200 rounded" />
+        <MotionPulse className="h-5 w-72 bg-gray-100 rounded" />
+        <MotionPulse className="h-40 bg-gray-50 rounded" />
       </div>
     );
 

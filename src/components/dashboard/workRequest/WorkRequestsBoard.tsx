@@ -6,6 +6,7 @@ import {
   useMemo,
   useCallback,
 } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { Ticket } from '../../../types/Ticket';
 import type { SpecialIncident } from '../../../types/SpecialIncident';
 import {
@@ -81,6 +82,7 @@ function StatusChip({ value }: { value: string }) {
 }
 
 export default function WorkRequestsBoard({ filters }: Props) {
+  const prefersReducedMotion = useReducedMotion();
   const { getLocationLabel } = useLocationCatalog({
     includeInactive: true,
     activeOnlyOptions: false,
@@ -290,9 +292,27 @@ export default function WorkRequestsBoard({ filters }: Props) {
     cond ? ' disabled:opacity-40 disabled:cursor-not-allowed' : '';
 
   return (
-    <div className="wr-board flex flex-col flex-1 min-h-0">
+    <motion.div
+      className="wr-board flex flex-col flex-1 min-h-0"
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 10, scale: 0.996 }}
+      animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.38, ease: [0.2, 0.8, 0.2, 1], delay: 0.08 }
+      }
+    >
       {/* Barra superior */}
-      <div className="wr-requests-toolbar flex items-center gap-3 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 shadow-sm">
+      <motion.div
+        className="wr-requests-toolbar flex items-center gap-3 rounded-xl border border-gray-200 bg-white/80 px-3 py-2 shadow-sm"
+        initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={
+          prefersReducedMotion
+            ? { duration: 0 }
+            : { duration: 0.32, ease: [0.2, 0.8, 0.2, 1], delay: 0.12 }
+        }
+      >
         <p className="text-sm font-medium text-gray-700">
           Solicitudes pendientes de aprobación — Página {page + 1} de{' '}
           {Math.ceil(totalCount / PAGE_SIZE) || 1}
@@ -319,7 +339,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
             Aceptar Solicitudes
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Contenido scrollable */}
       <div className="mt-2 flex-1 min-h-0">
@@ -332,18 +352,35 @@ export default function WorkRequestsBoard({ filters }: Props) {
               No hay tickets pendientes.
             </div>
           ) : (
-            ticketsToShow.map((t) => {
+            ticketsToShow.map((t, index) => {
               const imagePaths = getTicketImagePaths(t.image ?? '');
               const cover = imagePaths[0];
               const selected = selectedTicket.includes(t);
               const assigneeValue = getAssigneeFor(Number(t.id));
 
               return (
-                <div
+                <motion.div
                   key={t.id}
                   className={`wr-ticket-card rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:bg-indigo-50/30 transition ${
                     selected ? 'ring-1 ring-indigo-300' : ''
                   }`}
+                  initial={
+                    prefersReducedMotion
+                      ? false
+                      : { opacity: 0, y: 12, scale: 0.997 }
+                  }
+                  animate={
+                    prefersReducedMotion ? undefined : { opacity: 1, y: 0, scale: 1 }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : {
+                          duration: 0.34,
+                          ease: [0.2, 0.8, 0.2, 1],
+                          delay: 0.08 + index * 0.03,
+                        }
+                  }
                   onClick={() => setDetailTicket(t)}
                 >
                   <div className="flex items-start gap-3">
@@ -497,7 +534,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                       Aceptar
                     </button>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
@@ -583,19 +620,38 @@ export default function WorkRequestsBoard({ filters }: Props) {
                       </td>
                     </tr>
                   ) : (
-                    ticketsToShow.map((t) => {
+                    ticketsToShow.map((t, index) => {
                       const imagePaths = getTicketImagePaths(t.image ?? '');
                       const firstAsset = imagePaths[0];
                       const selected = selectedTicket.includes(t);
                       const assigneeValue = getAssigneeFor(Number(t.id));
 
                       return (
-                        <tr
+                        <motion.tr
                           key={t.id}
                           className={cx(
                             'wr-table-row hover:bg-indigo-50/40 transition cursor-pointer',
                             selected && 'bg-indigo-50/70'
                           )}
+                          initial={
+                            prefersReducedMotion
+                              ? false
+                              : { opacity: 0, y: 10, scale: 0.997 }
+                          }
+                          animate={
+                            prefersReducedMotion
+                              ? undefined
+                              : { opacity: 1, y: 0, scale: 1 }
+                          }
+                          transition={
+                            prefersReducedMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: 0.31,
+                                  ease: [0.2, 0.8, 0.2, 1],
+                                  delay: 0.07 + index * 0.026,
+                                }
+                          }
                           onClick={() => setDetailTicket(t)}
                         >
                           <td
@@ -768,7 +824,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
                               </button>
                             </div>
                           </td>
-                        </tr>
+                        </motion.tr>
                       );
                     })
                   )}
@@ -816,6 +872,6 @@ export default function WorkRequestsBoard({ filters }: Props) {
           }}
         />
       )}
-    </div>
+    </motion.div>
   );
 }
