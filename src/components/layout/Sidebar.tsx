@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   animate,
@@ -27,6 +27,8 @@ const SWIPE_THRESHOLD_PX = 56;
 const SWIPE_VELOCITY_THRESHOLD = 420;
 const EDGE_SWIPE_MIN_WIDTH_PX = 24;
 const EDGE_SWIPE_MAX_WIDTH_PX = 40;
+const GHOST_TAP_SUPPRESSION_MS = 320;
+const MENU_INTERACTION_LOCK_MS = 450;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -121,9 +123,12 @@ function SidebarContent() {
     getInitialDesktopCollapsedState
   );
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
+  const [isMenuInteractionLocked, setIsMenuInteractionLocked] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [edgeSwipeWidth, setEdgeSwipeWidth] = useState(EDGE_SWIPE_MIN_WIDTH_PX);
   const prefersReducedMotion = useReducedMotion();
+  const suppressMenuClickUntilRef = useRef(0);
+  const unlockMenuTimerRef = useRef<number | null>(null);
   const sidebarX = useMotionValue(-MOBILE_SIDEBAR_WIDTH_PX);
   const overlayOpacity = useTransform(
     sidebarX,
@@ -181,6 +186,14 @@ function SidebarContent() {
     return () => {
       mobileMediaQuery.removeEventListener('change', updateViewportState);
       window.removeEventListener('resize', updateViewportState);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (unlockMenuTimerRef.current !== null) {
+        window.clearTimeout(unlockMenuTimerRef.current);
+      }
     };
   }, []);
 
@@ -290,7 +303,19 @@ function SidebarContent() {
     info: PanInfo
   ) => {
     setIsDraggingSidebar(false);
-    setIsOpen(shouldOpenBySwipe(info));
+    const openedBySwipe = shouldOpenBySwipe(info);
+    if (openedBySwipe) {
+      suppressMenuClickUntilRef.current = Date.now() + GHOST_TAP_SUPPRESSION_MS;
+      setIsMenuInteractionLocked(true);
+      if (unlockMenuTimerRef.current !== null) {
+        window.clearTimeout(unlockMenuTimerRef.current);
+      }
+      unlockMenuTimerRef.current = window.setTimeout(() => {
+        setIsMenuInteractionLocked(false);
+        unlockMenuTimerRef.current = null;
+      }, MENU_INTERACTION_LOCK_MS);
+    }
+    setIsOpen(openedBySwipe);
   };
 
   const handlePanelSwipeDrag = (
@@ -377,6 +402,11 @@ function SidebarContent() {
         className={`
           fixed top-[var(--app-topbar-height)] left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
           h-[calc(100dvh-var(--app-topbar-height))] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh]
+          ${
+            isMobileViewport && (isDraggingSidebar || isMenuInteractionLocked)
+              ? 'pointer-events-none'
+              : ''
+          }
           ${isDesktopCollapsed ? 'md:w-20' : 'md:w-60'}
         `}
         drag={isMobileViewport && isOpen ? 'x' : false}
@@ -434,7 +464,14 @@ function SidebarContent() {
               <motion.div key={item.path} variants={menuItemVariants}>
                 <Link
                   to={item.path}
-                  onClick={() => setIsOpen(false)}
+                  onClick={(event) => {
+                    if (Date.now() < suppressMenuClickUntilRef.current) {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      return;
+                    }
+                    setIsOpen(false);
+                  }}
                   className={`group relative flex items-center rounded-md transition text-sm font-medium leading-5
                           [&_svg]:h-5 [&_svg]:w-5 [&_svg]:mr-0 [&_svg]:shrink-0
                           ${
