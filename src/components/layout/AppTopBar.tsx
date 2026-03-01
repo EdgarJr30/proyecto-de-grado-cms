@@ -7,6 +7,7 @@ import { cn } from '../../utils/cn';
 import UserQuickMenu from './UserQuickMenu';
 import { resolveTopBarMeta } from './topBarMeta';
 import PwaInstallTopbarButton from '../pwa/PwaInstallTopbarButton';
+import NotificationCenterMenu from './NotificationCenterMenu';
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
 
@@ -189,7 +190,10 @@ export default function AppTopBar() {
               {badge}
             </span>
           ))}
-          <PwaInstallTopbarButton />
+          <NotificationCenterMenu />
+          <div className="hidden md:block">
+            <PwaInstallTopbarButton />
+          </div>
           <button
             type="button"
             onClick={toggleTheme}
@@ -200,7 +204,7 @@ export default function AppTopBar() {
             }
             role="switch"
             aria-checked={isDark}
-            className="group relative inline-flex h-10 w-[84px] items-center rounded-full border border-slate-300/90 bg-white/80 p-1 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900/80"
+            className="group relative hidden md:inline-flex h-10 w-[84px] items-center rounded-full border border-slate-300/90 bg-white/80 p-1 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900/80"
           >
             <span
               className={cn(

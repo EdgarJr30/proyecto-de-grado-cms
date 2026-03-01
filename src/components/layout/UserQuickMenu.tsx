@@ -4,13 +4,16 @@ import {
   ChevronDown,
   CircleUserRound,
   LogOut,
+  Moon,
   PlusCircle,
   Settings,
+  Sun,
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useUser } from '../../context/UserContext';
+import { useTheme } from '../../context/ThemeContext';
 import { signOut } from '../../utils/auth';
 
 const PROFILE_PATH = '/mi-perfil';
@@ -30,6 +33,7 @@ export default function UserQuickMenu() {
   const location_id = useLocation();
   const { profile } = useUser();
   const { has, roles } = usePermissions();
+  const { isDark, toggleTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -180,6 +184,19 @@ export default function UserQuickMenu() {
                 Configuración
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 md:hidden dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {isDark ? (
+                <Moon className="h-4 w-4 text-indigo-400" />
+              ) : (
+                <Sun className="h-4 w-4 text-amber-500" />
+              )}
+              {isDark ? 'Modo oscuro activo' : 'Modo claro activo'}
+            </button>
 
             <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
 
