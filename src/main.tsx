@@ -10,8 +10,14 @@ import { SettingsProvider } from './context/SettingsContext';
 import { BrandingProvider } from './context/BrandingContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ThemedAppRoot from './components/app/ThemedAppRoot';
+import {
+  clearDeferredInstallPrompt,
+  setDeferredInstallPrompt,
+  type BeforeInstallPromptEvent,
+} from './pwa/installPromptStore';
 
 let numericInputNormalizationAttached = false;
+let pwaInstallPromptListenersAttached = false;
 
 function isNumericLikeInput(target: EventTarget | null): target is HTMLInputElement {
   if (!(target instanceof HTMLInputElement)) return false;
@@ -71,6 +77,20 @@ function setupGlobalNumericInputNormalization() {
   );
 }
 
+function setupGlobalInstallPromptCapture() {
+  if (pwaInstallPromptListenersAttached || typeof window === 'undefined') return;
+  pwaInstallPromptListenersAttached = true;
+
+  window.addEventListener('beforeinstallprompt', (event: Event) => {
+    event.preventDefault();
+    setDeferredInstallPrompt(event as BeforeInstallPromptEvent);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    clearDeferredInstallPrompt();
+  });
+}
+
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
   console.log = function () {};
@@ -81,6 +101,7 @@ if (process.env.NODE_ENV !== 'development') {
 
 console.log('🚀 Aplicación iniciada en modo:', process.env.NODE_ENV);
 setupGlobalNumericInputNormalization();
+setupGlobalInstallPromptCapture();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

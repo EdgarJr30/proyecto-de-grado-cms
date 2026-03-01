@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
 import UserQuickMenu from './UserQuickMenu';
 import { resolveTopBarMeta } from './topBarMeta';
+import PwaInstallTopbarButton from '../pwa/PwaInstallTopbarButton';
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
 
@@ -196,6 +197,7 @@ export default function AppTopBar() {
               {badge}
             </span>
           ))}
+          <PwaInstallTopbarButton />
           <button
             type="button"
             onClick={toggleTheme}

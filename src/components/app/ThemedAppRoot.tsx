@@ -2,7 +2,6 @@ import { ToastContainer } from 'react-toastify';
 import { MotionConfig } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
 import AppRouterContent from './AppRouterContent';
-import PwaInstallPrompt from '../pwa/PwaInstallPrompt';
 
 export default function ThemedAppRoot() {
   const { isDark } = useTheme();
@@ -21,7 +20,6 @@ export default function ThemedAppRoot() {
         theme={isDark ? 'dark' : 'light'}
       />
       <AppRouterContent />
-      <PwaInstallPrompt />
     </MotionConfig>
   );
 }
