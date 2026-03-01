@@ -16,6 +16,10 @@ import {
   showToastSuccess,
 } from '../../../notifications';
 import { formatDateInTimezone } from '../../../utils/formatDate';
+import {
+  DEFAULT_SECURE_PASSWORD_LENGTH,
+  generateSecurePassword,
+} from '../../../utils/passwordGenerator';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 import UserEditModal from './UserEditModal';
 import PasswordInput from '../../ui/password-input';
@@ -427,6 +431,15 @@ export default function UsersTable({
     resetCreate();
     setCreateFormVersion((prev) => prev + 1);
     setOpenCreate(true);
+  };
+
+  const handleGeneratePassword = () => {
+    try {
+      setPasswordC(generateSecurePassword());
+      setMsgCreate(null);
+    } catch {
+      showToastError('No se pudo generar una contraseña segura.');
+    }
   };
 
   async function handleCreateUser(e: React.FormEvent) {
@@ -1150,6 +1163,20 @@ export default function UsersTable({
                     onChange={(e) => setPasswordC(e.target.value)}
                     required
                   />
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500">
+                      Sugerida: {DEFAULT_SECURE_PASSWORD_LENGTH} caracteres,
+                      mayúsculas, minúsculas, números y símbolos.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleGeneratePassword}
+                      disabled={submittingCreate}
+                      className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      {passwordC ? 'Regenerar' : 'Generar segura'}
+                    </button>
+                  </div>
                 </div>
 
                 <div>
