@@ -1,6 +1,7 @@
 // src/context/AuthContext.tsx
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -28,6 +29,24 @@ function debounce<F extends (...args: unknown[]) => void>(fn: F, ms: number) {
   };
 }
 
+function getAuthErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string') return message.toLowerCase();
+  }
+  return '';
+}
+
+function isSessionMissingError(error: unknown): boolean {
+  const msg = getAuthErrorMessage(error);
+  return (
+    msg.includes('auth session missing') ||
+    msg.includes('session missing') ||
+    msg.includes('refresh token not found') ||
+    msg.includes('invalid refresh token')
+  );
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -48,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  const doRefresh = async ({ silent }: RefreshOptions = {}) => {
+  const doRefresh = useCallback(async ({ silent }: RefreshOptions = {}) => {
     const shouldBlock = !hydratedRef.current && !silent;
     if (shouldBlock) setLoading(true);
     try {
@@ -57,7 +76,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         data: { session },
         error: sErr,
       } = await supabase.auth.getSession();
-      if (sErr) console.warn('[Auth] getSession error:', sErr.message);
+      if (sErr) {
+        if (isSessionMissingError(sErr)) {
+          setIsAuthenticated(false);
+          return;
+        }
+        // Error transitorio de red/infra: conserva estado anterior.
+        console.warn('[Auth] getSession transient error:', sErr.message);
+        return;
+      }
 
       if (!session) {
         setIsAuthenticated(false);
@@ -66,9 +93,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // 2) valida que el token sea realmente usable
       const { data: userData, error: uErr } = await supabase.auth.getUser();
-      if (uErr || !userData?.user) {
-        console.warn('[Auth] invalid session → signing out');
-        await supabase.auth.signOut();
+      if (uErr) {
+        if (isSessionMissingError(uErr)) {
+          setIsAuthenticated(false);
+          return;
+        }
+        // Supabase emite SIGNED_IN en refocus; un error temporal de getUser
+        // no debe cerrar sesión ni resetear la app.
+        console.warn('[Auth] getUser transient error:', uErr.message);
+        setIsAuthenticated(true);
+        return;
+      }
+
+      if (!userData?.user) {
         setIsAuthenticated(false);
         return;
       }
@@ -80,7 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         hydratedRef.current = true;
       }
     }
-  };
+  }, []);
 
   // Debouncea los refresh “silenciosos”
   const debouncedSilentRefresh = useMemo(
@@ -88,11 +125,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       debounce(() => {
         void doRefresh({ silent: true });
       }, 300),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [doRefresh]
   );
 
-  const refresh = async (opts?: RefreshOptions) => doRefresh(opts);
+  const refresh = useCallback(
+    async (opts?: RefreshOptions) => doRefresh(opts),
+    [doRefresh]
+  );
 
   useEffect(() => {
     // Hidratación inicial (bloqueante)
@@ -100,16 +139,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Suscripción a eventos de auth
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      // Eventos “duros”: siempre refrescar (aunque bloquee en primera carga)
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-        void doRefresh();
+      if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setLoading(false);
+        hydratedRef.current = true;
         return;
       }
 
-      // Eventos “silenciosos”: ignorar si la pestaña está oculta; si no, hacer refresh SILENCIOSO con debounce
+      // SIGNED_IN puede dispararse también al refocus.
+      if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+        void doRefresh({ silent: true });
+        return;
+      }
+
+      // Eventos silenciosos: ignorar si la pestaña está oculta.
       if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (ignoreSilentEventsRef.current) {
-          // ignoramos mientras no haya foco
           return;
         }
         debouncedSilentRefresh();
@@ -120,11 +165,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     });
 
     return () => sub?.subscription.unsubscribe();
-  }, [debouncedSilentRefresh]);
+  }, [debouncedSilentRefresh, doRefresh]);
 
   const value = useMemo<AuthState>(
     () => ({ loading, isAuthenticated, refresh }),
-    [loading, isAuthenticated]
+    [loading, isAuthenticated, refresh]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -57,7 +57,13 @@ function getErrorMessage(error: unknown): string {
 }
 
 function isAuthSessionMissingError(error: unknown): boolean {
-  return getErrorMessage(error).toLowerCase().includes('auth session missing');
+  const msg = getErrorMessage(error).toLowerCase();
+  return (
+    msg.includes('auth session missing') ||
+    msg.includes('session missing') ||
+    msg.includes('invalid refresh token') ||
+    msg.includes('refresh token not found')
+  );
 }
 
 // cache en módulo (permisos)
@@ -195,6 +201,7 @@ export function PermissionsProvider({
 
   const [ready, setReady] = useState<boolean>(false);
   const lastRefreshAtRef = useRef(0);
+  const hasSessionRef = useRef(codes.length > 0 || roles.length > 0);
 
   // visibilidad de pestaña (para ignorar silenciosos sin foco)
   const ignoreSilentRef = useRef(document.visibilityState === 'hidden');
@@ -237,6 +244,7 @@ export function PermissionsProvider({
   const _refresh = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = Boolean(opts?.silent);
+      let applied = false;
       if (!silent) setReady(false);
       try {
         const {
@@ -247,9 +255,11 @@ export function PermissionsProvider({
 
         // Estado esperado en login/visitante: no hay sesión aún.
         if (!session) {
+          hasSessionRef.current = false;
           invalidatePermissionCaches();
           setLocalPerms([]);
           setLocalRoles([]);
+          applied = true;
           return;
         }
 
@@ -259,16 +269,26 @@ export function PermissionsProvider({
         ]);
         setLocalPerms(permList);
         setLocalRoles(roleList);
+        hasSessionRef.current = true;
+        applied = true;
       } catch (e) {
-        if (!isAuthSessionMissingError(e)) {
-          console.error('[Permissions] refresh error:', getErrorMessage(e));
+        if (isAuthSessionMissingError(e)) {
+          hasSessionRef.current = false;
+          invalidatePermissionCaches();
+          setLocalPerms([]);
+          setLocalRoles([]);
+          applied = true;
+        } else {
+          console.error(
+            '[Permissions] refresh transient error:',
+            getErrorMessage(e)
+          );
         }
-        invalidatePermissionCaches();
-        setLocalPerms([]);
-        setLocalRoles([]);
       } finally {
         setReady(true);
-        lastRefreshAtRef.current = Date.now();
+        if (applied) {
+          lastRefreshAtRef.current = Date.now();
+        }
       }
     },
     [setLocalPerms, setLocalRoles]
@@ -307,24 +327,27 @@ export function PermissionsProvider({
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((evt) => {
       switch (evt) {
-        case 'SIGNED_IN':
         case 'SIGNED_OUT':
           // invalida caches y refresca (hard)
           invalidatePermissionCaches();
           lastRefreshAtRef.current = 0;
-          if (evt === 'SIGNED_OUT') {
-            setLocalPerms([]);
-            setLocalRoles([]);
-            setReady(true);
-            try {
-              localStorage.removeItem(LS_PERMS);
-              localStorage.removeItem(LS_ROLES);
-            } catch {
-              /* empty */
-            }
-          } else {
-            void _refresh({ silent: false });
+          hasSessionRef.current = false;
+          setLocalPerms([]);
+          setLocalRoles([]);
+          setReady(true);
+          try {
+            localStorage.removeItem(LS_PERMS);
+            localStorage.removeItem(LS_ROLES);
+          } catch {
+            /* empty */
           }
+          break;
+        case 'SIGNED_IN':
+        case 'INITIAL_SESSION':
+          invalidatePermissionCaches();
+          lastRefreshAtRef.current = 0;
+          // SIGNED_IN también ocurre al refocus; si ya había sesión, evita bloqueo.
+          void _refresh({ silent: hasSessionRef.current });
           break;
 
         case 'USER_UPDATED':

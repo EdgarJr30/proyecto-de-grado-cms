@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   KeyRound,
   Loader2,
@@ -26,6 +26,7 @@ import { usePermissions } from '../rbac/PermissionsContext';
 import { useUser } from '../context/UserContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
+import { onDataInvalidated } from '../lib/dataInvalidation';
 import '../styles/peopleAsana.css';
 
 const PAGE_SIZE = 8;
@@ -173,35 +174,36 @@ export default function MyTicketsPage() {
   }, []);
 
   // 2) Carga tickets del usuario actual
-  useEffect(() => {
-    let active = true;
+  const loadTickets = useCallback(async () => {
+    if (!userId) {
+      setTickets([]);
+      setTicketsLoading(false);
+      return;
+    }
 
-    (async () => {
-      if (!userId) {
-        setTickets([]);
-        setTicketsLoading(false);
-        return;
-      }
-
-      setTicketsLoading(true);
-      try {
-        const rows = await getTicketsByUserId(userId);
-        if (!active) return;
-        setTickets(rows);
-      } catch (error) {
-        if (!active) return;
-        console.error(error);
-        showToastError('No se pudieron cargar tus tickets.');
-        setTickets([]);
-      } finally {
-        if (active) setTicketsLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
+    setTicketsLoading(true);
+    try {
+      const rows = await getTicketsByUserId(userId);
+      setTickets(rows);
+    } catch (error) {
+      console.error(error);
+      showToastError('No se pudieron cargar tus tickets.');
+      setTickets([]);
+    } finally {
+      setTicketsLoading(false);
+    }
   }, [userId]);
+
+  useEffect(() => {
+    void loadTickets();
+  }, [loadTickets]);
+
+  useEffect(() => {
+    return onDataInvalidated('tickets', () => {
+      if (!userId) return;
+      void loadTickets();
+    });
+  }, [loadTickets, userId]);
 
   // Rehidrata form de perfil cuando cambian los datos
   useEffect(() => {

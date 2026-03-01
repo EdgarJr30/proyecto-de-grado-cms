@@ -4,6 +4,7 @@ export type DataDomain =
   | 'branding'
   | 'locations'
   | 'permissions'
+  | 'tickets'
   | 'users';
 
 type DataInvalidationDetail = {

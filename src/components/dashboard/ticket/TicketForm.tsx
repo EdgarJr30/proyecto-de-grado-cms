@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Label } from '../../ui/label';
@@ -93,8 +93,83 @@ const makeInitialForm = (profile?: UserProfile | null): TicketFormData => {
   };
 };
 
+const TICKET_FORM_DRAFT_KEY = 'mlm:create-ticket:draft:v1';
+
+type TicketFormDraft = {
+  step: number;
+  form: Partial<TicketFormData>;
+  savedAt: number;
+};
+
+function normalizeStep(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  const safe = Math.trunc(value);
+  return Math.min(4, Math.max(1, safe));
+}
+
+function readTicketFormDraft(): TicketFormDraft | null {
+  try {
+    const raw = localStorage.getItem(TICKET_FORM_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<TicketFormDraft>;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.form || typeof parsed.form !== 'object') return null;
+    return {
+      step: normalizeStep(Number(parsed.step ?? 1)),
+      form: parsed.form,
+      savedAt:
+        typeof parsed.savedAt === 'number' ? parsed.savedAt : Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistTicketFormDraft(payload: TicketFormDraft) {
+  try {
+    localStorage.setItem(TICKET_FORM_DRAFT_KEY, JSON.stringify(payload));
+  } catch {
+    // no-op
+  }
+}
+
+function clearTicketFormDraft() {
+  try {
+    localStorage.removeItem(TICKET_FORM_DRAFT_KEY);
+  } catch {
+    // no-op
+  }
+}
+
+function mergeDraftWithProfile(
+  draftForm: Partial<TicketFormData>,
+  profile?: UserProfile | null
+): TicketFormData {
+  const base = makeInitialForm(profile);
+  const priority =
+    draftForm.priority === 'Baja' ||
+    draftForm.priority === 'Media' ||
+    draftForm.priority === 'Alta'
+      ? draftForm.priority
+      : base.priority;
+
+  return {
+    ...base,
+    ...draftForm,
+    requester: base.requester,
+    email: base.email,
+    priority,
+    image: '',
+    created_at:
+      typeof draftForm.created_at === 'string' && draftForm.created_at.trim()
+        ? draftForm.created_at
+        : base.created_at,
+  };
+}
+
 export default function TicketForm() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const draftReadyRef = useRef(false);
   // Lazy init: arranca sin perfil y luego se rehidrata al cargarlo
   const [form, setForm] = useState<TicketFormData>(() => makeInitialForm(null));
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -285,6 +360,8 @@ export default function TicketForm() {
         `Tu ticket "${ticketTitle}" ha sido registrado con éxito.`
       );
 
+      clearTicketFormDraft();
+
       if (alertResponse.isConfirmed) {
         // Usuario eligió "Crear otro ticket": reset usando el perfil cacheado
         setForm(makeInitialForm(profile));
@@ -348,8 +425,18 @@ export default function TicketForm() {
     (async () => {
       const p = await getCurrentUserProfile();
       if (!active) return;
-      setProfile(p ?? null);
-      setForm(makeInitialForm(p ?? null));
+      const nextProfile = p ?? null;
+      setProfile(nextProfile);
+
+      const draft = readTicketFormDraft();
+      if (draft) {
+        setForm(mergeDraftWithProfile(draft.form, nextProfile));
+        setStep(normalizeStep(draft.step));
+      } else {
+        setForm(makeInitialForm(nextProfile));
+        setStep(1);
+      }
+      draftReadyRef.current = true;
 
       // Cargar Special Incidents (solo activas)
       try {
@@ -372,6 +459,15 @@ export default function TicketForm() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!draftReadyRef.current) return;
+    persistTicketFormDraft({
+      step,
+      form,
+      savedAt: Date.now(),
+    });
+  }, [form, step]);
 
   return (
     <div className="w-full">

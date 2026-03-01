@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
+import { onDataInvalidated } from '../../../lib/dataInvalidation';
 import EditTicketModal from './EditWorkOrdersModal';
 import {
   updateTicket,
@@ -498,6 +499,14 @@ export default function WorkOrdersBoard({
         // noop
       }
     };
+  }, [scheduleCountsRefresh, scheduleBoardRefresh]);
+
+  useEffect(() => {
+    return onDataInvalidated('tickets', () => {
+      if (document.visibilityState === 'hidden') return;
+      scheduleCountsRefresh();
+      scheduleBoardRefresh();
+    });
   }, [scheduleCountsRefresh, scheduleBoardRefresh]);
 
   useEffect(() => {

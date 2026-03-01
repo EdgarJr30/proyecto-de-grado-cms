@@ -30,6 +30,7 @@ import type { Assignee } from '../../../types/Assignee';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import WorkRequestsDetailModal from './WorkRequestsDetailModal';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
+import { onDataInvalidated } from '../../../lib/dataInvalidation';
 
 interface Props {
   filters: FilterState<WorkRequestsFilterKey>;
@@ -96,6 +97,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
     Record<number, SpecialIncident>
   >({});
+  const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
   const canFullWR = useCan('work_requests:full_access');
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -213,7 +215,7 @@ export default function WorkRequestsBoard({ filters }: Props) {
     }
   }
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const { data, count } = await getTicketsByFiltersPaginated(
       filters,
       page,
@@ -223,17 +225,19 @@ export default function WorkRequestsBoard({ filters }: Props) {
     setSelectedTicket([]);
     setTotalCount(count);
 
-    const next: Record<number, number | ''> = {};
-    for (const t of data) {
-      const idNum = Number(t.id);
-      const current = assigneesMap[idNum];
-      next[idNum] =
-        typeof current !== 'undefined'
-          ? current
-          : ((t as Ticket).assignee_id ?? '');
-    }
-    setAssigneesMap(next);
-  }
+    setAssigneesMap((prev) => {
+      const next: Record<number, number | ''> = {};
+      for (const t of data) {
+        const idNum = Number(t.id);
+        const current = prev[idNum];
+        next[idNum] =
+          typeof current !== 'undefined'
+            ? current
+            : ((t as Ticket).assignee_id ?? '');
+      }
+      return next;
+    });
+  }, [filters, page]);
 
   type TicketWithSpecialIncident = Ticket & {
     special_incident_id?: number | null;
@@ -252,14 +256,20 @@ export default function WorkRequestsBoard({ filters }: Props) {
 
   useEffect(() => {
     setSelectedTicket([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, JSON.stringify(filters)]);
+  }, [page, filtersKey]);
 
   useEffect(() => {
     setIsLoading(true);
     void reload().finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, JSON.stringify(filters)]);
+  }, [reload]);
+
+  useEffect(() => {
+    return onDataInvalidated('tickets', () => {
+      if (document.visibilityState === 'hidden') return;
+      setIsLoading(true);
+      void reload().finally(() => setIsLoading(false));
+    });
+  }, [reload]);
 
   useEffect(() => {
     let cancelled = false;

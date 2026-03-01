@@ -19,6 +19,7 @@ import {
 } from '../../../services/ticketService';
 import AssigneeBadge from '../../common/AssigneeBadge';
 import { supabase } from '../../../lib/supabaseClient';
+import { onDataInvalidated } from '../../../lib/dataInvalidation';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { showToastError } from '../../../notifications/toast';
@@ -281,6 +282,13 @@ export default function WorkOrdersList({
   useEffect(() => {
     void reload(page);
   }, [page, fkey, reload]);
+
+  useEffect(() => {
+    return onDataInvalidated('tickets', () => {
+      if (document.visibilityState === 'hidden') return;
+      void reload(page);
+    });
+  }, [page, reload]);
 
   useEffect(() => {
     setManualOrderByStatus((prev) => normalizeManualOrderWithRows(prev, rows));

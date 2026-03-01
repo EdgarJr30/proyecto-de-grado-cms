@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { invalidateData } from '../lib/dataInvalidation';
 import type { Ticket, WorkOrder } from '../types/Ticket';
 import type { FilterState } from '../types/filters';
 import type { WorkRequestsFilterKey } from '../features/tickets/workRequestsFilters';
@@ -61,6 +62,10 @@ function parseLocationFilter(value: unknown): number | null {
   return null;
 }
 
+function invalidateTicketsData() {
+  invalidateData('tickets');
+}
+
 export async function createTicket(
   ticket: Omit<
     Ticket,
@@ -91,6 +96,7 @@ export async function createTicket(
     .single();
 
   if (error) throw new Error(error.message);
+  invalidateTicketsData();
   return data;
 }
 
@@ -124,6 +130,7 @@ export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
   if (error) {
     throw new Error(`Error al actualizar el ticket: ${error.message}`);
   }
+  invalidateTicketsData();
 }
 
 const WORK_ORDER_STATUS_SET = new Set<Ticket['status']>([
@@ -165,6 +172,8 @@ export async function moveWorkOrderStatus(
       'No se pudo mover la orden (no existe, está archivada o no tienes permiso).'
     );
   }
+
+  invalidateTicketsData();
 }
 
 export async function getTicketsByUserId(userId: string): Promise<Ticket[]> {
@@ -333,6 +342,7 @@ export async function acceptTickets(input: AcceptTicketsInput): Promise<void> {
         .eq('is_accepted', false);
 
       if (error) throw new Error(error.message);
+      invalidateTicketsData();
     }
     return;
   }
@@ -380,6 +390,8 @@ export async function acceptTickets(input: AcceptTicketsInput): Promise<void> {
       )} (no existen, ya estaban aceptados o no tienes permiso).`
     );
   }
+
+  invalidateTicketsData();
 }
 
 /** RPC de conteos (sin cambios) */
@@ -687,6 +699,7 @@ export async function archiveTicket(id: number): Promise<void> {
     .eq('is_archived', false);
 
   if (error) throw new Error(`No se pudo archivar: ${error.message}`);
+  invalidateTicketsData();
 }
 
 export async function unarchiveTicket(id: number): Promise<void> {
@@ -697,6 +710,7 @@ export async function unarchiveTicket(id: number): Promise<void> {
     .eq('is_archived', true);
 
   if (error) throw new Error(`No se pudo desarchivar: ${error.message}`);
+  invalidateTicketsData();
 }
 
 export async function acceptWorkOrderWithPrimary(
@@ -708,6 +722,7 @@ export async function acceptWorkOrderWithPrimary(
     p_primary_assignee_id: primaryAssigneeId,
   });
   if (error) throw new Error(error.message);
+  invalidateTicketsData();
 }
 
 export async function setSecondaryAssignees(
@@ -719,4 +734,5 @@ export async function setSecondaryAssignees(
     p_secondary_ids: secondaryIds.length ? secondaryIds : null,
   });
   if (error) throw new Error(error.message);
+  invalidateTicketsData();
 }

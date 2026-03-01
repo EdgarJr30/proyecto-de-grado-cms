@@ -1,5 +1,6 @@
 // src/context/UserContext.tsx
 import React, {
+  useCallback,
   createContext,
   useContext,
   useEffect,
@@ -50,34 +51,37 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  const refresh = async (opts: RefreshOptions = {}) => {
-    const { silent = false } = opts;
-    const shouldBlock = !hydratedRef.current && !silent;
+  const refresh = useCallback(
+    async (opts: RefreshOptions = {}) => {
+      const { silent = false } = opts;
+      const shouldBlock = !hydratedRef.current && !silent;
 
-    if (shouldBlock) setLoading(true);
-    setError(null);
+      if (shouldBlock) setLoading(true);
+      setError(null);
 
-    try {
-      if (!isAuthenticated) {
-        setProfile(null);
-        return;
+      try {
+        if (!isAuthenticated) {
+          setProfile(null);
+          return;
+        }
+        const p = await getCurrentUserProfile();
+        setProfile(p);
+      } catch (e: unknown) {
+        const msg =
+          e instanceof Error
+            ? e.message
+            : 'Error inesperado obteniendo el perfil';
+        setError(msg);
+        console.error(msg);
+      } finally {
+        if (shouldBlock) {
+          setLoading(false);
+          hydratedRef.current = true;
+        }
       }
-      const p = await getCurrentUserProfile();
-      setProfile(p);
-    } catch (e: unknown) {
-      const msg =
-        e instanceof Error
-          ? e.message
-          : 'Error inesperado obteniendo el perfil';
-      setError(msg);
-      console.error(msg);
-    } finally {
-      if (shouldBlock) {
-        setLoading(false);
-        hydratedRef.current = true;
-      }
-    }
-  };
+    },
+    [isAuthenticated]
+  );
 
   useEffect(() => {
     // Hidratación inicial
@@ -85,14 +89,19 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
 
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       switch (event) {
-        case 'SIGNED_IN':
         case 'SIGNED_OUT':
-          // Eventos "duros" -> refresco normal
-          void refresh();
+          setProfile(null);
+          setLoading(false);
+          hydratedRef.current = true;
+          break;
+        case 'SIGNED_IN':
+        case 'INITIAL_SESSION':
+          // SIGNED_IN puede dispararse al recuperar foco; evita bloquear UI.
+          void refresh({ silent: true });
           break;
         case 'USER_UPDATED':
         case 'TOKEN_REFRESHED':
-          // 👇 Solo refresca de forma silenciosa si la pestaña está visible
+          // Solo refresca de forma silenciosa si la pestaña está visible.
           if (!ignoreSilentRef.current) {
             void refresh({ silent: true });
           }
@@ -116,31 +125,34 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
-  const update = async (patch: UserProfilePatch) => {
-    if (!isAuthenticated) {
-      return { ok: false, error: 'No hay sesión activa' };
-    }
-
-    const prev = profile;
-    try {
-      if (prev) setProfile({ ...prev, ...patch });
-      const updated = await updateCurrentUserProfile(patch);
-      if (!updated) {
-        if (prev) setProfile(prev);
-        return { ok: false, error: 'No se pudo actualizar el perfil' };
+  const update = useCallback(
+    async (patch: UserProfilePatch) => {
+      if (!isAuthenticated) {
+        return { ok: false, error: 'No hay sesión activa' };
       }
-      setProfile(updated);
-      return { ok: true };
-    } catch (e: unknown) {
-      if (prev) setProfile(prev);
-      const msg =
-        e instanceof Error
-          ? e.message
-          : 'Error inesperado actualizando el perfil';
-      setError(msg);
-      return { ok: false, error: msg };
-    }
-  };
+
+      const prev = profile;
+      try {
+        if (prev) setProfile({ ...prev, ...patch });
+        const updated = await updateCurrentUserProfile(patch);
+        if (!updated) {
+          if (prev) setProfile(prev);
+          return { ok: false, error: 'No se pudo actualizar el perfil' };
+        }
+        setProfile(updated);
+        return { ok: true };
+      } catch (e: unknown) {
+        if (prev) setProfile(prev);
+        const msg =
+          e instanceof Error
+            ? e.message
+            : 'Error inesperado actualizando el perfil';
+        setError(msg);
+        return { ok: false, error: msg };
+      }
+    },
+    [isAuthenticated, profile]
+  );
 
   const value = useMemo<UserState>(
     () => ({
@@ -150,7 +162,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({
       refresh,
       update,
     }),
-    [loading, error, profile]
+    [loading, error, profile, refresh, update]
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
