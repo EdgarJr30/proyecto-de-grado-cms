@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import { MotionPulse } from '../ui/motionPrimitives';
 import DefaultSidebarLogo from '../../assets/logo.png';
@@ -16,8 +22,24 @@ import { useHasPersistentSidebar } from './SidebarLayoutContext';
 const SIDEBAR_FONT_FAMILY =
   "'Manrope', 'Nunito Sans', 'Segoe UI', sans-serif";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
-const SWIPE_OPEN_THRESHOLD_PX = 64;
-const SWIPE_OPEN_VELOCITY = 550;
+const MOBILE_SIDEBAR_WIDTH_PX = 240;
+const SWIPE_THRESHOLD_PX = 56;
+const SWIPE_VELOCITY_THRESHOLD = 420;
+const EDGE_SWIPE_MIN_WIDTH_PX = 24;
+const EDGE_SWIPE_MAX_WIDTH_PX = 40;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function resolveEdgeSwipeWidth(viewportWidth: number) {
+  // Escala por tamaño de pantalla para mantener gesto cómodo sin activaciones accidentales.
+  return clamp(
+    Math.round(viewportWidth * 0.07),
+    EDGE_SWIPE_MIN_WIDTH_PX,
+    EDGE_SWIPE_MAX_WIDTH_PX
+  );
+}
 
 function getInitialDesktopCollapsedState() {
   if (typeof window === 'undefined') return false;
@@ -98,9 +120,16 @@ function SidebarContent() {
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(
     getInitialDesktopCollapsedState
   );
-  const [isSwipingFromEdge, setIsSwipingFromEdge] = useState(false);
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [edgeSwipeWidth, setEdgeSwipeWidth] = useState(EDGE_SWIPE_MIN_WIDTH_PX);
   const prefersReducedMotion = useReducedMotion();
+  const sidebarX = useMotionValue(-MOBILE_SIDEBAR_WIDTH_PX);
+  const overlayOpacity = useTransform(
+    sidebarX,
+    [-MOBILE_SIDEBAR_WIDTH_PX, 0],
+    [0, 0.4]
+  );
 
   useEffect(() => {
     const handleOpenSidebar = () => setIsOpen(true);
@@ -140,15 +169,50 @@ function SidebarContent() {
     if (typeof window === 'undefined') return;
 
     const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
-    const updateViewportState = () => setIsMobileViewport(mobileMediaQuery.matches);
+    const updateViewportState = () => {
+      setIsMobileViewport(mobileMediaQuery.matches);
+      setEdgeSwipeWidth(resolveEdgeSwipeWidth(window.innerWidth));
+    };
 
     updateViewportState();
     mobileMediaQuery.addEventListener('change', updateViewportState);
+    window.addEventListener('resize', updateViewportState);
 
     return () => {
       mobileMediaQuery.removeEventListener('change', updateViewportState);
+      window.removeEventListener('resize', updateViewportState);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isMobileViewport) {
+      sidebarX.set(0);
+      return;
+    }
+
+    if (isDraggingSidebar) return;
+
+    const controls = animate(
+      sidebarX,
+      isOpen ? 0 : -MOBILE_SIDEBAR_WIDTH_PX,
+      prefersReducedMotion
+        ? { duration: 0 }
+        : {
+            type: 'spring',
+            stiffness: 480,
+            damping: 44,
+            mass: 0.34,
+          }
+    );
+
+    return () => controls.stop();
+  }, [
+    isDraggingSidebar,
+    isMobileViewport,
+    isOpen,
+    prefersReducedMotion,
+    sidebarX,
+  ]);
 
   // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
   const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
@@ -198,48 +262,51 @@ function SidebarContent() {
     visible: { opacity: 1, x: 0 },
   };
 
-  const handleEdgeSwipeEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const travelledDistance = Math.max(0, info.offset.x);
-    const travelledVelocity = info.velocity.x;
+  const shouldOpenBySwipe = (info: PanInfo) =>
+    info.offset.x >= SWIPE_THRESHOLD_PX ||
+    info.velocity.x >= SWIPE_VELOCITY_THRESHOLD;
 
-    if (
-      travelledDistance >= SWIPE_OPEN_THRESHOLD_PX ||
-      travelledVelocity >= SWIPE_OPEN_VELOCITY
-    ) {
-      setIsOpen(true);
-    }
-
-    setIsSwipingFromEdge(false);
+  const shouldCloseBySwipe = (info: PanInfo) => {
+    return (
+      info.offset.x <= -SWIPE_THRESHOLD_PX ||
+      info.velocity.x <= -SWIPE_VELOCITY_THRESHOLD
+    );
   };
 
-  const handleSidebarSwipeEnd = (
+  const handleEdgeSwipeDrag = (
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo
   ) => {
-    const travelledDistance = Math.min(0, info.offset.x);
-    const travelledVelocity = info.velocity.x;
-
-    if (
-      travelledDistance <= -SWIPE_OPEN_THRESHOLD_PX ||
-      travelledVelocity <= -SWIPE_OPEN_VELOCITY
-    ) {
-      setIsOpen(false);
-    }
+    const nextX = clamp(
+      -MOBILE_SIDEBAR_WIDTH_PX + Math.max(0, info.offset.x),
+      -MOBILE_SIDEBAR_WIDTH_PX,
+      0
+    );
+    sidebarX.set(nextX);
   };
 
-  const handleOverlaySwipeEnd = (
+  const handleEdgeSwipeEnd = (
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo
   ) => {
-    const travelledDistance = Math.min(0, info.offset.x);
-    const travelledVelocity = info.velocity.x;
+    setIsDraggingSidebar(false);
+    setIsOpen(shouldOpenBySwipe(info));
+  };
 
-    if (
-      travelledDistance <= -SWIPE_OPEN_THRESHOLD_PX ||
-      travelledVelocity <= -SWIPE_OPEN_VELOCITY
-    ) {
-      setIsOpen(false);
-    }
+  const handlePanelSwipeDrag = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
+    const nextX = clamp(info.offset.x, -MOBILE_SIDEBAR_WIDTH_PX, 0);
+    sidebarX.set(nextX);
+  };
+
+  const handlePanelSwipeEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
+    setIsDraggingSidebar(false);
+    setIsOpen(!shouldCloseBySwipe(info));
   };
 
   // Mientras carga auth o permisos → skeleton
@@ -267,60 +334,60 @@ function SidebarContent() {
     <>
       {/* Overlay (móvil) */}
       <motion.div
-        className={`fixed inset-x-0 bottom-0 top-[var(--app-topbar-height)] bg-black/40 z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        } md:hidden`}
+        className={`fixed inset-0 z-40 bg-black/40 md:hidden ${
+          isOpen || isDraggingSidebar ? '' : 'pointer-events-none'
+        }`}
+        style={isMobileViewport ? { opacity: overlayOpacity } : undefined}
         onClick={() => setIsOpen(false)}
         drag={isMobileViewport && isOpen ? 'x' : false}
         dragDirectionLock
-        dragConstraints={{ left: -140, right: 0 }}
-        dragElastic={0.08}
+        dragConstraints={{ left: -MOBILE_SIDEBAR_WIDTH_PX, right: 0 }}
+        dragElastic={0.03}
         dragMomentum={false}
         dragSnapToOrigin
-        onDragEnd={handleOverlaySwipeEnd}
+        onDragStart={() => setIsDraggingSidebar(true)}
+        onDrag={handlePanelSwipeDrag}
+        onDragEnd={handlePanelSwipeEnd}
       />
 
       {/* Zona de swipe desde el borde izquierdo (móvil) */}
       <motion.div
         aria-hidden
-        className={`fixed left-0 top-[var(--app-topbar-height)] z-[45] h-[calc(100dvh-var(--app-topbar-height))] w-5 touch-pan-y md:hidden ${
+        className={`fixed top-[var(--app-topbar-height)] z-[45] h-[calc(100dvh-var(--app-topbar-height))] touch-pan-y md:hidden ${
           isOpen ? 'pointer-events-none' : ''
         }`}
+        style={{ left: 0, width: edgeSwipeWidth }}
         drag="x"
         dragDirectionLock
-        dragConstraints={{ left: 0, right: 120 }}
-        dragElastic={0.08}
+        dragConstraints={{ left: 0, right: MOBILE_SIDEBAR_WIDTH_PX }}
+        dragElastic={0.03}
+        dragMomentum={false}
         dragSnapToOrigin
-        onDragStart={() => setIsSwipingFromEdge(true)}
+        onDragStart={() => setIsDraggingSidebar(true)}
+        onDrag={handleEdgeSwipeDrag}
         onDragEnd={handleEdgeSwipeEnd}
-      >
-        <motion.div
-          className="absolute left-0 top-1/2 h-24 w-1.5 -translate-y-1/2 rounded-r-full bg-blue-400/35"
-          animate={{
-            opacity: isSwipingFromEdge ? 0.8 : 0.35,
-            scaleY: isSwipingFromEdge ? 1.08 : 1,
-          }}
-          transition={{ duration: 0.18, ease: 'easeOut' }}
-        />
-      </motion.div>
+      />
 
       {/* Sidebar */}
       <motion.aside
-        style={{ fontFamily: SIDEBAR_FONT_FAMILY }}
+        style={{
+          fontFamily: SIDEBAR_FONT_FAMILY,
+          x: isMobileViewport ? sidebarX : undefined,
+        }}
         className={`
           fixed top-[var(--app-topbar-height)] left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
-          transform transition-[transform,width] duration-300
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           h-[calc(100dvh-var(--app-topbar-height))] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh]
           ${isDesktopCollapsed ? 'md:w-20' : 'md:w-60'}
         `}
         drag={isMobileViewport && isOpen ? 'x' : false}
         dragDirectionLock
-        dragConstraints={{ left: -140, right: 0 }}
-        dragElastic={0.08}
+        dragConstraints={{ left: -MOBILE_SIDEBAR_WIDTH_PX, right: 0 }}
+        dragElastic={0.03}
         dragMomentum={false}
         dragSnapToOrigin
-        onDragEnd={handleSidebarSwipeEnd}
+        onDragStart={() => setIsDraggingSidebar(true)}
+        onDrag={handlePanelSwipeDrag}
+        onDragEnd={handlePanelSwipeEnd}
       >
         {/* Header + logo */}
         <div
