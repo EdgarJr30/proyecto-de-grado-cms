@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useUser } from '../../../context/UserContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
-import { updateUser, type DbUser } from '../../../services/userAdminService';
+import {
+  getUserIdentityById,
+  getUserPasswordResetAuditById,
+  resetUserPassword,
+  updateUser,
+  type DbUser,
+} from '../../../services/userAdminService';
+import PasswordInput from '../../ui/password-input';
+import { generateSecurePassword } from '../../../utils/passwordGenerator';
+import { formatDateInTimezone } from '../../../utils/formatDate';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 
 interface Role {
@@ -85,10 +95,34 @@ export default function UserEditModal({
   canFull,
   canManageRoles,
 }: Props) {
+  const { profile } = useUser();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState('');
+  const [lastResetAt, setLastResetAt] = useState<string | null>(null);
+  const [lastResetById, setLastResetById] = useState<string | null>(null);
+  const [lastResetByName, setLastResetByName] = useState<string | null>(null);
+  const [lastResetByEmail, setLastResetByEmail] = useState<string | null>(null);
+  const [updatedAtInfo, setUpdatedAtInfo] = useState<string | null>(null);
+  const [loadingResetActor, setLoadingResetActor] = useState(false);
 
   const isEditing = useMemo(() => Boolean(form.id), [form.id]);
+  const resetActorLabel = useMemo(() => {
+    if (loadingResetActor) return 'Cargando…';
+    const fullName = (lastResetByName ?? '').trim();
+    const email = (lastResetByEmail ?? '').trim();
+    if (fullName && email) return `${fullName} (${email})`;
+    if (fullName) return fullName;
+    if (email) return email;
+    if (lastResetById) return lastResetById;
+    return '—';
+  }, [
+    loadingResetActor,
+    lastResetByName,
+    lastResetByEmail,
+    lastResetById,
+  ]);
 
   // Cargar usuario en el formulario cuando abra
   useEffect(() => {
@@ -106,7 +140,38 @@ export default function UserEditModal({
       rol_id: user.rol_id ?? '',
       is_active: user.is_active,
     });
+    setGeneratedPassword('');
+    setLastResetAt(user.password_reset_at ?? null);
+    setLastResetById(user.password_reset_by ?? null);
+    setLastResetByName(null);
+    setLastResetByEmail(null);
+    setUpdatedAtInfo(user.updated_at ?? null);
   }, [open, user]);
+
+  useEffect(() => {
+    if (!open || !lastResetById) return;
+    if (lastResetByName || lastResetByEmail) return;
+
+    let active = true;
+    setLoadingResetActor(true);
+    (async () => {
+      try {
+        const actor = await getUserIdentityById(lastResetById);
+        if (!active || !actor) return;
+        const fullName = `${actor.name ?? ''} ${actor.last_name ?? ''}`.trim();
+        setLastResetByName(fullName || null);
+        setLastResetByEmail(actor.email ?? null);
+      } catch {
+        if (!active) return;
+      } finally {
+        if (active) setLoadingResetActor(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [open, lastResetById, lastResetByName, lastResetByEmail]);
 
   useEffect(() => {
     if (!open) return;
@@ -157,6 +222,86 @@ export default function UserEditModal({
       showToastError(extractErrorMessage(err));
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!canFull) {
+      showToastError('No tienes permiso para resetear contraseñas.');
+      return;
+    }
+    if (!form.id) {
+      showToastError('No se pudo determinar el usuario.');
+      return;
+    }
+
+    let nextPassword = '';
+    try {
+      nextPassword = generateSecurePassword();
+    } catch {
+      showToastError('No se pudo generar una contraseña segura.');
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      await resetUserPassword(form.id, nextPassword);
+      setGeneratedPassword(nextPassword);
+      const persistedAudit = await getUserPasswordResetAuditById(form.id);
+      if (persistedAudit) {
+        setLastResetAt(persistedAudit.password_reset_at ?? null);
+        setUpdatedAtInfo(persistedAudit.updated_at ?? null);
+        setLastResetById(persistedAudit.password_reset_by ?? null);
+        setLastResetByName(null);
+        setLastResetByEmail(null);
+      } else {
+        // Fallback de compatibilidad para BD sin columnas nuevas.
+        const nowIso = new Date().toISOString();
+        const actorName = `${profile?.name ?? ''} ${profile?.last_name ?? ''}`.trim();
+        setLastResetAt(nowIso);
+        setUpdatedAtInfo(nowIso);
+        setLastResetById(profile?.id ?? null);
+        setLastResetByName(actorName || null);
+        setLastResetByEmail(profile?.email ?? null);
+      }
+      showToastSuccess('Contraseña reseteada y generada correctamente.');
+      await onSaved();
+    } catch (err: unknown) {
+      showToastError(extractErrorMessage(err));
+    } finally {
+      setResettingPassword(false);
+    }
+  }
+
+  async function handleCopyGeneratedPassword() {
+    if (!generatedPassword) return;
+
+    try {
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.clipboard &&
+        navigator.clipboard.writeText
+      ) {
+        await navigator.clipboard.writeText(generatedPassword);
+      } else if (typeof document !== 'undefined') {
+        const textarea = document.createElement('textarea');
+        textarea.value = generatedPassword;
+        textarea.setAttribute('readonly', 'true');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!ok) throw new Error('No se pudo copiar');
+      } else {
+        throw new Error('No se pudo copiar');
+      }
+
+      showToastSuccess('Contraseña copiada al portapapeles.');
+    } catch {
+      showToastError('No se pudo copiar la contraseña.');
     }
   }
 
@@ -296,6 +441,86 @@ export default function UserEditModal({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium text-indigo-900">
+                    Resetear contraseña
+                  </p>
+                  <p className="mt-1 text-xs text-indigo-800">
+                    Genera una contraseña temporal sin pedir la contraseña
+                    anterior.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleResetPassword()}
+                  disabled={resettingPassword || submitting || !canFull || !form.id}
+                  className="rounded-md bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+                  title={
+                    !canFull
+                      ? 'No tienes permiso para resetear contraseñas'
+                      : undefined
+                  }
+                >
+                  {resettingPassword ? 'Reseteando…' : 'Resetear y generar'}
+                </button>
+              </div>
+
+              {generatedPassword && (
+                <div className="mt-3">
+                  <label className="block text-xs font-medium text-indigo-900">
+                    Nueva contraseña temporal
+                  </label>
+                  <PasswordInput
+                    value={generatedPassword}
+                    readOnly
+                    autoComplete="off"
+                    className="mt-1 block w-full rounded-md border-indigo-200 bg-white text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void handleCopyGeneratedPassword()}
+                      className="rounded-md border border-indigo-200 bg-white px-2.5 py-1.5 text-xs font-medium text-indigo-800 hover:bg-indigo-50"
+                    >
+                      Copiar contraseña
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 grid gap-1 text-xs text-indigo-900">
+                <p>
+                  Último reseteo:{' '}
+                  <strong>
+                    {lastResetAt
+                      ? formatDateInTimezone(
+                          lastResetAt,
+                          'America/Santo_Domingo',
+                          'display'
+                        )
+                      : 'Nunca'}
+                  </strong>
+                </p>
+                <p>
+                  Reseteado por: <strong>{resetActorLabel}</strong>
+                </p>
+                <p>
+                  Última actualización:{' '}
+                  <strong>
+                    {updatedAtInfo
+                      ? formatDateInTimezone(
+                          updatedAtInfo,
+                          'America/Santo_Domingo',
+                          'display'
+                        )
+                      : '—'}
+                  </strong>
+                </p>
+              </div>
             </div>
 
             {/* Estado solo lectura */}

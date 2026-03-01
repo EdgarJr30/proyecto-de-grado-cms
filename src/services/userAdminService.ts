@@ -11,6 +11,9 @@ export type DbUser = {
   rol_id: number | null;
   created_at: string;
   is_active: boolean;
+  updated_at?: string | null;
+  password_reset_at?: string | null;
+  password_reset_by?: string | null;
 };
 
 type Paginated = {
@@ -23,14 +26,23 @@ type RpcErrorLike = {
   message?: string;
 } | null;
 
+const USERS_SELECT_BASE =
+  'id,email,name,last_name,location_id,rol_id,is_active,created_at';
+const USERS_SELECT_WITH_PASSWORD_AUDIT = `${USERS_SELECT_BASE},updated_at,password_reset_at,password_reset_by`;
+
 function isMissingRpcError(error: RpcErrorLike): boolean {
+  if (!error) return false;
+  // PGRST202 indica que PostgREST no encuentra la RPC en el schema cache.
+  // Evitamos heurísticas por texto para no ocultar errores reales dentro de la función.
+  return error.code === 'PGRST202';
+}
+
+function isMissingPasswordAuditColumnsError(error: RpcErrorLike): boolean {
   if (!error) return false;
   const msg = (error.message ?? '').toLowerCase();
   return (
-    error.code === 'PGRST202' ||
-    error.code === '42883' ||
-    msg.includes('could not find the function') ||
-    msg.includes('does not exist')
+    error.code === '42703' &&
+    (msg.includes('password_reset_at') || msg.includes('password_reset_by'))
   );
 }
 
@@ -46,28 +58,58 @@ export async function getUsersPaginated(opts: {
 }): Promise<Paginated> {
   const { page, pageSize, search, location_id, includeInactive } = opts;
 
-  let q = supabase
+  let qWithAudit = supabase
     .from('users')
-    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
-      count: 'exact',
-    })
+    .select(USERS_SELECT_WITH_PASSWORD_AUDIT, { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
 
   if (search && search.trim().length >= 2) {
     const s = `%${search.trim()}%`;
-    q = q.or(`email.ilike.${s},name.ilike.${s},last_name.ilike.${s}`);
+    qWithAudit = qWithAudit.or(`email.ilike.${s},name.ilike.${s},last_name.ilike.${s}`);
   }
 
   if (location_id != null) {
-    q = q.eq('location_id', location_id);
+    qWithAudit = qWithAudit.eq('location_id', location_id);
   }
 
   if (!includeInactive) {
-    q = q.eq('is_active', true);
+    qWithAudit = qWithAudit.eq('is_active', true);
   }
 
-  const { data, error, count } = await q;
+  const withAuditRes = await qWithAudit;
+  if (!withAuditRes.error) {
+    return {
+      data: (withAuditRes.data ?? []) as DbUser[],
+      count: withAuditRes.count ?? 0,
+    };
+  }
+
+  if (!isMissingPasswordAuditColumnsError(withAuditRes.error)) {
+    throw withAuditRes.error;
+  }
+
+  // Compatibilidad para bases sin columnas de auditoría de reset.
+  let qLegacy = supabase
+    .from('users')
+    .select(USERS_SELECT_BASE, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(page * pageSize, page * pageSize + pageSize - 1);
+
+  if (search && search.trim().length >= 2) {
+    const s = `%${search.trim()}%`;
+    qLegacy = qLegacy.or(`email.ilike.${s},name.ilike.${s},last_name.ilike.${s}`);
+  }
+
+  if (location_id != null) {
+    qLegacy = qLegacy.eq('location_id', location_id);
+  }
+
+  if (!includeInactive) {
+    qLegacy = qLegacy.eq('is_active', true);
+  }
+
+  const { data, error, count } = await qLegacy;
   if (error) throw error;
 
   return { data: (data ?? []) as DbUser[], count: count ?? 0 };
@@ -140,6 +182,22 @@ export async function updateUser(userId: string, patch: Partial<DbUser>) {
   invalidateData('users');
 }
 
+export async function resetUserPassword(userId: string, newPassword: string) {
+  const { error } = await supabase.rpc('admin_reset_user_password', {
+    p_id: userId,
+    p_new_password: newPassword,
+  });
+
+  if (error) {
+    if (isMissingRpcError(error)) {
+      throw new Error(
+        'La función admin_reset_user_password no está disponible en la base de datos.'
+      );
+    }
+    throw error;
+  }
+}
+
 export async function setUserActive(userId: string, active: boolean) {
   const { error } = await supabase
     .from('users')
@@ -178,18 +236,16 @@ export async function getUsersByRolePaginated(opts: {
 }): Promise<Paginated> {
   const { roleId, page, pageSize, search, includeInactive } = opts;
 
-  let q = supabase
+  let qWithAudit = supabase
     .from('users')
-    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
-      count: 'exact',
-    })
+    .select(USERS_SELECT_WITH_PASSWORD_AUDIT, { count: 'exact' })
     .eq('rol_id', roleId);
 
-  if (!includeInactive) q = q.eq('is_active', true);
+  if (!includeInactive) qWithAudit = qWithAudit.eq('is_active', true);
 
   if (search && search.trim().length >= 2) {
     const s = `%${search.trim()}%`;
-    q = q.or(
+    qWithAudit = qWithAudit.or(
       [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
     );
   }
@@ -197,7 +253,36 @@ export async function getUsersByRolePaginated(opts: {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await q
+  const withAuditRes = await qWithAudit
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (!withAuditRes.error) {
+    return {
+      data: (withAuditRes.data ?? []) as DbUser[],
+      count: withAuditRes.count ?? 0,
+    };
+  }
+
+  if (!isMissingPasswordAuditColumnsError(withAuditRes.error)) {
+    throw withAuditRes.error;
+  }
+
+  let qLegacy = supabase
+    .from('users')
+    .select(USERS_SELECT_BASE, { count: 'exact' })
+    .eq('rol_id', roleId);
+
+  if (!includeInactive) qLegacy = qLegacy.eq('is_active', true);
+
+  if (search && search.trim().length >= 2) {
+    const s = `%${search.trim()}%`;
+    qLegacy = qLegacy.or(
+      [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
+    );
+  }
+
+  const { data, error, count } = await qLegacy
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -213,18 +298,16 @@ export async function getUsersWithoutRolePaginated(opts: {
 }): Promise<Paginated> {
   const { page, pageSize, search, includeInactive } = opts;
 
-  let q = supabase
+  let qWithAudit = supabase
     .from('users')
-    .select('id,email,name,last_name,location_id,rol_id,is_active,created_at', {
-      count: 'exact',
-    })
+    .select(USERS_SELECT_WITH_PASSWORD_AUDIT, { count: 'exact' })
     .is('rol_id', null);
 
-  if (!includeInactive) q = q.eq('is_active', true);
+  if (!includeInactive) qWithAudit = qWithAudit.eq('is_active', true);
 
   if (search && search.trim().length >= 2) {
     const s = `%${search.trim()}%`;
-    q = q.or(
+    qWithAudit = qWithAudit.or(
       [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
     );
   }
@@ -232,12 +315,84 @@ export async function getUsersWithoutRolePaginated(opts: {
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  const { data, error, count } = await q
+  const withAuditRes = await qWithAudit
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (!withAuditRes.error) {
+    return {
+      data: (withAuditRes.data ?? []) as DbUser[],
+      count: withAuditRes.count ?? 0,
+    };
+  }
+
+  if (!isMissingPasswordAuditColumnsError(withAuditRes.error)) {
+    throw withAuditRes.error;
+  }
+
+  let qLegacy = supabase
+    .from('users')
+    .select(USERS_SELECT_BASE, { count: 'exact' })
+    .is('rol_id', null);
+
+  if (!includeInactive) qLegacy = qLegacy.eq('is_active', true);
+
+  if (search && search.trim().length >= 2) {
+    const s = `%${search.trim()}%`;
+    qLegacy = qLegacy.or(
+      [`email.ilike.${s}`, `name.ilike.${s}`, `last_name.ilike.${s}`].join(',')
+    );
+  }
+
+  const { data, error, count } = await qLegacy
     .order('created_at', { ascending: false })
     .range(from, to);
 
   if (error) throw error;
   return { data: (data ?? []) as DbUser[], count: count ?? 0 };
+}
+
+export async function getUserIdentityById(userId: string): Promise<{
+  id: string;
+  name: string | null;
+  last_name: string | null;
+  email: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id,name,last_name,email')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data ?? null) as {
+    id: string;
+    name: string | null;
+    last_name: string | null;
+    email: string | null;
+  } | null;
+}
+
+export async function getUserPasswordResetAuditById(userId: string): Promise<{
+  updated_at: string | null;
+  password_reset_at: string | null;
+  password_reset_by: string | null;
+} | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('updated_at,password_reset_at,password_reset_by')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingPasswordAuditColumnsError(error)) return null;
+    throw error;
+  }
+  return (data ?? null) as {
+    updated_at: string | null;
+    password_reset_at: string | null;
+    password_reset_by: string | null;
+  } | null;
 }
 
 export async function bulkSetUsersRole(
