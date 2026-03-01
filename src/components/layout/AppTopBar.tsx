@@ -78,10 +78,8 @@ export default function AppTopBar() {
     () => resolveTopBarMeta(location_id.pathname, title),
     [location_id.pathname, title]
   );
-  const inventoryBreadcrumbOnlyHeader =
-    topBarMeta.sectionLabel === 'Inventario' &&
-    Boolean(topBarMeta.breadcrumbs?.length);
-  const hasDetailedHeader = inventoryBreadcrumbOnlyHeader
+  const breadcrumbOnlyHeader = Boolean(topBarMeta.breadcrumbs?.length);
+  const hasDetailedHeader = breadcrumbOnlyHeader
     ? false
     : Boolean(topBarMeta.description || topBarMeta.breadcrumbs?.length);
 
@@ -171,17 +169,17 @@ export default function AppTopBar() {
                 })}
               </nav>
             ) : null}
-            {inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
+            {breadcrumbOnlyHeader && topBarMeta.description ? (
               <p className="max-w-[32rem] truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">
                 {topBarMeta.description}
               </p>
             ) : null}
-            {!inventoryBreadcrumbOnlyHeader ? (
+            {!breadcrumbOnlyHeader ? (
               <p className="truncate text-sm font-semibold text-slate-900 md:text-base dark:text-slate-100">
                 {topBarMeta.title}
               </p>
             ) : null}
-            {!inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
+            {!breadcrumbOnlyHeader && topBarMeta.description ? (
               <p className="max-w-3xl truncate text-xs text-slate-500 dark:text-slate-400">
                 {topBarMeta.description}
               </p>

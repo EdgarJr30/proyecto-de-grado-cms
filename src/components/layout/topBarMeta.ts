@@ -216,6 +216,152 @@ const INVENTORY_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
   },
 ];
 
+const GENERAL_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
+  {
+    path: '/inicio',
+    title: 'Inicio',
+    description:
+      'Resumen operativo con indicadores clave, actividad reciente y accesos rápidos.',
+    breadcrumbs: [{ label: 'Inicio' }],
+  },
+  {
+    path: '/ordenes_trabajo',
+    title: 'Órdenes de Trabajo',
+    description:
+      'Gestiona órdenes de trabajo: creación, asignación, seguimiento y cierre.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Órdenes de Trabajo' },
+    ],
+  },
+  {
+    path: '/solicitudes',
+    title: 'Solicitudes',
+    description:
+      'Administra solicitudes de servicio desde su registro hasta su atención.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Solicitudes' },
+    ],
+  },
+  {
+    path: '/admin_usuarios',
+    title: 'Usuarios',
+    description:
+      'Gestión de usuarios, estados y niveles de acceso dentro de la plataforma.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Usuarios' },
+    ],
+  },
+  {
+    path: '/mi-perfil',
+    title: 'Mi Perfil',
+    description:
+      'Consulta y actualiza tu información personal y tu actividad en la aplicación.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Mi Perfil' },
+    ],
+  },
+  {
+    path: '/admin/tecnicos',
+    title: 'Técnicos',
+    description:
+      'Administra técnicos y su información para facilitar asignaciones operativas.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Técnicos' },
+    ],
+  },
+  {
+    path: '/crear-ticket',
+    title: 'Crear Ticket',
+    description:
+      'Registra nuevos tickets con prioridad, contexto y datos necesarios para su atención.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Crear Ticket' },
+    ],
+  },
+  {
+    path: '/informes',
+    title: 'Informes',
+    description:
+      'Explora reportes y métricas para análisis operativo, cumplimiento y seguimiento.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Informes' },
+    ],
+  },
+  {
+    path: '/admin/incidencias',
+    title: 'Incidencias',
+    description:
+      'Configura incidencias especiales para clasificar y gestionar eventos críticos.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración', to: '/admin/settings' },
+      { label: 'Incidencias' },
+    ],
+  },
+  {
+    path: '/admin/anuncios',
+    title: 'Anuncios',
+    description:
+      'Publica y administra anuncios internos visibles para los usuarios del sistema.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración', to: '/admin/settings' },
+      { label: 'Anuncios' },
+    ],
+  },
+  {
+    path: '/admin/sociedades',
+    title: 'Sociedades',
+    description:
+      'Gestiona sociedades y la información corporativa utilizada en la plataforma.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración', to: '/admin/settings' },
+      { label: 'Sociedades' },
+    ],
+  },
+  {
+    path: '/admin/settings',
+    title: 'Configuración',
+    description:
+      'Centro de configuración general para catálogos, parámetros y opciones administrativas.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración' },
+    ],
+  },
+  {
+    path: '/admin/permisos',
+    title: 'Permisos y Roles',
+    description:
+      'Define roles y permisos para controlar accesos y acciones por tipo de usuario.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración', to: '/admin/settings' },
+      { label: 'Permisos y Roles' },
+    ],
+  },
+  {
+    path: '/admin/roles/:id',
+    title: 'Editar rol',
+    description:
+      'Ajusta permisos y alcance del rol seleccionado con control detallado de accesos.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Configuración', to: '/admin/settings' },
+      { label: 'Permisos y Roles', to: '/admin/permisos' },
+      { label: 'Editar rol' },
+    ],
+  },
+];
+
 export function resolveTopBarMeta(pathname: string, fallbackTitle: string): TopBarMeta {
   const inventoryMeta = INVENTORY_TOP_BAR_ROUTES.find((route) =>
     matchesRoute(route.path, pathname)
@@ -231,9 +377,22 @@ export function resolveTopBarMeta(pathname: string, fallbackTitle: string): TopB
     };
   }
 
+  const generalMeta = GENERAL_TOP_BAR_ROUTES.find((route) =>
+    matchesRoute(route.path, pathname)
+  );
+
+  if (generalMeta) {
+    return {
+      sectionLabel: 'Navegación',
+      title: generalMeta.title,
+      description: generalMeta.description,
+      breadcrumbs: generalMeta.breadcrumbs,
+      badges: generalMeta.badges,
+    };
+  }
+
   return {
     sectionLabel: 'Navegación',
     title: fallbackTitle,
   };
 }
-
