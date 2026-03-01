@@ -29,10 +29,7 @@ import { KardexToolbar } from './components/KardexToolbar';
 import { KardexMobileList } from './components/KardexMobileList';
 import { KardexTable } from './components/KardexTable';
 import { localizeReference } from '../inventory_docs/components/docMeta';
-
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
-}
+import { InventoryBottomPagination } from '../components/InventoryPaginationNav';
 
 function EmptyState({
   title,
@@ -491,56 +488,20 @@ export default function KardexPage() {
 
         {/* Footer paginación compacto (opcional, puedes moverlo a Toolbar si prefieres) */}
         <div className="border-t border-slate-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-          <div className="mx-auto max-w-[1400px] px-4 md:px-6 lg:px-8 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs text-slate-600">
-              Mostrando{' '}
-              <span className="font-medium text-slate-900">
-                {rows.length === 0 ? 0 : (page - 1) * pageSize + 1}
-              </span>
-              {' - '}
-              <span className="font-medium text-slate-900">
-                {Math.min(page * pageSize, count)}
-              </span>{' '}
-              de <span className="font-medium text-slate-900">{count}</span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className={cx(
-                  'rounded-xl border px-3 py-1.5 text-sm',
-                  isLoading || page <= 1
-                    ? 'cursor-not-allowed border-slate-200 text-slate-400'
-                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                )}
-                disabled={isLoading || page <= 1}
-                onClick={() => goToPage(page - 1)}
-              >
-                Anterior
-              </button>
-
-              <div className="text-sm text-slate-700">
-                Página{' '}
-                <span className="font-semibold text-slate-900">{page}</span> /{' '}
-                <span className="font-semibold text-slate-900">
-                  {totalPages}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                className={cx(
-                  'rounded-xl border px-3 py-1.5 text-sm',
-                  isLoading || page >= totalPages
-                    ? 'cursor-not-allowed border-slate-200 text-slate-400'
-                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                )}
-                disabled={isLoading || page >= totalPages}
-                onClick={() => goToPage(page + 1)}
-              >
-                Siguiente
-              </button>
-            </div>
+          <div className="mx-auto max-w-[1400px] px-4 md:px-6 lg:px-8 py-3">
+            <InventoryBottomPagination
+              page={page}
+              totalPages={totalPages}
+              totalCount={count}
+              rangeStart={rows.length === 0 ? 0 : (page - 1) * pageSize + 1}
+              rangeEnd={Math.min(page * pageSize, count)}
+              isLoading={isLoading}
+              canPrev={page > 1}
+              canNext={page < totalPages}
+              onPrev={() => goToPage(page - 1)}
+              onNext={() => goToPage(page + 1)}
+              className="border-0 p-0 bg-transparent"
+            />
           </div>
         </div>
       </main>

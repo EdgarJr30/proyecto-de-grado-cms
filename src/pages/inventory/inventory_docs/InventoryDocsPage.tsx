@@ -21,6 +21,11 @@ import { InventoryDocsToolbar } from './components/InventoryDocsToolbar';
 import { InventoryDocsMobileList } from './components/InventoryDocsMobileList';
 import { InventoryDocsTable } from './components/InventoryDocsTable';
 import { MotionPulse } from '../../../components/ui/motionPrimitives';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../components/InventoryPaginationNav';
+import { useClientPagination } from '../components/useClientPagination';
 
 function EmptyState({ loading }: { loading: boolean }) {
   return (
@@ -96,6 +101,9 @@ export default function InventoryDocsPage() {
   const [createdFrom, setCreatedFrom] = useState('');
   const [createdTo, setCreatedTo] = useState('');
   const [q, setQ] = useState('');
+
+  const pagination = useClientPagination(rows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
 
   const filters: ListDocsFilters = useMemo(() => {
     const next: ListDocsFilters = {};
@@ -224,8 +232,33 @@ export default function InventoryDocsPage() {
               </div>
             ) : (
               <>
-                <InventoryDocsMobileList rows={rows} />
-                <InventoryDocsTable rows={rows} />
+                <div className="mb-3 rounded-xl border border-slate-200 bg-white px-5 py-3">
+                  <InventoryTopPagination
+                    isLoading={loading}
+                    canPrev={pagination.canPrev}
+                    canNext={pagination.canNext}
+                    onPrev={pagination.goPrev}
+                    onNext={pagination.goNext}
+                  />
+                </div>
+
+                <InventoryDocsMobileList rows={visibleRows} />
+                <InventoryDocsTable rows={visibleRows} />
+
+                <div className="mt-3 rounded-xl border border-slate-200 bg-white">
+                  <InventoryBottomPagination
+                    page={pagination.page}
+                    totalPages={pagination.totalPages}
+                    totalCount={pagination.totalCount}
+                    rangeStart={pagination.rangeStart}
+                    rangeEnd={pagination.rangeEnd}
+                    isLoading={loading}
+                    canPrev={pagination.canPrev}
+                    canNext={pagination.canNext}
+                    onPrev={pagination.goPrev}
+                    onNext={pagination.goNext}
+                  />
+                </div>
               </>
             )}
 

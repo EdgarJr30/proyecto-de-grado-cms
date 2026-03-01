@@ -20,6 +20,11 @@ import { UomsMobileList } from './components/UomsMobileList';
 import { UomsTable } from './components/UomsTable';
 import { UomModal } from './components/UomModal';
 import { EMPTY_FORM, type FormState } from './components/types';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../components/InventoryPaginationNav';
+import { useClientPagination } from '../components/useClientPagination';
 
 function EmptyState({
   title,
@@ -71,6 +76,9 @@ export default function UomsPage() {
     });
   }, [rows, search]);
 
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
   async function reload() {
     if (!canRead) return;
     setIsLoading(true);
@@ -92,7 +100,7 @@ export default function UomsPage() {
 
   // sync selection state + checkbox indeterminate
   useEffect(() => {
-    const total = filteredRows.length;
+    const total = visibleRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -102,11 +110,11 @@ export default function UomsPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [filteredRows.length, selectedRows.length]);
+  }, [visibleRows.length, selectedRows.length]);
 
   useEffect(() => {
-    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
-  }, [filteredRows]);
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
 
   useEffect(() => {
     void reload();
@@ -129,7 +137,7 @@ export default function UomsPage() {
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? filteredRows : []);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -247,8 +255,18 @@ export default function UomsPage() {
                 onBulkDelete={handleBulkDelete}
               />
 
+              <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={isLoading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
+              </div>
+
               <UomsMobileList
-                rows={filteredRows}
+                rows={visibleRows}
                 isLoading={isLoading}
                 selectedRows={selectedRows}
                 setSelectedRows={setSelectedRows}
@@ -258,7 +276,7 @@ export default function UomsPage() {
               />
 
               <UomsTable
-                rows={filteredRows}
+                rows={visibleRows}
                 isLoading={isLoading}
                 selectedRows={selectedRows}
                 setSelectedRows={setSelectedRows}
@@ -269,6 +287,19 @@ export default function UomsPage() {
                 checkboxRef={checkboxRef}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+              />
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={isLoading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
               />
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">

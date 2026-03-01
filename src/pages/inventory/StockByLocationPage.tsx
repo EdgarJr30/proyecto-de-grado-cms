@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Filter } from 'lucide-react';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 import type { UUID, VStockByLocationRow } from '../../types/inventory';
 import { listStockByLocation } from '../../services/inventory/viewsService';
 import { listWarehouses } from '../../services/inventory/warehousesService';
+import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from './components/InventoryPaginationNav';
+import { useClientPagination } from './components/useClientPagination';
 
 function fmtQty(value: number) {
   return new Intl.NumberFormat('es-DO', { maximumFractionDigits: 3 }).format(
@@ -80,6 +87,9 @@ export default function StockByLocationPage() {
     });
   }, [rows, query]);
 
+  const pagination = useClientPagination(filtered, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900">
@@ -100,9 +110,16 @@ export default function StockByLocationPage() {
         <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60 pt-6">
           <div className="px-4 md:px-6 lg:px-8 py-6 space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <InventoryFiltersDropdown
+                icon={Filter}
+                title="Filtros"
+                description="Filtra por almacén, código de repuesto y ubicación."
+                searchValue={query}
+                searchPlaceholder="Código, nombre, almacén, ubicación..."
+                onSearchChange={setQuery}
+              >
                 <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  <label className="text-[11px] font-semibold text-slate-700">
                     Almacén
                   </label>
                   <select
@@ -118,19 +135,7 @@ export default function StockByLocationPage() {
                     ))}
                   </select>
                 </div>
-
-                <div className="md:col-span-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Buscar
-                  </label>
-                  <input
-                    className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                    placeholder="Código, nombre, almacén, ubicación..."
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                </div>
-              </div>
+              </InventoryFiltersDropdown>
             </div>
 
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
@@ -141,6 +146,16 @@ export default function StockByLocationPage() {
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                   {filtered.length} fila{filtered.length === 1 ? '' : 's'}
                 </span>
+              </div>
+
+              <div className="px-4 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={loading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
               </div>
 
               {loading ? (
@@ -165,7 +180,7 @@ export default function StockByLocationPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {filtered.map((r) => (
+                        {visibleRows.map((r) => (
                           <tr key={`${r.part_id}:${r.warehouse_id}:${r.bin_id ?? 'null'}`}>
                             <td className="px-4 py-3">
                               <div className="font-medium text-slate-900">{r.part_code}</div>
@@ -192,7 +207,7 @@ export default function StockByLocationPage() {
                   </div>
 
                   <div className="divide-y divide-slate-200 md:hidden">
-                    {filtered.map((r) => (
+                    {visibleRows.map((r) => (
                       <article
                         key={`${r.part_id}:${r.warehouse_id}:${r.bin_id ?? 'null'}`}
                         className="px-4 py-3 space-y-2"
@@ -228,6 +243,19 @@ export default function StockByLocationPage() {
                   </div>
                 </>
               )}
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={loading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
+              />
             </div>
           </div>
         </section>

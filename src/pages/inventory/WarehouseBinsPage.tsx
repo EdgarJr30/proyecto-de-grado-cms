@@ -22,12 +22,17 @@ import {
 } from '../../services/inventory';
 import AnimatedDialog from '../../components/ui/AnimatedDialog';
 import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from './components/InventoryPaginationNav';
+import { useClientPagination } from './components/useClientPagination';
+import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
+import {
   Boxes,
   ChevronLeft,
   Filter,
   Plus,
   RefreshCw,
-  Search,
   ShieldAlert,
   Trash2,
   Pencil,
@@ -142,12 +147,15 @@ export default function WarehouseBinsPage() {
     });
   }, [rows, query, statusFilter]);
 
-  useEffect(() => {
-    setSelectedRows((prev) => prev.filter((row) => filtered.includes(row)));
-  }, [filtered]);
+  const pagination = useClientPagination(filtered, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
 
   useEffect(() => {
-    const total = filtered.length;
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
+
+  useEffect(() => {
+    const total = visibleRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -157,11 +165,11 @@ export default function WarehouseBinsPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [filtered.length, selectedRows.length]);
+  }, [visibleRows.length, selectedRows.length]);
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? filtered : []);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -327,115 +335,111 @@ export default function WarehouseBinsPage() {
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
                 <div className="text-xs text-slate-500 mb-3">Almacén: {warehouseLabel}</div>
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
-                      <Filter className="h-4 w-4 text-blue-700" />
-                      Filtros
-                    </span>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Buscar
-                      </label>
-                      <div className="relative w-full sm:w-[320px]">
-                        <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          value={query}
-                          onChange={(event) => setQuery(event.target.value)}
-                          placeholder="Código o nombre de ubicación..."
-                          className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                        Estado
-                      </label>
-                      <select
-                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-                        value={statusFilter}
-                        onChange={(event) =>
-                          setStatusFilter(
-                            event.target.value as 'all' | 'active' | 'inactive'
-                          )
-                        }
+                <InventoryFiltersDropdown
+                  icon={Filter}
+                  title="Filtros y acciones"
+                  description="Filtra ubicaciones por código, nombre y estado."
+                  searchValue={query}
+                  searchPlaceholder="Código o nombre de ubicación..."
+                  onSearchChange={setQuery}
+                  panelActions={
+                    <>
+                      <Link
+                        to="/inventory/warehouses"
+                        className="inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
                       >
-                        <option value="all">Todos</option>
-                        <option value="active">Activos</option>
-                        <option value="inactive">Inactivos</option>
-                      </select>
-                    </div>
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Almacenes
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void refreshBins()}
+                        disabled={loading}
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                          loading
+                            ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                        )}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refrescar
+                      </button>
+                      <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                        <Boxes className="h-3.5 w-3.5 text-blue-700" />
+                        {filtered.length} items
+                      </span>
+                      {selectedRows.length > 0 ? (
+                        <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {selectedRows.length} seleccionadas
+                        </span>
+                      ) : null}
+                      {!canWrite ? (
+                        <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                          <ShieldAlert className="h-3.5 w-3.5" />
+                          Solo lectura
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={openCreate}
+                        disabled={!canWrite}
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                          !canWrite
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        )}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuevo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void onBulkDelete()}
+                        disabled={!canWrite || loading || selectedRows.length === 0}
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                          !canWrite || loading || selectedRows.length === 0
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-rose-600 hover:bg-rose-700 text-white'
+                        )}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar selección
+                      </button>
+                    </>
+                  }
+                >
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-700">
+                      Estado
+                    </label>
+                    <select
+                      className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={statusFilter}
+                      onChange={(event) =>
+                        setStatusFilter(
+                          event.target.value as 'all' | 'active' | 'inactive'
+                        )
+                      }
+                    >
+                      <option value="all">Todos</option>
+                      <option value="active">Activos</option>
+                      <option value="inactive">Inactivos</option>
+                    </select>
                   </div>
+                </InventoryFiltersDropdown>
+              </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      to="/inventory/warehouses"
-                      className="inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-2" />
-                      Almacenes
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void refreshBins()}
-                      disabled={loading}
-                      className={cx(
-                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
-                        loading
-                          ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                      )}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refrescar
-                    </button>
-                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                      <Boxes className="h-3.5 w-3.5 text-blue-700" />
-                      {filtered.length} items
-                    </span>
-                    {selectedRows.length > 0 ? (
-                      <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                        {selectedRows.length} seleccionadas
-                      </span>
-                    ) : null}
-                    {!canWrite ? (
-                      <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                        <ShieldAlert className="h-3.5 w-3.5" />
-                        Solo lectura
-                      </span>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={openCreate}
-                      disabled={!canWrite}
-                      className={cx(
-                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
-                        !canWrite
-                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      )}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuevo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void onBulkDelete()}
-                      disabled={!canWrite || loading || selectedRows.length === 0}
-                      className={cx(
-                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
-                        !canWrite || loading || selectedRows.length === 0
-                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
-                          : 'bg-rose-600 hover:bg-rose-700 text-white'
-                      )}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Eliminar selección
-                    </button>
-                  </div>
-                </div>
+              <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={loading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
               </div>
 
               <div className="md:hidden p-4 space-y-3">
@@ -444,7 +448,7 @@ export default function WarehouseBinsPage() {
                 ) : filtered.length === 0 ? (
                   <div className="py-10 text-center text-slate-400">Sin resultados.</div>
                 ) : (
-                  filtered.map((row) => {
+                  visibleRows.map((row) => {
                     const selected = selectedRows.includes(row);
                     return (
                       <div
@@ -531,7 +535,7 @@ export default function WarehouseBinsPage() {
                         <input
                           ref={checkboxRef}
                           type="checkbox"
-                          disabled={!canWrite || filtered.length === 0 || loading}
+                          disabled={!canWrite || visibleRows.length === 0 || loading}
                           className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
                           checked={checked}
                           onChange={toggleAll}
@@ -558,7 +562,7 @@ export default function WarehouseBinsPage() {
                         </td>
                       </tr>
                     ) : (
-                      filtered.map((row) => {
+                      visibleRows.map((row) => {
                         const selected = selectedRows.includes(row);
                         return (
                           <tr
@@ -637,6 +641,19 @@ export default function WarehouseBinsPage() {
                   </tbody>
                 </table>
               </div>
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={loading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
+              />
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">
                 <div className="text-xs text-slate-500">

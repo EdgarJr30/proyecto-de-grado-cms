@@ -9,6 +9,11 @@ import { PageShell } from './components/PageShell';
 import { PartCostsToolbar } from './components/PartCostsToolbar';
 import { PartCostsMobileList } from './components/PartCostsMobileList';
 import { PartCostsTable } from './components/PartCostsTable';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../../components/InventoryPaginationNav';
+import { useClientPagination } from '../../components/useClientPagination';
 
 type SortKey = 'updated_at' | 'avg_unit_cost' | 'part_code' | 'warehouse_code';
 type SortDir = 'asc' | 'desc';
@@ -70,33 +75,6 @@ export default function PartCostsPage() {
     }
   }
 
-  // sync selection state + checkbox indeterminate
-  useEffect(() => {
-    const total = rows.length;
-    const selected = selectedRows.length;
-
-    const nextChecked = total > 0 && selected === total;
-    const nextInd = selected > 0 && selected < total;
-
-    setChecked(nextChecked);
-    setIndeterminate(nextInd);
-
-    if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [rows.length, selectedRows.length]);
-
-  useEffect(() => {
-    void reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canRead]);
-
-  function toggleAll() {
-    const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? rows : []);
-    setChecked(shouldSelectAll);
-    setIndeterminate(false);
-    if (checkboxRef.current) checkboxRef.current.indeterminate = false;
-  }
-
   const viewRows = useMemo(() => {
     const copy = [...rows];
 
@@ -121,6 +99,40 @@ export default function PartCostsPage() {
 
     return copy;
   }, [rows, sortKey, sortDir]);
+
+  const pagination = useClientPagination(viewRows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
+  // sync selection state + checkbox indeterminate
+  useEffect(() => {
+    const total = visibleRows.length;
+    const selected = selectedRows.length;
+
+    const nextChecked = total > 0 && selected === total;
+    const nextInd = selected > 0 && selected < total;
+
+    setChecked(nextChecked);
+    setIndeterminate(nextInd);
+
+    if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
+  }, [visibleRows.length, selectedRows.length]);
+
+  useEffect(() => {
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
+
+  useEffect(() => {
+    void reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canRead]);
+
+  function toggleAll() {
+    const shouldSelectAll = !(checked || indeterminate);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
+    setChecked(shouldSelectAll);
+    setIndeterminate(false);
+    if (checkboxRef.current) checkboxRef.current.indeterminate = false;
+  }
 
   if (!canRead) {
     return (
@@ -156,15 +168,25 @@ export default function PartCostsPage() {
         />
 
         <section className="flex-1 min-h-0 overflow-auto px-4 md:px-6 lg:px-8 pb-6">
+          <div className="mb-3 rounded-xl border border-slate-200 bg-white px-5 py-3">
+            <InventoryTopPagination
+              isLoading={isLoading}
+              canPrev={pagination.canPrev}
+              canNext={pagination.canNext}
+              onPrev={pagination.goPrev}
+              onNext={pagination.goNext}
+            />
+          </div>
+
           <PartCostsMobileList
-            rows={viewRows}
+            rows={visibleRows}
             isLoading={isLoading}
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
           />
 
           <PartCostsTable
-            rows={viewRows}
+            rows={visibleRows}
             isLoading={isLoading}
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
@@ -173,6 +195,21 @@ export default function PartCostsPage() {
             onToggleAll={toggleAll}
             checkboxRef={checkboxRef}
           />
+
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white">
+            <InventoryBottomPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              isLoading={isLoading}
+              canPrev={pagination.canPrev}
+              canNext={pagination.canNext}
+              onPrev={pagination.goPrev}
+              onNext={pagination.goNext}
+            />
+          </div>
         </section>
       </main>
     </PageShell>

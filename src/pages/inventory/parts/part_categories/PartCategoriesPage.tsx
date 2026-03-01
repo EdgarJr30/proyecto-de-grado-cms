@@ -23,6 +23,11 @@ import { PartCategoriesToolbar } from './components/PartCategoriesToolbar';
 import { PartCategoriesMobileList } from './components/PartCategoriesMobileList';
 import { PartCategoriesTable } from './components/PartCategoriesTable';
 import { PartCategoryModal } from './components/PartCategoryModal';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../../components/InventoryPaginationNav';
+import { useClientPagination } from '../../components/useClientPagination';
 
 import { buildCategoryLabelMap } from './components/categoryHelpers';
 import { EMPTY_FORM, type FormState } from './components/types';
@@ -80,6 +85,9 @@ export default function PartCategoriesPage() {
     });
   }, [rows, search, helpers]);
 
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
   const parentOptions = useMemo(() => {
     const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
     return isEditing ? sorted.filter((r) => r.id !== form.id) : sorted;
@@ -108,7 +116,7 @@ export default function PartCategoriesPage() {
 
   // sync selection state + checkbox indeterminate
   useEffect(() => {
-    const total = filteredRows.length;
+    const total = visibleRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -118,11 +126,11 @@ export default function PartCategoriesPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [filteredRows.length, selectedRows.length]);
+  }, [visibleRows.length, selectedRows.length]);
 
   useEffect(() => {
-    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
-  }, [filteredRows]);
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
 
   useEffect(() => {
     void reload();
@@ -145,7 +153,7 @@ export default function PartCategoriesPage() {
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? filteredRows : []);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -267,8 +275,18 @@ export default function PartCategoriesPage() {
                 onBulkDelete={handleBulkDelete}
               />
 
+              <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={isLoading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
+              </div>
+
               <PartCategoriesMobileList
-                rows={filteredRows}
+                rows={visibleRows}
                 helpers={helpers}
                 isLoading={isLoading}
                 selectedRows={selectedRows}
@@ -279,7 +297,7 @@ export default function PartCategoriesPage() {
               />
 
               <PartCategoriesTable
-                rows={filteredRows}
+                rows={visibleRows}
                 helpers={helpers}
                 isLoading={isLoading}
                 selectedRows={selectedRows}
@@ -291,6 +309,19 @@ export default function PartCategoriesPage() {
                 checkboxRef={checkboxRef}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+              />
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={isLoading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
               />
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">

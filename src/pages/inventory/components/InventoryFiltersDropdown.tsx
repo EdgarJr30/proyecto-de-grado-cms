@@ -15,6 +15,7 @@ export function InventoryFiltersDropdown({
   onSearchSubmit,
   panelActions,
   children,
+  kpiWidgets,
   footer,
   defaultDesktopOpen = true,
 }: {
@@ -27,6 +28,7 @@ export function InventoryFiltersDropdown({
   onSearchSubmit?: () => void;
   panelActions?: ReactNode;
   children?: ReactNode;
+  kpiWidgets?: ReactNode;
   footer?: ReactNode;
   defaultDesktopOpen?: boolean;
 }) {
@@ -134,6 +136,7 @@ export function InventoryFiltersDropdown({
             ) : null}
 
             {children}
+            {kpiWidgets}
             {footer}
           </div>
         ) : null}

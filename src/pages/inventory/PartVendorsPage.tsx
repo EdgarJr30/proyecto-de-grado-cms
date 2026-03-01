@@ -21,6 +21,11 @@ import {
   upsertPartVendor,
 } from '../../services/inventory/vendorsService';
 import { listParts } from '../../services/inventory/partsService';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from './components/InventoryPaginationNav';
+import { useClientPagination } from './components/useClientPagination';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -54,6 +59,8 @@ function PartVendorsContent({ embedded }: Props) {
 
   const [form, setForm] =
     useState<Omit<PartVendorInsert, 'part_id'>>(emptyForm);
+  const pagination = useClientPagination(rows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
 
   const vendorById = useMemo(() => {
     const m = new Map<UUID, VendorRow>();
@@ -410,6 +417,16 @@ function PartVendorsContent({ embedded }: Props) {
       </form>
 
       <div className="overflow-auto rounded-xl ring-1 ring-gray-200 bg-white">
+        <div className="px-4 py-3 border-b border-slate-100 bg-white">
+          <InventoryTopPagination
+            isLoading={loading}
+            canPrev={pagination.canPrev}
+            canNext={pagination.canNext}
+            onPrev={pagination.goPrev}
+            onNext={pagination.goNext}
+          />
+        </div>
+
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50 sticky top-0 z-10">
             <tr>
@@ -454,7 +471,7 @@ function PartVendorsContent({ embedded }: Props) {
                 </td>
               </tr>
             ) : (
-              rows.map((r) => {
+              visibleRows.map((r) => {
                 const v = vendorById.get(r.vendor_id) ?? null;
                 return (
                   <tr key={r.id} className="hover:bg-gray-50">
@@ -517,6 +534,19 @@ function PartVendorsContent({ embedded }: Props) {
             )}
           </tbody>
         </table>
+
+        <InventoryBottomPagination
+          page={pagination.page}
+          totalPages={pagination.totalPages}
+          totalCount={pagination.totalCount}
+          rangeStart={pagination.rangeStart}
+          rangeEnd={pagination.rangeEnd}
+          isLoading={loading}
+          canPrev={pagination.canPrev}
+          canNext={pagination.canNext}
+          onPrev={pagination.goPrev}
+          onNext={pagination.goNext}
+        />
       </div>
 
       {partId && rows.length > 0 && (

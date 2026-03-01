@@ -21,6 +21,11 @@ import PartsToolbar from './components/PartsToolbar';
 import PartsMobileList from './components/PartsMobileList';
 import PartsTable from './components/PartsTable';
 import PartsForm from './components/PartsForm';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../components/InventoryPaginationNav';
+import { useClientPagination } from '../components/useClientPagination';
 
 import { usePartsData } from './hooks/usePartsData';
 import { usePartsFilters } from './hooks/usePartsFilters';
@@ -78,6 +83,9 @@ export default function PartsPage() {
     catById,
   });
 
+  const pagination = useClientPagination(filteredParts, { initialPageSize: 50 });
+  const visibleParts = pagination.pagedItems;
+
   const {
     checkboxRef,
     selectedRows,
@@ -86,7 +94,7 @@ export default function PartsPage() {
     indeterminate,
     toggleAll,
   } = useRowSelection<PartRow>({
-    items: filteredParts,
+    items: visibleParts,
   });
 
   const selectedCount = selectedRows.length;
@@ -261,9 +269,19 @@ export default function PartsPage() {
                 onBulkDelete={handleBulkDelete}
               />
 
+              <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={isLoading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
+              </div>
+
               <PartsMobileList
                 isLoading={isLoading}
-                parts={filteredParts}
+                parts={visibleParts}
                 selectedRows={selectedRows}
                 setSelectedRows={setSelectedRows}
                 canManage={canManage}
@@ -275,7 +293,7 @@ export default function PartsPage() {
 
               <PartsTable
                 isLoading={isLoading}
-                parts={filteredParts}
+                parts={visibleParts}
                 checkboxRef={checkboxRef}
                 checked={checked}
                 indeterminate={indeterminate}
@@ -287,6 +305,19 @@ export default function PartsPage() {
                 catById={catById}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+              />
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={isLoading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
               />
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">

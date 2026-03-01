@@ -22,6 +22,11 @@ import { VendorsTable } from './components/VendorsTable';
 import { VendorsMobileList } from './components/VendorsMobileList';
 import { VendorModal } from './components/VendorModal';
 import { EMPTY_VENDOR_FORM, type VendorsTab } from './components/types';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../components/InventoryPaginationNav';
+import { useClientPagination } from '../components/useClientPagination';
 
 function EmptyState({
   title,
@@ -95,6 +100,9 @@ export default function VendorsPage() {
     });
   }, [rows, search, statusFilter]);
 
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
   const setTab = (next: VendorsTab) => {
     const params = new URLSearchParams(location.search);
     params.set('tab', next);
@@ -132,11 +140,11 @@ export default function VendorsPage() {
   }, [canRead, canManage, tab]);
 
   useEffect(() => {
-    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
-  }, [filteredRows]);
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
 
   useEffect(() => {
-    const total = filteredRows.length;
+    const total = visibleRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -146,11 +154,11 @@ export default function VendorsPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [filteredRows.length, selectedRows.length]);
+  }, [visibleRows.length, selectedRows.length]);
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? filteredRows : []);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -317,8 +325,18 @@ export default function VendorsPage() {
 
               {tab === 'vendors' ? (
                 <>
+                  <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                    <InventoryTopPagination
+                      isLoading={loading}
+                      canPrev={pagination.canPrev}
+                      canNext={pagination.canNext}
+                      onPrev={pagination.goPrev}
+                      onNext={pagination.goNext}
+                    />
+                  </div>
+
                   <VendorsMobileList
-                    rows={filteredRows}
+                    rows={visibleRows}
                     loading={loading}
                     canManage={canManage}
                     selectedRows={selectedRows}
@@ -328,7 +346,7 @@ export default function VendorsPage() {
                   />
 
                   <VendorsTable
-                    rows={filteredRows}
+                    rows={visibleRows}
                     loading={loading}
                     canManage={canManage}
                     selectedRows={selectedRows}
@@ -338,6 +356,19 @@ export default function VendorsPage() {
                     checkboxRef={checkboxRef}
                     onEdit={startEdit}
                     onDelete={(row) => void onDelete(row)}
+                  />
+
+                  <InventoryBottomPagination
+                    page={pagination.page}
+                    totalPages={pagination.totalPages}
+                    totalCount={pagination.totalCount}
+                    rangeStart={pagination.rangeStart}
+                    rangeEnd={pagination.rangeEnd}
+                    isLoading={loading}
+                    canPrev={pagination.canPrev}
+                    canNext={pagination.canNext}
+                    onPrev={pagination.goPrev}
+                    onNext={pagination.goNext}
                   />
 
                   <div className="px-5 py-4 border-t border-slate-100 bg-white">

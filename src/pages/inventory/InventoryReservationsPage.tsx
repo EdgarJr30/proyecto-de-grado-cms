@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCcw, Search } from 'lucide-react';
+import { Filter, RefreshCcw } from 'lucide-react';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 import { listAcceptedWorkOrders } from '../../services/inventory/inventoryRequests';
 import TicketPartsPanel from './parts/TicketPartsPanel';
 import type { TicketWoPick } from '../../types/inventory/inventoryRequests';
 import { MotionSpin } from '../../components/ui/motionPrimitives';
+import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -85,80 +86,77 @@ export default function InventoryReservationsPage() {
         <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60 pt-6">
           <div className="px-4 md:px-6 lg:px-8 py-6 space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => void loadTickets()}
-                  disabled={loading}
-                  className={cx(
-                    'inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition',
-                    loading
-                      ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
-                      : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
-                  )}
-                >
-                  {loading ? (
-                    <MotionSpin className="inline-flex h-4 w-4">
-                      <RefreshCcw className="h-4 w-4" />
-                    </MotionSpin>
-                  ) : (
-                    <RefreshCcw className="h-4 w-4" />
-                  )}
-                  Actualizar OT
-                </button>
-              </div>
-              <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-                <div className="lg:col-span-4">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    Buscar OT aceptada
-                  </label>
-                  <div className="mt-1 relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                    <input
-                      className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                      placeholder="ID, título, solicitante, estado..."
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="lg:col-span-5">
-                  <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    OT seleccionada
-                  </label>
-                  <select
-                    className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-                    value={ticketId ?? ''}
-                    onChange={(e) =>
-                      setTicketId(e.target.value ? Number(e.target.value) : null)
-                    }
+              <InventoryFiltersDropdown
+                icon={Filter}
+                title="Filtros y acciones"
+                description="Busca OT aceptadas y selecciona la OT para gestionar reservas."
+                searchValue={query}
+                searchPlaceholder="ID, título, solicitante, estado..."
+                onSearchChange={setQuery}
+                panelActions={
+                  <button
+                    type="button"
+                    onClick={() => void loadTickets()}
                     disabled={loading}
-                  >
-                    {filteredTickets.length === 0 ? (
-                      <option value="">Sin resultados</option>
-                    ) : null}
-                    {filteredTickets.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        #{t.id} — {t.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="lg:col-span-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 h-10 mt-6 text-xs text-slate-600 flex items-center">
-                    {selectedTicket ? (
-                      <span className="truncate">
-                        Estado: <b>{selectedTicket.status ?? '—'}</b> ·
-                        Prioridad: <b>{selectedTicket.priority ?? '—'}</b>
-                      </span>
-                    ) : (
-                      <span>Selecciona una OT para gestionar reservas.</span>
+                    className={cx(
+                      'inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold transition',
+                      loading
+                        ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
+                        : 'border-slate-300 text-slate-700 bg-white hover:bg-slate-50'
                     )}
+                  >
+                    {loading ? (
+                      <MotionSpin className="inline-flex h-4 w-4">
+                        <RefreshCcw className="h-4 w-4" />
+                      </MotionSpin>
+                    ) : (
+                      <RefreshCcw className="h-4 w-4" />
+                    )}
+                    Actualizar OT
+                  </button>
+                }
+              >
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-8">
+                  <div className="lg:col-span-5">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      OT seleccionada
+                    </label>
+                    <select
+                      className="mt-1 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                      value={ticketId ?? ''}
+                      onChange={(e) =>
+                        setTicketId(e.target.value ? Number(e.target.value) : null)
+                      }
+                      disabled={loading}
+                    >
+                      {filteredTickets.length === 0 ? (
+                        <option value="">Sin resultados</option>
+                      ) : null}
+                      {filteredTickets.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          #{t.id} — {t.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="lg:col-span-3">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                      Estado
+                    </label>
+                    <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 h-10 text-xs text-slate-600 flex items-center">
+                      {selectedTicket ? (
+                        <span className="truncate">
+                          Estado: <b>{selectedTicket.status ?? '—'}</b> ·
+                          Prioridad: <b>{selectedTicket.priority ?? '—'}</b>
+                        </span>
+                      ) : (
+                        <span>Selecciona una OT para gestionar reservas.</span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </InventoryFiltersDropdown>
             </div>
 
             {!canWork ? (

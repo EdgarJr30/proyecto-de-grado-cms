@@ -6,6 +6,7 @@ import type {
 import type { OptionRow } from '../../../../services/inventory/lookupsService';
 import type { UUID } from '../../../../types/inventory/common';
 import { InventoryFiltersDropdown } from '../../components/InventoryFiltersDropdown';
+import { InventoryTopPagination } from '../../components/InventoryPaginationNav';
 import { DangerButton, PrimaryButton } from './buttons';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -191,35 +192,13 @@ export function KardexToolbar({
               Consejo: escribe en “Búsqueda” para filtrar por doc_no,
               referencia, repuesto, almacén o ubicación.
             </div>
-
-            <div className="flex items-center gap-2 sm:justify-end">
-              <button
-                type="button"
-                onClick={onPrevPage}
-                disabled={isLoading || page <= 1}
-                className={cx(
-                  'rounded-xl border px-3 py-1.5 text-sm',
-                  isLoading || page <= 1
-                    ? 'cursor-not-allowed border-slate-200 text-slate-400'
-                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                )}
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                onClick={onNextPage}
-                disabled={isLoading || page >= totalPages}
-                className={cx(
-                  'rounded-xl border px-3 py-1.5 text-sm',
-                  isLoading || page >= totalPages
-                    ? 'cursor-not-allowed border-slate-200 text-slate-400'
-                    : 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                )}
-              >
-                Siguiente
-              </button>
-            </div>
+            <InventoryTopPagination
+              isLoading={isLoading}
+              canPrev={page > 1}
+              canNext={page < totalPages}
+              onPrev={onPrevPage}
+              onNext={onNextPage}
+            />
           </div>
         }
       >

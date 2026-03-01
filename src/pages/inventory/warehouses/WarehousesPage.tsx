@@ -24,6 +24,11 @@ import { WarehousesMobileList } from './components/WarehousesMobileList';
 import { WarehousesTable } from './components/WarehousesTable';
 import { WarehouseModal } from './components/WarehouseModal';
 import { toFormDefaults, type FormState } from './components/types';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from '../components/InventoryPaginationNav';
+import { useClientPagination } from '../components/useClientPagination';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -113,12 +118,15 @@ export default function WarehousesPage() {
     });
   }, [rows, query, statusFilter]);
 
-  useEffect(() => {
-    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
-  }, [filteredRows]);
+  const pagination = useClientPagination(filteredRows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
 
   useEffect(() => {
-    const total = filteredRows.length;
+    setSelectedRows((prev) => prev.filter((row) => visibleRows.includes(row)));
+  }, [visibleRows]);
+
+  useEffect(() => {
+    const total = visibleRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -128,11 +136,11 @@ export default function WarehousesPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [filteredRows.length, selectedRows.length]);
+  }, [visibleRows.length, selectedRows.length]);
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? filteredRows : []);
+    setSelectedRows(shouldSelectAll ? visibleRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -285,8 +293,18 @@ export default function WarehousesPage() {
                 onBulkDelete={() => void onBulkDelete()}
               />
 
+              <div className="px-5 py-3 border-b border-slate-100 bg-white">
+                <InventoryTopPagination
+                  isLoading={loading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
+              </div>
+
               <WarehousesMobileList
-                rows={filteredRows}
+                rows={visibleRows}
                 loading={loading}
                 canManage={canManage}
                 selectedRows={selectedRows}
@@ -296,7 +314,7 @@ export default function WarehousesPage() {
               />
 
               <WarehousesTable
-                rows={filteredRows}
+                rows={visibleRows}
                 loading={loading}
                 canManage={canManage}
                 selectedRows={selectedRows}
@@ -306,6 +324,19 @@ export default function WarehousesPage() {
                 checkboxRef={checkboxRef}
                 onEdit={openEdit}
                 onDelete={(row) => void onDelete(row)}
+              />
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={loading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
               />
 
               <div className="px-5 py-4 border-t border-slate-100 bg-white">

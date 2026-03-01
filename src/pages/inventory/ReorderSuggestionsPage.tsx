@@ -9,8 +9,15 @@ import {
   listWarehousesOptions,
   listCategoriesOptions,
 } from '../../services/inventory/lookupsService';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from './components/InventoryPaginationNav';
+import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
+import { useClientPagination } from './components/useClientPagination';
 
 import { listReorderSuggestions } from '../../services/inventory/reorderSuggestionsService';
+import { Filter, RefreshCcw, RotateCcw, Search } from 'lucide-react';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -52,16 +59,17 @@ export default function ReorderSuggestionsPage() {
     }
   }
 
-  async function load() {
+  async function load(next?: { query?: string }) {
     if (!canRead) return;
 
     setLoading(true);
     try {
+      const query = next?.query ?? q;
       const data = await listReorderSuggestions({
         needsReorder: needsOnly,
         warehouseId: warehouseId || undefined,
         categoryId: categoryId || undefined,
-        q: q.trim() || undefined,
+        q: query.trim() || undefined,
       });
       setRows(data);
     } catch (e: unknown) {
@@ -87,6 +95,16 @@ export default function ReorderSuggestionsPage() {
     () => rows.filter((r) => r.needs_reorder).length,
     [rows]
   );
+  const pagination = useClientPagination(rows, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
+  function resetFilters() {
+    setNeedsOnly(true);
+    setWarehouseId('');
+    setCategoryId('');
+    setQ('');
+    void load({ query: '' });
+  }
 
   // ✅ Guard de permisos para evitar "pantalla en blanco"
   if (!canRead) {
@@ -111,116 +129,123 @@ export default function ReorderSuggestionsPage() {
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
         <div className="flex-1 min-h-0 overflow-auto pt-6">
           <div className="px-4 md:px-6 py-4 space-y-4">
-            <div className="flex justify-end text-xs text-muted-foreground">
-              {loading
-                ? 'Cargando…'
-                : `${rows.length} filas / necesitan=${needsCount}`}
-            </div>
-            {/* Filters */}
-            <div className="rounded-2xl border bg-card p-4 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div className="rounded-xl border p-3 bg-card">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Requiere reposición
-                  </label>
-                  <div className="mt-2 flex gap-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <InventoryFiltersDropdown
+                icon={Filter}
+                title="Filtros y acciones"
+                description="Filtra sugerencias por almacén, categoría y texto de búsqueda."
+                searchValue={q}
+                searchPlaceholder="Buscar por código o nombre de repuesto..."
+                onSearchChange={setQ}
+                onSearchSubmit={() => void load()}
+                panelActions={
+                  <>
+                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      {loading
+                        ? 'Cargando…'
+                        : `${rows.length} filas / necesitan=${needsCount}`}
+                    </span>
                     <button
-                      onClick={() => setNeedsOnly(true)}
-                      className={cx(
-                        'px-3 py-2 rounded-xl border text-sm font-semibold',
-                        needsOnly && 'bg-accent'
-                      )}
+                      onClick={() => void load()}
+                      className="inline-flex items-center h-9 px-3 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       type="button"
                     >
-                      Solo necesarios
-                    </button>
-                    <button
-                      onClick={() => setNeedsOnly(false)}
-                      className={cx(
-                        'px-3 py-2 rounded-xl border text-sm font-semibold',
-                        !needsOnly && 'bg-accent'
-                      )}
-                      type="button"
-                    >
-                      Todos
-                    </button>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border p-3 bg-card">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Almacén
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                    value={warehouseId}
-                    onChange={(e) =>
-                      setWarehouseId((e.target.value as UUID) || '')
-                    }
-                  >
-                    <option value="">Todos</option>
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-xl border p-3 bg-card">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Categoría
-                  </label>
-                  <select
-                    className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                    value={categoryId}
-                    onChange={(e) =>
-                      setCategoryId((e.target.value as UUID) || '')
-                    }
-                  >
-                    <option value="">Todas</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-xl border p-3 bg-card">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Buscar (código/nombre)
-                  </label>
-                  <input
-                    className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') load();
-                    }}
-                    placeholder="Ej: FILTRO, BANDA, 10W40…"
-                  />
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      onClick={load}
-                      className="px-3 py-2 rounded-xl border text-sm font-semibold hover:bg-accent"
-                      type="button"
-                    >
+                      <Search className="h-4 w-4 mr-2" />
                       Aplicar
                     </button>
                     <button
-                      onClick={() => {
-                        setQ('');
-                        load();
-                      }}
-                      className="px-3 py-2 rounded-xl border text-sm font-semibold hover:bg-accent"
+                      onClick={() => void load()}
+                      className="inline-flex items-center h-9 px-3 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
                       type="button"
                     >
-                      Limpiar
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Recargar
                     </button>
+                    <button
+                      onClick={resetFilters}
+                      className="inline-flex items-center h-9 px-3 rounded-md bg-rose-600 text-sm font-semibold text-white hover:bg-rose-700"
+                      type="button"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reiniciar
+                    </button>
+                  </>
+                }
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Requiere reposición
+                    </label>
+                    <div className="mt-1 flex gap-2">
+                      <button
+                        onClick={() => setNeedsOnly(true)}
+                        className={cx(
+                          'h-10 px-3 rounded-md border text-sm font-semibold',
+                          needsOnly
+                            ? 'bg-blue-50 border-blue-200 text-blue-700'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        )}
+                        type="button"
+                      >
+                        Solo necesarios
+                      </button>
+                      <button
+                        onClick={() => setNeedsOnly(false)}
+                        className={cx(
+                          'h-10 px-3 rounded-md border text-sm font-semibold',
+                          !needsOnly
+                            ? 'bg-blue-50 border-blue-200 text-blue-700'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                        )}
+                        type="button"
+                      >
+                        Todos
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Almacén
+                    </label>
+                    <select
+                      className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={warehouseId}
+                      onChange={(e) =>
+                        setWarehouseId((e.target.value as UUID) || '')
+                      }
+                    >
+                      <option value="">Todos</option>
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                      Categoría
+                    </label>
+                    <select
+                      className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={categoryId}
+                      onChange={(e) =>
+                        setCategoryId((e.target.value as UUID) || '')
+                      }
+                    >
+                      <option value="">Todas</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              </div>
+              </InventoryFiltersDropdown>
             </div>
 
             {/* Table */}
@@ -236,6 +261,16 @@ export default function ReorderSuggestionsPage() {
                     )
                   </span>
                 </div>
+              </div>
+
+              <div className="px-4 py-3 border-b">
+                <InventoryTopPagination
+                  isLoading={loading}
+                  canPrev={pagination.canPrev}
+                  canNext={pagination.canNext}
+                  onPrev={pagination.goPrev}
+                  onNext={pagination.goNext}
+                />
               </div>
 
               <div className="overflow-auto">
@@ -259,7 +294,7 @@ export default function ReorderSuggestionsPage() {
                   </thead>
 
                   <tbody className="divide-y">
-                    {rows.map((r) => (
+                    {visibleRows.map((r) => (
                       <tr
                         key={`${r.part_id}-${r.warehouse_id}`}
                         className="hover:bg-muted/20"
@@ -328,6 +363,19 @@ export default function ReorderSuggestionsPage() {
                   </tbody>
                 </table>
               </div>
+
+              <InventoryBottomPagination
+                page={pagination.page}
+                totalPages={pagination.totalPages}
+                totalCount={pagination.totalCount}
+                rangeStart={pagination.rangeStart}
+                rangeEnd={pagination.rangeEnd}
+                isLoading={loading}
+                canPrev={pagination.canPrev}
+                canNext={pagination.canNext}
+                onPrev={pagination.goPrev}
+                onNext={pagination.goNext}
+              />
 
               <div className="px-4 py-3 border-t text-xs text-muted-foreground">
                 Consejo: la “reposición sugerida” normalmente busca llevarte al

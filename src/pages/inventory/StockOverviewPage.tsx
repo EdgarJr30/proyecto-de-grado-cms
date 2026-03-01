@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Boxes, Filter, RefreshCcw, Search } from 'lucide-react';
+import { Boxes, RefreshCcw } from 'lucide-react';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
+import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
+import {
+  InventoryBottomPagination,
+  InventoryTopPagination,
+} from './components/InventoryPaginationNav';
+import { useClientPagination } from './components/useClientPagination';
 
 import type { UUID } from '../../types/inventory';
 import type { WarehouseRow, VAvailableStockRow } from '../../types/inventory';
@@ -194,6 +200,9 @@ export default function StockOverviewPage() {
     return { onHand, reserved, available, count: filtered.length };
   }, [filtered]);
 
+  const pagination = useClientPagination(filtered, { initialPageSize: 50 });
+  const visibleRows = pagination.pagedItems;
+
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900">
@@ -214,23 +223,15 @@ export default function StockOverviewPage() {
         <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto">
           <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-blue-50">
-                      <Filter className="h-5 w-5 text-blue-700" />
-                    </span>
-                    <div>
-                      <div className="text-sm font-semibold text-slate-900">
-                        Filtros de disponibilidad
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        Vista de existencias, reservas y disponible real.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <InventoryFiltersDropdown
+                icon={Boxes}
+                title="Filtros de disponibilidad"
+                description="Vista de existencias, reservas y disponible real."
+                searchValue={query}
+                searchPlaceholder="Código o nombre del repuesto, almacén..."
+                onSearchChange={setQuery}
+                panelActions={
+                  <>
                     <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                       <Boxes className="h-3.5 w-3.5 text-blue-700" />
                       {loading ? 'Cargando…' : `${filtered.length} resultados`}
@@ -246,30 +247,38 @@ export default function StockOverviewPage() {
                       <RefreshCcw className="h-4 w-4 mr-2" />
                       Refrescar
                     </button>
+                  </>
+                }
+                kpiWidgets={
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <StatCard label="Filas" value={totals.count} />
+                    <StatCard
+                      label="En existencia (suma)"
+                      value={formatQty(totals.onHand)}
+                    />
+                    <StatCard
+                      label="Reservado (suma)"
+                      value={formatQty(totals.reserved)}
+                    />
+                    <StatCard
+                      label="Disponible (suma)"
+                      value={formatQty(totals.available)}
+                    />
                   </div>
-                </div>
-
+                }
+                footer={
+                  <InventoryTopPagination
+                    isLoading={loading}
+                    canPrev={pagination.canPrev}
+                    canNext={pagination.canNext}
+                    onPrev={pagination.goPrev}
+                    onNext={pagination.goNext}
+                  />
+                }
+              >
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                  <div className="lg:col-span-5">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      Buscar
-                    </label>
-                    <div className="relative mt-1">
-                      <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Código o nombre del repuesto, almacén..."
-                        className={cx(
-                          'h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm focus:outline-none',
-                          'focus:ring-2 focus:ring-blue-500/30'
-                        )}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="lg:col-span-4">
-                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  <div className="lg:col-span-7">
+                    <label className="text-[11px] font-semibold text-slate-700">
                       Almacén
                     </label>
                     <select
@@ -278,7 +287,7 @@ export default function StockOverviewPage() {
                         setWarehouseId((e.target.value as UUID) || '')
                       }
                       className={cx(
-                        'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none',
+                        'mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus:outline-none',
                         'focus:ring-2 focus:ring-blue-500/30'
                       )}
                     >
@@ -291,8 +300,8 @@ export default function StockOverviewPage() {
                     </select>
                   </div>
 
-                  <div className="lg:col-span-3 flex items-end gap-3">
-                    <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">
+                  <div className="lg:col-span-5 flex flex-wrap items-end gap-3">
+                    <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
                       <input
                         type="checkbox"
                         checked={onlyAvailable}
@@ -302,7 +311,7 @@ export default function StockOverviewPage() {
                       Solo disponibles
                     </label>
 
-                    <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">
+                    <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700">
                       <input
                         type="checkbox"
                         checked={onlyReserved}
@@ -313,23 +322,7 @@ export default function StockOverviewPage() {
                     </label>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <StatCard label="Filas" value={totals.count} />
-                  <StatCard
-                    label="En existencia (suma)"
-                    value={formatQty(totals.onHand)}
-                  />
-                  <StatCard
-                    label="Reservado (suma)"
-                    value={formatQty(totals.reserved)}
-                  />
-                  <StatCard
-                    label="Disponible (suma)"
-                    value={formatQty(totals.available)}
-                  />
-                </div>
-              </div>
+              </InventoryFiltersDropdown>
             </div>
 
             <div className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
@@ -375,13 +368,26 @@ export default function StockOverviewPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((r) => (
+                    {visibleRows.map((r) => (
                       <StockRow key={`${r.part_id}:${r.warehouse_id}`} r={r} />
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
+
+            <InventoryBottomPagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              totalCount={pagination.totalCount}
+              rangeStart={pagination.rangeStart}
+              rangeEnd={pagination.rangeEnd}
+              isLoading={loading}
+              canPrev={pagination.canPrev}
+              canNext={pagination.canNext}
+              onPrev={pagination.goPrev}
+              onNext={pagination.goNext}
+            />
 
             <div className="px-5 py-4 border-t border-slate-100 bg-white">
               <div className="text-xs text-slate-500">
