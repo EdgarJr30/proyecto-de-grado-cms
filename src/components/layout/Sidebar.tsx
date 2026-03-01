@@ -204,7 +204,7 @@ function SidebarContent() {
     <>
       {/* Overlay (móvil) */}
       <div
-        className={`fixed inset-x-0 bottom-0 top-16 bg-black/40 z-40 transition-opacity duration-300 ${
+        className={`fixed inset-x-0 bottom-0 top-[var(--app-topbar-height)] bg-black/40 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         } md:hidden`}
         onClick={() => setIsOpen(false)}
@@ -214,10 +214,10 @@ function SidebarContent() {
       <aside
         style={{ fontFamily: SIDEBAR_FONT_FAMILY }}
         className={`
-          fixed top-16 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
+          fixed top-[var(--app-topbar-height)] left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
           transform transition-[transform,width] duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          h-[calc(100dvh-4rem)] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh]
+          h-[calc(100dvh-var(--app-topbar-height))] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh]
           ${isDesktopCollapsed ? 'md:w-20' : 'md:w-60'}
         `}
       >

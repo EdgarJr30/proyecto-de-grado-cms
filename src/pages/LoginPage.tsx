@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DefaultLogo from '../assets/logo.png';
 import DefaultCollage from '../assets/login_img.png';
@@ -24,12 +24,27 @@ export default function LoginPage() {
   const finalLogo = logoSrc ?? DefaultLogo;
   const finalCollage = loginImgSrc ?? DefaultCollage;
 
+  const navigateToHome = useCallback(() => {
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) {
+      activeElement.blur();
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        window.dispatchEvent(new Event('resize'));
+        navigate('/inicio', { replace: true });
+      });
+    });
+  }, [navigate]);
+
   // Si ya está autenticado, redirige
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate('/inicio', { replace: true });
+      navigateToHome();
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, navigateToHome]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +67,7 @@ export default function LoginPage() {
 
       if (data.session?.user) {
         showToastSuccess('Inicio de sesión exitoso. Bienvenido.');
-        navigate('/inicio', { replace: true });
+        navigateToHome();
       }
     } catch (err: unknown) {
       const finalMessage =

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
-import { motion, useReducedMotion } from 'framer-motion';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
@@ -44,7 +43,6 @@ export default function AppTopBar() {
     getInitialDesktopCollapsedState
   );
   const { isDark, toggleTheme } = useTheme();
-  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const handleSidebarState = (event: Event) => {
@@ -83,6 +81,9 @@ export default function AppTopBar() {
   const hasDetailedHeader = breadcrumbOnlyHeader
     ? false
     : Boolean(topBarMeta.description || topBarMeta.breadcrumbs?.length);
+  const topbarHeight = hasDetailedHeader
+    ? 'calc(6rem + env(safe-area-inset-top, 0px))'
+    : 'calc(4rem + env(safe-area-inset-top, 0px))';
 
   const handleToggleSidebar = () => {
     window.dispatchEvent(
@@ -93,26 +94,17 @@ export default function AppTopBar() {
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--app-topbar-height',
-      hasDetailedHeader ? '6rem' : '4rem'
+      topbarHeight
     );
-  }, [hasDetailedHeader]);
+  }, [topbarHeight]);
 
   return (
-    <motion.header
-      initial={
-        prefersReducedMotion
-          ? { opacity: 1, y: 0 }
-          : { opacity: 0, y: -8 }
-      }
-      animate={{ opacity: 1, y: 0 }}
-      transition={
-        prefersReducedMotion
-          ? { duration: 0 }
-          : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
-      }
+    <header
+      style={{
+        height: topbarHeight,
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+      }}
       className={`fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur transition-[left,height] duration-300 ${
-        hasDetailedHeader ? 'h-24' : 'h-16'
-      } ${
         desktopSidebarCollapsed ? 'md:left-20' : 'md:left-60'
       } dark:border-slate-700 dark:bg-slate-900/95`}
     >
@@ -254,6 +246,6 @@ export default function AppTopBar() {
           <UserQuickMenu />
         </div>
       </div>
-    </motion.header>
+    </header>
   );
 }

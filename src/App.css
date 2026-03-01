@@ -145,6 +145,7 @@
 
   .app-shell-safe {
     --app-topbar-height-default: 4rem;
+    --app-topbar-height: var(--app-topbar-height-default);
   }
 
   .app-shell-safe main {
