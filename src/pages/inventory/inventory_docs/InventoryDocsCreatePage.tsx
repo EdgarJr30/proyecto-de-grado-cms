@@ -1,14 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
-  ChevronRight,
-  FilePlus2,
   Loader2,
-  ShieldAlert,
 } from 'lucide-react';
 
-import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import type { InventoryDocType } from '../../../types/inventory';
@@ -95,7 +91,6 @@ export default function InventoryDocsCreatePage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyAccessState />
         </main>
@@ -105,67 +100,18 @@ export default function InventoryDocsCreatePage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
-          <div className="px-4 md:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-3">
-              <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Link to="/inventario" className="hover:text-slate-900">
-                  Inventario
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <Link to="/inventory/docs" className="hover:text-slate-900">
-                  Documentos
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-900 font-medium">Crear</span>
-              </nav>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-blue-50">
-                    <FilePlus2 className="h-5 w-5 text-blue-700" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                      Crear documento de inventario
-                    </h1>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Selecciona un tipo de movimiento para abrir un borrador.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  {canWrite ? (
-                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      ✓ Creación habilitada
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      Solo lectura
-                    </span>
-                  )}
-
-                  <GhostButton
-                    onClick={() => navigate('/inventory/docs')}
-                    icon={ArrowLeft}
-                    className="h-9"
-                  >
-                    Ver listado
-                  </GhostButton>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <section className="flex-1 min-h-0 overflow-auto">
+        <section className="flex-1 min-h-0 overflow-auto pt-6">
           <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="mb-4 flex justify-end">
+              <GhostButton
+                onClick={() => navigate('/inventory/docs')}
+                icon={ArrowLeft}
+                className="h-9"
+              >
+                Ver listado
+              </GhostButton>
+            </div>
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
               <div className="xl:col-span-8">
                 <div className="rounded-2xl border border-slate-200 bg-white p-5">

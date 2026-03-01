@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
 import UserQuickMenu from './UserQuickMenu';
+import { resolveTopBarMeta } from './topBarMeta';
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
 
@@ -73,12 +74,29 @@ export default function AppTopBar() {
     () => resolveTitle(location_id.pathname),
     [location_id.pathname]
   );
+  const topBarMeta = useMemo(
+    () => resolveTopBarMeta(location_id.pathname, title),
+    [location_id.pathname, title]
+  );
+  const inventoryBreadcrumbOnlyHeader =
+    topBarMeta.sectionLabel === 'Inventario' &&
+    Boolean(topBarMeta.breadcrumbs?.length);
+  const hasDetailedHeader = inventoryBreadcrumbOnlyHeader
+    ? false
+    : Boolean(topBarMeta.description || topBarMeta.breadcrumbs?.length);
 
   const handleToggleSidebar = () => {
     window.dispatchEvent(
       new Event(sidebarOpen ? 'app:sidebar-close' : 'app:sidebar-open')
     );
   };
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--app-topbar-height',
+      hasDetailedHeader ? '6rem' : '4rem'
+    );
+  }, [hasDetailedHeader]);
 
   return (
     <motion.header
@@ -93,12 +111,19 @@ export default function AppTopBar() {
           ? { duration: 0 }
           : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
       }
-      className={`fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur transition-[left] duration-300 ${
+      className={`fixed inset-x-0 top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur transition-[left,height] duration-300 ${
+        hasDetailedHeader ? 'h-24' : 'h-16'
+      } ${
         desktopSidebarCollapsed ? 'md:left-20' : 'md:left-60'
       } dark:border-slate-700 dark:bg-slate-900/95`}
     >
-      <div className="mx-auto flex h-full items-center justify-between gap-3 px-3 md:px-6">
-        <div className="flex min-w-0 items-center gap-2">
+      <div
+        className={cn(
+          'mx-auto flex h-full justify-between gap-3 px-3 md:px-6',
+          hasDetailedHeader ? 'items-start py-3' : 'items-center'
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-2">
           <button
             type="button"
             onClick={handleToggleSidebar}
@@ -110,16 +135,74 @@ export default function AppTopBar() {
           </button>
 
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">
-              Navegación
-            </p>
-            <p className="truncate text-sm font-semibold text-slate-900 md:text-base dark:text-slate-100">
-              {title}
-            </p>
+            {topBarMeta.breadcrumbs?.length ? (
+              <nav
+                className={cn(
+                  'flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400',
+                  hasDetailedHeader ? 'mt-0.5' : ''
+                )}
+              >
+                {topBarMeta.breadcrumbs.map((breadcrumb, index) => {
+                  const isLast = index === topBarMeta.breadcrumbs!.length - 1;
+                  return (
+                    <div key={`${breadcrumb.label}-${index}`} className="flex items-center gap-1.5">
+                      {breadcrumb.to && !isLast ? (
+                        <Link
+                          to={breadcrumb.to}
+                          className="truncate hover:text-slate-900 dark:hover:text-slate-100"
+                        >
+                          {breadcrumb.label}
+                        </Link>
+                      ) : (
+                        <span
+                          className={cn(
+                            'truncate',
+                            isLast
+                              ? 'font-semibold text-slate-900 dark:text-slate-100'
+                              : ''
+                          )}
+                        >
+                          {breadcrumb.label}
+                        </span>
+                      )}
+                      {!isLast ? <span className="text-slate-400">›</span> : null}
+                    </div>
+                  );
+                })}
+                {inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
+                  <>
+                    <span className="hidden text-slate-400 sm:inline" aria-hidden="true">
+                      •
+                    </span>
+                    <span className="hidden max-w-[32rem] truncate text-[11px] text-slate-500 sm:inline dark:text-slate-400">
+                      {topBarMeta.description}
+                    </span>
+                  </>
+                ) : null}
+              </nav>
+            ) : null}
+            {!inventoryBreadcrumbOnlyHeader ? (
+              <p className="truncate text-sm font-semibold text-slate-900 md:text-base dark:text-slate-100">
+                {topBarMeta.title}
+              </p>
+            ) : null}
+            {!inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
+              <p className="max-w-3xl truncate text-xs text-slate-500 dark:text-slate-400">
+                {topBarMeta.description}
+              </p>
+            ) : null}
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {topBarMeta.badges?.map((badge) => (
+            <span
+              key={badge}
+              className="hidden sm:inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700"
+            >
+              {badge}
+            </span>
+          ))}
           <button
             type="button"
             onClick={toggleTheme}

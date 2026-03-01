@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../../../components/layout/Sidebar';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import {
   showConfirmAlert,
@@ -11,7 +10,6 @@ import type {
   WarehouseInsert,
   WarehouseRow,
   WarehouseUpdate,
-  UUID,
 } from '../../../types/inventory';
 import {
   createWarehouse,
@@ -21,7 +19,6 @@ import {
 } from '../../../services/inventory';
 
 import { PageShell } from './components/PageShell';
-import { WarehousesHeader } from './components/WarehousesHeader';
 import { WarehousesToolbar } from './components/WarehousesToolbar';
 import { WarehousesMobileList } from './components/WarehousesMobileList';
 import { WarehousesTable } from './components/WarehousesTable';
@@ -53,11 +50,19 @@ export default function WarehousesPage() {
   const canRead = has('inventory:read');
   const canManage = has('inventory:full_access');
 
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
   const [rows, setRows] = useState<WarehouseRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [query, setQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(
+    'active'
+  );
+
+  const [selectedRows, setSelectedRows] = useState<WarehouseRow[]>([]);
+  const [checked, setChecked] = useState(false);
+  const [indeterminate, setIndeterminate] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<WarehouseRow | null>(null);
@@ -65,15 +70,16 @@ export default function WarehousesPage() {
   const [saving, setSaving] = useState(false);
 
   async function refresh() {
+    if (!canRead) return;
     setLoading(true);
     try {
       const data = await listWarehouses({
         limit: 500,
-        is_active: showInactive ? undefined : true,
         orderBy: 'code',
         ascending: true,
       });
       setRows(data);
+      setSelectedRows([]);
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
     } finally {
@@ -84,30 +90,69 @@ export default function WarehousesPage() {
   useEffect(() => {
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showInactive]);
+  }, [canRead]);
 
   const filteredRows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
 
     return rows.filter((row) => {
-      return (
+      const matchesQuery =
+        !q ||
         row.code.toLowerCase().includes(q) ||
         row.name.toLowerCase().includes(q) ||
-        (row.location_label ?? '').toLowerCase().includes(q)
-      );
+        (row.location_label ?? '').toLowerCase().includes(q);
+
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'active'
+            ? row.is_active
+            : !row.is_active;
+
+      return matchesQuery && matchesStatus;
     });
-  }, [rows, query]);
+  }, [rows, query, statusFilter]);
+
+  useEffect(() => {
+    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
+  }, [filteredRows]);
+
+  useEffect(() => {
+    const total = filteredRows.length;
+    const selected = selectedRows.length;
+
+    const nextChecked = total > 0 && selected === total;
+    const nextInd = selected > 0 && selected < total;
+
+    setChecked(nextChecked);
+    setIndeterminate(nextInd);
+
+    if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
+  }, [filteredRows.length, selectedRows.length]);
+
+  function toggleAll() {
+    const shouldSelectAll = !(checked || indeterminate);
+    setSelectedRows(shouldSelectAll ? filteredRows : []);
+    setChecked(shouldSelectAll);
+    setIndeterminate(false);
+    if (checkboxRef.current) checkboxRef.current.indeterminate = false;
+  }
 
   function openCreate() {
-    if (!canManage) return;
+    if (!canManage) {
+      showToastError('No tienes permisos para gestionar almacenes.');
+      return;
+    }
     setEditing(null);
     setForm(toFormDefaults());
     setIsModalOpen(true);
   }
 
   function openEdit(row: WarehouseRow) {
-    if (!canManage) return;
+    if (!canManage) {
+      showToastError('No tienes permisos para gestionar almacenes.');
+      return;
+    }
     setEditing(row);
     setForm(toFormDefaults(row));
     setIsModalOpen(true);
@@ -160,19 +205,47 @@ export default function WarehousesPage() {
     }
   }
 
-  async function onDelete(id: UUID) {
-    if (!canManage) return;
+  async function onDelete(row: WarehouseRow) {
+    if (!canManage) {
+      showToastError('No tienes permisos para gestionar almacenes.');
+      return;
+    }
 
     const ok = await showConfirmAlert({
       title: 'Eliminar almacén',
-      text: 'Se eliminará este almacén. La acción puede fallar si tiene ubicaciones o inventario asociado.',
+      text: `¿Eliminar el almacén "${row.code}"? La acción puede fallar si tiene ubicaciones o inventario asociado.`,
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
 
     try {
-      await deleteWarehouse(id);
+      await deleteWarehouse(row.id);
       showToastSuccess('Almacén eliminado.');
+      await refresh();
+    } catch (error: unknown) {
+      showToastError(getErrorMessage(error));
+    }
+  }
+
+  async function onBulkDelete() {
+    if (!canManage) {
+      showToastError('No tienes permisos para gestionar almacenes.');
+      return;
+    }
+    if (selectedRows.length === 0) return;
+
+    const ok = await showConfirmAlert({
+      title: 'Eliminar selección',
+      text: `¿Eliminar ${selectedRows.length} almacén(es) seleccionado(s)?`,
+      confirmButtonText: 'Sí, eliminar',
+    });
+    if (!ok) return;
+
+    try {
+      for (const row of selectedRows) {
+        await deleteWarehouse(row.id);
+      }
+      showToastSuccess(`Se eliminaron ${selectedRows.length} almacén(es).`);
       await refresh();
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
@@ -182,7 +255,6 @@ export default function WarehousesPage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyState
             title="Acceso restringido"
@@ -195,37 +267,55 @@ export default function WarehousesPage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <WarehousesHeader count={rows.length} canManage={canManage} />
+        <section className="flex-1 min-h-0 overflow-auto">
+          <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <WarehousesToolbar
+                canManage={canManage}
+                query={query}
+                statusFilter={statusFilter}
+                totalCount={filteredRows.length}
+                selectedCount={selectedRows.length}
+                loading={loading}
+                onQueryChange={setQuery}
+                onStatusFilterChange={setStatusFilter}
+                onRefresh={() => void refresh()}
+                onCreate={openCreate}
+                onBulkDelete={() => void onBulkDelete()}
+              />
 
-        <WarehousesToolbar
-          canManage={canManage}
-          query={query}
-          showInactive={showInactive}
-          onQueryChange={setQuery}
-          onShowInactiveChange={setShowInactive}
-          onRefresh={() => void refresh()}
-          onCreate={openCreate}
-        />
+              <WarehousesMobileList
+                rows={filteredRows}
+                loading={loading}
+                canManage={canManage}
+                selectedRows={selectedRows}
+                setSelectedRows={setSelectedRows}
+                onEdit={openEdit}
+                onDelete={(row) => void onDelete(row)}
+              />
 
-        <section className="flex-1 min-h-0 overflow-auto px-4 md:px-6 lg:px-8 pb-6">
-          <WarehousesMobileList
-            rows={filteredRows}
-            loading={loading}
-            canManage={canManage}
-            onEdit={openEdit}
-            onDelete={(row) => void onDelete(row.id)}
-          />
+              <WarehousesTable
+                rows={filteredRows}
+                loading={loading}
+                canManage={canManage}
+                selectedRows={selectedRows}
+                setSelectedRows={setSelectedRows}
+                checked={checked}
+                onToggleAll={toggleAll}
+                checkboxRef={checkboxRef}
+                onEdit={openEdit}
+                onDelete={(row) => void onDelete(row)}
+              />
 
-          <WarehousesTable
-            rows={filteredRows}
-            loading={loading}
-            canManage={canManage}
-            onEdit={openEdit}
-            onDelete={(row) => void onDelete(row.id)}
-          />
+              <div className="px-5 py-4 border-t border-slate-100 bg-white">
+                <div className="text-xs text-slate-500">
+                  Tip: usa el botón "Ubicaciones" para administrar pasillos y
+                  estantes de cada almacén.
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <WarehouseModal

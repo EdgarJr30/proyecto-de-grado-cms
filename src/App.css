@@ -144,11 +144,11 @@
   }
 
   .app-shell-safe {
-    --app-topbar-height: 4rem;
+    --app-topbar-height-default: 4rem;
   }
 
   .app-shell-safe main {
-    padding-top: var(--app-topbar-height) !important;
+    padding-top: var(--app-topbar-height, var(--app-topbar-height-default)) !important;
   }
 
   .dark .bg-white {

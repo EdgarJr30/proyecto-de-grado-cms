@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 
@@ -93,7 +92,6 @@ export default function ReorderSuggestionsPage() {
   if (!canRead) {
     return (
       <div className="h-screen flex bg-background text-foreground">
-        <Sidebar />
         <main className="flex-1 min-w-0 p-6">
           <div className="rounded-2xl border bg-card p-6 shadow-sm">
             <div className="text-lg font-semibold">Sin acceso</div>
@@ -110,50 +108,14 @@ export default function ReorderSuggestionsPage() {
 
   return (
     <div className="h-screen flex bg-background text-foreground">
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        {/* Header */}
-        <div className="border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="px-4 md:px-6 pt-5 pb-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Inventario
-                  </span>
-                  <span className="text-xs text-muted-foreground">›</span>
-                  <span className="text-xs text-muted-foreground">
-                    Reposición
-                  </span>
-                  <span className="text-xs text-muted-foreground">›</span>
-                  <span className="text-xs font-semibold text-foreground/80">
-                    Sugerencias de reposición
-                  </span>
-                </div>
-
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-                  Sugerencias de reposición
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground max-w-3xl">
-                  Vista <span className="font-mono">v_reorder_suggestions</span>{' '}
-                  — solo lectura. Aquí se muestran las sugerencias de reposición
-                  calculadas según stock y políticas (min/reorder_point).
-                </p>
-              </div>
-
-              <div className="shrink-0 text-xs text-muted-foreground">
-                {loading
-                  ? 'Cargando…'
-                  : `${rows.length} filas / necesitan=${needsCount}`}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="flex-1 min-h-0 overflow-auto pt-6">
           <div className="px-4 md:px-6 py-4 space-y-4">
+            <div className="flex justify-end text-xs text-muted-foreground">
+              {loading
+                ? 'Cargando…'
+                : `${rows.length} filas / necesitan=${needsCount}`}
+            </div>
             {/* Filters */}
             <div className="rounded-2xl border bg-card p-4 shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">

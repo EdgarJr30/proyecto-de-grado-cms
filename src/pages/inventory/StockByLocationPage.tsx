@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight, MapPinned } from 'lucide-react';
-import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 import type { UUID, VStockByLocationRow } from '../../types/inventory';
@@ -86,7 +83,6 @@ export default function StockByLocationPage() {
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900">
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -100,38 +96,8 @@ export default function StockByLocationPage() {
 
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900">
-      <Sidebar />
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
-          <div className="px-4 md:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-3">
-              <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Link to="/inventario" className="hover:text-slate-900">
-                  Inventario
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-900 font-medium">
-                  Stock por ubicación
-                </span>
-              </nav>
-              <div className="flex items-center gap-3">
-                <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-sky-100">
-                  <MapPinned className="h-5 w-5 text-sky-700" />
-                </div>
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                    Stock por ubicación
-                  </h1>
-                  <p className="mt-1 text-xs md:text-sm text-slate-500">
-                    Vista detallada por repuesto, almacén y ubicación.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60">
+        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60 pt-6">
           <div className="px-4 md:px-6 lg:px-8 py-6 space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

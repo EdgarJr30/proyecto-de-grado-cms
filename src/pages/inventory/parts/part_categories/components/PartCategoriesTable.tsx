@@ -2,7 +2,6 @@ import { type RefObject } from 'react';
 import type { PartCategoryRow } from '../../../../../types/inventory';
 import type { CategoryHelpers } from './types';
 import { Pencil, Trash2 } from 'lucide-react';
-import { DangerButton, GhostButton } from './buttons';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -36,143 +35,135 @@ export function PartCategoriesTable({
   onDelete: (r: PartCategoryRow) => void;
 }) {
   return (
-    <div className="hidden md:block">
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="h-11 border-b border-slate-200 bg-blue-50/50" />
+    <div className="hidden md:block overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="bg-white sticky top-0 z-10">
+          <tr className="border-b border-slate-200">
+            <th className="px-5 py-3 w-12">
+              <input
+                ref={checkboxRef}
+                type="checkbox"
+                disabled={!canManage}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                checked={checked}
+                onChange={onToggleAll}
+                aria-label="Seleccionar todo"
+              />
+            </th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">
+              Nombre
+            </th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">
+              Padre
+            </th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">
+              Ruta
+            </th>
+            <th className="text-right font-semibold text-slate-600 px-5 py-3">
+              Acciones
+            </th>
+          </tr>
+        </thead>
 
-        <div className="-mt-6 p-4">
-          <div className="overflow-auto rounded-xl ring-1 ring-slate-200 bg-white">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50 sticky top-0 z-10">
-                <tr>
-                  <th className="px-6 w-12">
+        <tbody className="divide-y divide-slate-100">
+          {isLoading ? (
+            <tr>
+              <td colSpan={5} className="py-10 text-center text-slate-400">
+                Cargando…
+              </td>
+            </tr>
+          ) : rows.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="py-10 text-center text-slate-400">
+                Sin resultados.
+              </td>
+            </tr>
+          ) : (
+            rows.map((r) => {
+              const selected = selectedRows.includes(r);
+              const parent = helpers.labelOf(r.parent_id) ?? '—';
+              const breadcrumb = helpers.breadcrumbOf(r.id);
+
+              return (
+                <tr
+                  key={r.id}
+                  className={cx(
+                    'hover:bg-slate-50/70 transition',
+                    selected && 'bg-blue-50/50'
+                  )}
+                >
+                  <td className="px-5 py-3 w-12">
                     <input
-                      ref={checkboxRef}
                       type="checkbox"
                       disabled={!canManage}
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                      checked={checked}
-                      onChange={onToggleAll}
-                      aria-label="Seleccionar todo"
+                      checked={selected}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setSelectedRows((prev) => [...prev, r]);
+                          return;
+                        }
+                        setSelectedRows((prev) => prev.filter((x) => x !== r));
+                      }}
+                      aria-label={`Seleccionar ${r.name}`}
                     />
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Padre
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Ruta
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
+                  </td>
 
-              <tbody className="divide-y divide-slate-200">
-                {isLoading ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-10 text-center text-slate-400"
-                    >
-                      Cargando…
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-10 text-center text-slate-400"
-                    >
-                      Sin resultados.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r) => {
-                    const selected = selectedRows.includes(r);
-                    const parent = helpers.labelOf(r.parent_id) ?? '—';
-                    const breadcrumb = helpers.breadcrumbOf(r.id);
+                  <td className="px-5 py-3 text-sm font-semibold text-slate-900">
+                    {r.name}
+                  </td>
 
-                    return (
-                      <tr
-                        key={r.id}
+                  <td className="px-5 py-3 text-slate-700">{parent}</td>
+
+                  <td className="px-5 py-3 text-slate-500">
+                    <span className="line-clamp-1">{breadcrumb}</span>
+                  </td>
+
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
                         className={cx(
-                          'transition',
-                          selected ? 'bg-blue-50/60' : 'hover:bg-slate-50'
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                          !canManage
+                            ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                         )}
+                        disabled={!canManage}
+                        onClick={() => onEdit(r)}
                       >
-                        <td className="relative px-6 w-12">
-                          {selected && (
-                            <div className="absolute inset-y-0 left-0 w-0.5 bg-blue-600" />
-                          )}
-                          <input
-                            type="checkbox"
-                            disabled={!canManage}
-                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                            checked={selected}
-                            onChange={(e) => {
-                              if (e.target.checked)
-                                setSelectedRows((prev) => [...prev, r]);
-                              else
-                                setSelectedRows((prev) =>
-                                  prev.filter((x) => x !== r)
-                                );
-                            }}
-                            aria-label={`Seleccionar ${r.name}`}
-                          />
-                        </td>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </button>
 
-                        <td className="px-4 py-4 text-sm font-semibold text-slate-900">
-                          {r.name}
-                        </td>
+                      <button
+                        type="button"
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                          !canManage
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-rose-600 hover:bg-rose-700 text-white'
+                        )}
+                        disabled={!canManage}
+                        onClick={() => onDelete(r)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
 
-                        <td className="px-4 py-4 text-sm text-slate-700">
-                          {parent}
-                        </td>
-
-                        <td className="px-4 py-4 text-sm text-slate-500">
-                          <span className="line-clamp-1">{breadcrumb}</span>
-                        </td>
-
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <GhostButton
-                              disabled={!canManage}
-                              onClick={() => onEdit(r)}
-                            >
-                              <span className="inline-flex items-center gap-2">
-                                <Pencil className="h-4 w-4" />
-                                Editar
-                              </span>
-                            </GhostButton>
-
-                            <DangerButton
-                              disabled={!canManage}
-                              onClick={() => onDelete(r)}
-                              icon={Trash2}
-                            >
-                              Eliminar
-                            </DangerButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {indeterminate ? (
-            <div className="mt-3 text-xs text-slate-500">
-              Hay selección parcial (no todas las filas están seleccionadas).
-            </div>
-          ) : null}
+      {indeterminate ? (
+        <div className="px-5 py-3 text-xs text-slate-500 border-t border-slate-100 bg-white">
+          Hay selección parcial (no todas las filas están seleccionadas).
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }

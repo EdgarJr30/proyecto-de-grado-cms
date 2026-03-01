@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
 import { useCan } from '../../rbac/PermissionsContext';
 import {
   showConfirmAlert,
@@ -216,7 +215,6 @@ function PartVendorsContent({ embedded }: Props) {
     // standalone page
     return (
       <div className="h-screen flex bg-gray-100">
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
             <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
@@ -537,19 +535,7 @@ export default function PartVendorsPage(props: Props) {
 
   return (
     <div className="h-screen flex bg-gray-100">
-      <Sidebar />
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="px-4 md:px-6 lg:px-8 pb-0 pt-4 md:pt-6">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-2xl md:text-3xl font-bold">
-              Repuesto–Proveedor
-            </h2>
-            <p className="text-sm text-gray-600">
-              Lead time, MOQ, precio, moneda y preferido por repuesto.
-            </p>
-          </div>
-        </header>
-
         <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto flex-1 min-h-0">
           <PartVendorsContent />
         </section>

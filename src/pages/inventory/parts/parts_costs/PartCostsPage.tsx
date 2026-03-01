@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Sidebar from '../../../../components/layout/Sidebar';
 import { usePermissions } from '../../../../rbac/PermissionsContext';
 import { showToastError } from '../../../../notifications';
 
@@ -7,7 +6,6 @@ import type { UUID, VPartCostRow } from '../../../../types/inventory';
 import { listPartCosts } from '../../../../services/inventory/partCostsService';
 
 import { PageShell } from './components/PageShell';
-import { PartCostsHeader } from './components/PartCostsHeader';
 import { PartCostsToolbar } from './components/PartCostsToolbar';
 import { PartCostsMobileList } from './components/PartCostsMobileList';
 import { PartCostsTable } from './components/PartCostsTable';
@@ -33,7 +31,6 @@ function EmptyState({
 export default function PartCostsPage() {
   const { has } = usePermissions();
   const canRead = has('inventory:read');
-  const canManage = has('inventory:full_access'); // 👈 igual que en categories
 
   const checkboxRef = useRef<HTMLInputElement>(null);
 
@@ -128,7 +125,6 @@ export default function PartCostsPage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyState
             title="Acceso restringido"
@@ -141,12 +137,7 @@ export default function PartCostsPage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        {/* 👇 igual que categories: count + canManage */}
-        <PartCostsHeader count={rows.length} canManage={canManage} />
-
         <PartCostsToolbar
           isLoading={isLoading}
           // filtros

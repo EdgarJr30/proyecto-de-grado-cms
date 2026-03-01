@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import type {
   PartCriticality,
@@ -18,7 +17,6 @@ import {
   showToastSuccess,
 } from '../../../notifications';
 
-import PartsHeader from './components/PartsHeader';
 import PartsToolbar from './components/PartsToolbar';
 import PartsMobileList from './components/PartsMobileList';
 import PartsTable from './components/PartsTable';
@@ -231,7 +229,6 @@ export default function PartsPage() {
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900">
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -245,18 +242,7 @@ export default function PartsPage() {
 
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900">
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <PartsHeader
-          totalCount={totalCount}
-          selectedCount={selectedCount}
-          canManage={canManage}
-          isLoading={isLoading}
-          onCreate={openCreate}
-          onBulkDelete={handleBulkDelete}
-        />
-
         <section className="flex-1 min-h-0 overflow-auto">
           <div className="px-4 md:px-6 lg:px-8 py-6">
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -268,7 +254,11 @@ export default function PartsPage() {
                 critFilter={critFilter}
                 setCritFilter={setCritFilter}
                 totalCount={totalCount}
+                selectedCount={selectedCount}
                 canManage={canManage}
+                isLoading={isLoading}
+                onCreate={openCreate}
+                onBulkDelete={handleBulkDelete}
               />
 
               <PartsMobileList
