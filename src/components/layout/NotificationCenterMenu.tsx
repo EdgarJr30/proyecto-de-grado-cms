@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, CheckCheck, Circle, Search, X } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
@@ -34,6 +34,8 @@ export default function NotificationCenterMenu() {
   const [filter, setFilter] = useState<NotificationFilter>('pending');
   const [query, setQuery] = useState('');
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -49,6 +51,38 @@ export default function NotificationCenterMenu() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    if (typeof window === 'undefined') return;
+
+    const desktopMedia = window.matchMedia('(min-width: 768px)');
+    if (!desktopMedia.matches) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      const clickedTrigger = triggerRef.current?.contains(target);
+      const clickedPanel = panelRef.current?.contains(target);
+      if (clickedTrigger || clickedPanel) return;
+      setOpen(false);
+    };
+
+    document.addEventListener('pointerdown', onOutsidePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', onOutsidePointerDown, true);
+    };
+  }, [open]);
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => item.status === 'unread').length,
@@ -234,6 +268,7 @@ export default function NotificationCenterMenu() {
 
   const desktopPanel = (
     <motion.div
+      ref={panelRef}
       role="dialog"
       aria-label="Panel de notificaciones"
       initial={
@@ -259,10 +294,10 @@ export default function NotificationCenterMenu() {
   );
 
   const desktopBackdrop = (
-    <motion.button
-      type="button"
+    <motion.div
+      role="presentation"
+      aria-hidden="true"
       onClick={() => setOpen(false)}
-      aria-label="Cerrar panel de notificaciones"
       initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
@@ -273,10 +308,10 @@ export default function NotificationCenterMenu() {
 
   const mobilePanel = (
     <>
-      <motion.button
-        type="button"
+      <motion.div
+        role="presentation"
+        aria-hidden="true"
         onClick={() => setOpen(false)}
-        aria-label="Cerrar panel de notificaciones"
         initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
@@ -284,15 +319,12 @@ export default function NotificationCenterMenu() {
         className="fixed inset-x-0 bottom-0 top-[var(--app-topbar-height,4rem)] z-[130] bg-slate-950/45 md:hidden"
       />
       <motion.div
+        ref={panelRef}
         role="dialog"
         aria-label="Panel de notificaciones"
-        initial={
-          prefersReducedMotion ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.985 }
-        }
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={
-          prefersReducedMotion ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 8, scale: 0.985 }
-        }
+        initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
         transition={
           prefersReducedMotion
             ? { duration: 0 }
@@ -302,7 +334,7 @@ export default function NotificationCenterMenu() {
           top: 'calc(var(--app-topbar-height, 4rem) + 0.5rem)',
           maxHeight: '72dvh',
         }}
-        className="fixed inset-x-3 z-[131] flex min-h-[18rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900 md:hidden"
+        className="fixed inset-x-3 z-[131] flex min-h-[18rem] transform-gpu rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900 md:hidden"
       >
         {panelBody}
       </motion.div>
@@ -312,11 +344,13 @@ export default function NotificationCenterMenu() {
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Centro de notificaciones"
         aria-haspopup="dialog"
         aria-expanded={open}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
         className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
       >
         <Bell className="h-5 w-5" />
