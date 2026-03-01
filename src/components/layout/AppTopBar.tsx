@@ -138,7 +138,7 @@ export default function AppTopBar() {
             {topBarMeta.breadcrumbs?.length ? (
               <nav
                 className={cn(
-                  'flex min-w-0 items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400',
+                  'flex min-w-0 items-center gap-1.5 overflow-hidden text-xs text-slate-500 dark:text-slate-400',
                   hasDetailedHeader ? 'mt-0.5' : ''
                 )}
               >
@@ -169,17 +169,12 @@ export default function AppTopBar() {
                     </div>
                   );
                 })}
-                {inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
-                  <>
-                    <span className="hidden text-slate-400 sm:inline" aria-hidden="true">
-                      •
-                    </span>
-                    <span className="hidden max-w-[32rem] truncate text-[11px] text-slate-500 sm:inline dark:text-slate-400">
-                      {topBarMeta.description}
-                    </span>
-                  </>
-                ) : null}
               </nav>
+            ) : null}
+            {inventoryBreadcrumbOnlyHeader && topBarMeta.description ? (
+              <p className="max-w-[32rem] truncate text-[10px] leading-tight text-slate-500 dark:text-slate-400">
+                {topBarMeta.description}
+              </p>
             ) : null}
             {!inventoryBreadcrumbOnlyHeader ? (
               <p className="truncate text-sm font-semibold text-slate-900 md:text-base dark:text-slate-100">
