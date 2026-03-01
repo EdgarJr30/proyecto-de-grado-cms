@@ -82,6 +82,25 @@ if (process.env.NODE_ENV !== 'development') {
 console.log('🚀 Aplicación iniciada en modo:', process.env.NODE_ENV);
 setupGlobalNumericInputNormalization();
 
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swUrl = `/sw.js?v=${encodeURIComponent(__APP_VERSION__)}`;
+    navigator.serviceWorker
+      .register(swUrl, { updateViaCache: 'none' })
+      .then(() => {
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+      })
+      .catch((error) => {
+        console.error('Error registrando service worker:', error);
+      });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider>

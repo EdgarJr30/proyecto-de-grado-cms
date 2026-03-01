@@ -9,8 +9,19 @@
   RewriteRule . /index.html [L]
 </IfModule>
 
+# ========= MIME types =========
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
 # ========= Caching headers =========
 <IfModule mod_headers.c>
+  # Cabeceras de seguridad base
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
   # 1) NUNCA cachear HTML (forzar que se baje el index.html nuevo en cada visita)
   <FilesMatch "\.(?:html)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
@@ -24,7 +35,18 @@
     Header set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 
-  # 3) (Opcional) Fallback corto para archivos SIN hash colocados en /static o similares
+  # 3) SW/manifest/offline SIEMPRE deben revalidarse para recibir actualizaciones rapido
+  <FilesMatch "^(?:sw\.js|manifest\.webmanifest|offline\.html)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  <Files "sw.js">
+    Header set Service-Worker-Allowed "/"
+  </Files>
+
+  # 4) (Opcional) Fallback corto para archivos SIN hash colocados en /static o similares
   #    Útil si subes PDFs, imágenes o archivos que podrías reemplazar con el mismo nombre.
   <LocationMatch "^/(?:static|assets|files|uploads)/">
     Header set Cache-Control "public, max-age=300, must-revalidate"
@@ -36,6 +58,7 @@
   ExpiresActive On
   # HTML expira inmediatamente
   ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/manifest+json "access plus 0 seconds"
   # Assets con hash: 1 año
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType text/javascript "access plus 1 year"
