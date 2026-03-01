@@ -1,13 +1,15 @@
 // src/components/Routes/ProtectedRoute.tsx
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AppTopBar from '../components/layout/AppTopBar';
+import Sidebar from '../components/layout/Sidebar';
 import ScreenLoader from '../components/ui/ScreenLoader';
+import { SidebarLayoutProvider } from '../components/layout/SidebarLayoutContext';
 
 export default function ProtectedRoute({
   children,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }) {
   const { loading, isAuthenticated } = useAuth();
   const location_id = useLocation();
@@ -24,11 +26,16 @@ export default function ProtectedRoute({
     );
   }
 
+  const content = children ?? <Outlet />;
+
   return isAuthenticated ? (
-    <>
+    <SidebarLayoutProvider>
       <AppTopBar />
-      <div className="app-shell-safe">{children}</div>
-    </>
+      <div className="app-shell-safe flex min-h-[100dvh]">
+        <Sidebar persistent />
+        <div className="min-w-0 flex-1">{content}</div>
+      </div>
+    </SidebarLayoutProvider>
   ) : (
     <Navigate to="/login" state={{ from: location_id }} replace />
   );

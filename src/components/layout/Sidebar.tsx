@@ -9,11 +9,56 @@ import { APP_ROUTES } from '../../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useBranding } from '../../context/BrandingContext';
 import Footer from '../ui/Footer';
+import { useHasPersistentSidebar } from './SidebarLayoutContext';
 
 const SIDEBAR_FONT_FAMILY =
   "'Manrope', 'Nunito Sans', 'Segoe UI', sans-serif";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
 
-export default function Sidebar() {
+function getInitialDesktopCollapsedState() {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === '1';
+}
+
+function CollapseToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return collapsed ? (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="1.8"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 5.25h15M4.5 12h10.5M4.5 18.75h15M16.5 9l3 3-3 3"
+      />
+    </svg>
+  ) : (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="1.8"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M4.5 5.25h15M9 12h10.5M4.5 18.75h15M7.5 9l-3 3 3 3"
+      />
+    </svg>
+  );
+}
+
+type SidebarProps = {
+  persistent?: boolean;
+};
+
+function SidebarContent() {
   const { loading } = useAuth();
   const { profile } = useUser();
   const { has, ready } = usePermissions();
@@ -22,6 +67,9 @@ export default function Sidebar() {
   const location_id = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(
+    getInitialDesktopCollapsedState
+  );
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
@@ -40,6 +88,23 @@ export default function Sidebar() {
       new CustomEvent('app:sidebar-state', { detail: { open: isOpen } })
     );
   }, [isOpen]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      SIDEBAR_COLLAPSED_STORAGE_KEY,
+      isDesktopCollapsed ? '1' : '0'
+    );
+
+    window.dispatchEvent(
+      new CustomEvent('app:sidebar-desktop-state', {
+        detail: { collapsed: isDesktopCollapsed },
+      })
+    );
+  }, [isDesktopCollapsed]);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location_id.pathname]);
 
   // Si ya hay cache, esto viene instantáneo. Si no, caerá en default.
   const finalLogoSrc = logoSrc ?? DefaultSidebarLogo;
@@ -94,7 +159,9 @@ export default function Sidebar() {
     return (
       <aside
         style={{ fontFamily: SIDEBAR_FONT_FAMILY }}
-        className="fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh]"
+        className={`fixed top-0 left-0 w-60 bg-gray-900 text-gray-200 flex flex-col h-[100dvh] transition-[width] duration-300 ${
+          isDesktopCollapsed ? 'md:w-20' : 'md:w-60'
+        }`}
       >
         <div className="h-16 px-4 border-b border-gray-700 flex items-center">
           <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
@@ -123,23 +190,46 @@ export default function Sidebar() {
         style={{ fontFamily: SIDEBAR_FONT_FAMILY }}
         className={`
           fixed top-16 left-0 w-60 bg-gray-900 text-gray-200 shadow-xl flex flex-col z-50
-          transform transition-transform duration-300
+          transform transition-[transform,width] duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          h-[calc(100dvh-4rem)] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh] overflow-y-auto
+          h-[calc(100dvh-4rem)] md:top-0 md:translate-x-0 md:static md:flex md:h-[100dvh]
+          ${isDesktopCollapsed ? 'md:w-20' : 'md:w-60'}
         `}
       >
-        {/* Logo */}
-        <div className="h-16 px-4 border-b border-gray-700 flex items-center">
+        {/* Header + logo */}
+        <div
+          className={`h-16 border-b border-gray-700 flex items-center gap-2 ${
+            isDesktopCollapsed ? 'px-2 md:justify-center' : 'px-4 md:justify-between'
+          }`}
+        >
           {logoSrc ? (
-            <img src={finalLogoSrc} alt="Logo" className="h-7 w-auto" />
+            <img
+              src={finalLogoSrc}
+              alt="Logo"
+              className={isDesktopCollapsed ? 'h-8 w-8 object-contain' : 'h-7 w-auto'}
+            />
           ) : (
             <div className="h-7 w-32 rounded bg-gray-800 animate-pulse" />
           )}
+
+          <button
+            type="button"
+            onClick={() => setIsDesktopCollapsed((prev) => !prev)}
+            className="hidden md:inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-700 bg-gray-800/70 text-gray-200 hover:bg-gray-700 transition"
+            aria-label={
+              isDesktopCollapsed ? 'Expandir menú lateral' : 'Minimizar menú lateral'
+            }
+            title={isDesktopCollapsed ? 'Expandir menú' : 'Minimizar menú'}
+          >
+            <CollapseToggleIcon collapsed={isDesktopCollapsed} />
+          </button>
         </div>
 
         {/* Menú */}
         <motion.nav
-          className="flex flex-col gap-1 flex-1 px-2 py-3"
+          className={`flex flex-col gap-1 flex-1 py-3 ${
+            isDesktopCollapsed ? 'px-1.5' : 'px-2'
+          }`}
           variants={menuContainerVariants}
           initial={prefersReducedMotion ? false : 'hidden'}
           animate={prefersReducedMotion ? undefined : 'visible'}
@@ -149,15 +239,29 @@ export default function Sidebar() {
               <Link
                 to={item.path}
                 onClick={() => setIsOpen(false)}
-                className={`px-3 py-2 rounded-md transition text-sm font-medium leading-5 flex items-center gap-2
-                          [&_svg]:h-4 [&_svg]:w-4 [&_svg]:mr-0 [&_svg]:shrink-0 ${
-                  location_id.pathname === item.path
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-800'
-                }`}
+                className={`group relative flex items-center rounded-md transition text-sm font-medium leading-5
+                          [&_svg]:h-5 [&_svg]:w-5 [&_svg]:mr-0 [&_svg]:shrink-0
+                          ${
+                            isDesktopCollapsed
+                              ? 'gap-2 px-3 py-2 md:justify-center md:px-2 md:py-3'
+                              : 'gap-2 px-3 py-2'
+                          }
+                          ${
+                            location_id.pathname === item.path
+                              ? 'bg-blue-600 text-white'
+                              : 'hover:bg-gray-800'
+                          }`}
               >
                 {item.icon}
-                <span>{item.name}</span>
+                <span className={isDesktopCollapsed ? 'md:hidden' : ''}>
+                  {item.name}
+                </span>
+
+                {isDesktopCollapsed ? (
+                  <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 md:block md:group-hover:opacity-100">
+                    {item.name}
+                  </span>
+                ) : null}
               </Link>
             </motion.div>
           ))}
@@ -169,25 +273,41 @@ export default function Sidebar() {
         </motion.nav>
 
         {/* User card */}
-        <div className="px-2.5 pt-1.5 pb-1.5 border-t border-gray-800">
-          <div className="flex items-center gap-1.5">
+        <div
+          className={`pt-1.5 pb-1.5 border-t border-gray-800 ${
+            isDesktopCollapsed ? 'px-1.5' : 'px-2.5'
+          }`}
+        >
+          <div
+            className={`group relative flex items-center ${
+              isDesktopCollapsed ? 'md:justify-center' : 'gap-1.5'
+            }`}
+          >
             <div className="h-7 w-7 rounded-full bg-blue-600 grid place-items-center text-[10px] font-semibold">
               {initials}
             </div>
-            <div className="min-w-0">
+            <div className={`min-w-0 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
               <p className="text-[11px] font-medium text-white truncate">
                 {fullName}
               </p>
             </div>
+
+            {isDesktopCollapsed ? (
+              <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 md:block md:group-hover:opacity-100">
+                {fullName}
+              </span>
+            ) : null}
           </div>
         </div>
 
         {/* Logout */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-red-500 hover:bg-gray-800 transition font-medium
+          className={`group relative w-full flex items-center px-2.5 py-1.5 text-xs text-red-500 hover:bg-gray-800 transition font-medium
                      focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
-                     focus-visible:ring-offset-gray-900 cursor-pointer"
+                     focus-visible:ring-offset-gray-900 cursor-pointer ${
+                       isDesktopCollapsed ? 'md:justify-center md:px-2' : 'gap-1.5'
+                     }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -203,10 +323,31 @@ export default function Sidebar() {
               d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6A2.25 2.25 0 0 0 5.25 5.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m-3-3h8.25m0 0-3-3m3 3-3 3"
             />
           </svg>
-          Cerrar sesión
+          <span className={isDesktopCollapsed ? 'md:hidden' : ''}>
+            Cerrar sesión
+          </span>
+
+          {isDesktopCollapsed ? (
+            <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 md:block md:group-hover:opacity-100">
+              Cerrar sesión
+            </span>
+          ) : null}
         </button>
-        <Footer variant="dark" compact />
+
+        <Footer
+          variant="dark"
+          compact
+          className={isDesktopCollapsed ? 'md:hidden' : ''}
+        />
       </aside>
     </>
   );
+}
+
+export default function Sidebar({ persistent = false }: SidebarProps) {
+  const hasPersistentSidebar = useHasPersistentSidebar();
+
+  if (hasPersistentSidebar && !persistent) return null;
+
+  return <SidebarContent />;
 }

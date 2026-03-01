@@ -7,6 +7,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
 import UserQuickMenu from './UserQuickMenu';
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
+
+function getInitialDesktopCollapsedState() {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === '1';
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -31,6 +38,9 @@ function resolveTitle(pathname: string) {
 export default function AppTopBar() {
   const location_id = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(
+    getInitialDesktopCollapsedState
+  );
   const { isDark, toggleTheme } = useTheme();
   const prefersReducedMotion = useReducedMotion();
 
@@ -40,9 +50,22 @@ export default function AppTopBar() {
       setSidebarOpen(Boolean(customEvent.detail?.open));
     };
 
+    const handleDesktopSidebarState = (event: Event) => {
+      const customEvent = event as CustomEvent<{ collapsed?: boolean }>;
+      setDesktopSidebarCollapsed(Boolean(customEvent.detail?.collapsed));
+    };
+
     window.addEventListener('app:sidebar-state', handleSidebarState);
+    window.addEventListener(
+      'app:sidebar-desktop-state',
+      handleDesktopSidebarState
+    );
     return () => {
       window.removeEventListener('app:sidebar-state', handleSidebarState);
+      window.removeEventListener(
+        'app:sidebar-desktop-state',
+        handleDesktopSidebarState
+      );
     };
   }, []);
 
@@ -70,7 +93,9 @@ export default function AppTopBar() {
           ? { duration: 0 }
           : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
       }
-      className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur md:left-60 dark:border-slate-700 dark:bg-slate-900/95"
+      className={`fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur transition-[left] duration-300 ${
+        desktopSidebarCollapsed ? 'md:left-20' : 'md:left-60'
+      } dark:border-slate-700 dark:bg-slate-900/95`}
     >
       <div className="mx-auto flex h-full items-center justify-between gap-3 px-3 md:px-6">
         <div className="flex min-w-0 items-center gap-2">
