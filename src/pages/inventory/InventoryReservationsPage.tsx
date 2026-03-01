@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronRight, ClipboardCheck, RefreshCcw, Search } from 'lucide-react';
-import Sidebar from '../../components/layout/Sidebar';
+import { RefreshCcw, Search } from 'lucide-react';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 import { listAcceptedWorkOrders } from '../../services/inventory/inventoryRequests';
@@ -70,7 +68,6 @@ export default function InventoryReservationsPage() {
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900">
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -84,35 +81,11 @@ export default function InventoryReservationsPage() {
 
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900">
-      <Sidebar />
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
-          <div className="px-4 md:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-3">
-              <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Link to="/inventario" className="hover:text-slate-900">
-                  Inventario
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-900 font-medium">Reservas por OT</span>
-              </nav>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-amber-100">
-                    <ClipboardCheck className="h-5 w-5 text-amber-700" />
-                  </div>
-                  <div className="min-w-0">
-                    <h1 className="text-lg md:text-xl font-bold tracking-tight">
-                      Reservas por OT (tickets)
-                    </h1>
-                    <p className="mt-1 text-xs md:text-sm text-slate-500">
-                      Reserva, entrega, devolución y liberación de repuestos por
-                      orden de trabajo.
-                    </p>
-                  </div>
-                </div>
-
+        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60 pt-6">
+          <div className="px-4 md:px-6 lg:px-8 py-6 space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex justify-end">
                 <button
                   type="button"
                   onClick={() => void loadTickets()}
@@ -134,13 +107,6 @@ export default function InventoryReservationsPage() {
                   Actualizar OT
                 </button>
               </div>
-            </div>
-          </div>
-        </header>
-
-        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60">
-          <div className="px-4 md:px-6 lg:px-8 py-6 space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
               <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
                 <div className="lg:col-span-4">
                   <label className="text-xs font-semibold uppercase tracking-wide text-slate-600">

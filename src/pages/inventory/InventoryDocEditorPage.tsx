@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import {
   showToastError,
@@ -42,7 +41,6 @@ import {
 } from '../../notifications/inventoryAlerts';
 
 import {
-  ChevronRight,
   ArrowLeft,
   Save,
   Send,
@@ -59,11 +57,6 @@ import {
   Boxes,
   Info,
   CircleDot,
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  ArrowRightLeft,
-  SlidersHorizontal,
-  RotateCcw,
 } from 'lucide-react';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -161,21 +154,6 @@ function labelType(t: InventoryDocType) {
       return 'Ajuste';
     case 'RETURN':
       return 'Devolución';
-  }
-}
-
-function docTypeIcon(t: InventoryDocType) {
-  switch (t) {
-    case 'RECEIPT':
-      return ArrowDownToLine;
-    case 'ISSUE':
-      return ArrowUpFromLine;
-    case 'TRANSFER':
-      return ArrowRightLeft;
-    case 'ADJUSTMENT':
-      return SlidersHorizontal;
-    case 'RETURN':
-      return RotateCcw;
   }
 }
 
@@ -675,7 +653,6 @@ export default function InventoryDocEditorPage() {
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50">
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
@@ -692,7 +669,6 @@ export default function InventoryDocEditorPage() {
     !canWrite || draftLines.length === 0 || hasUnsavedChanges;
 
   const badge = doc ? statusConfig(doc.status) : null;
-  const TypeIcon = doc ? docTypeIcon(doc.doc_type) : FileText;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const totalQty = useMemo(
@@ -702,80 +678,53 @@ export default function InventoryDocEditorPage() {
 
   return (
     <div className="h-screen flex bg-slate-50 text-slate-900">
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        {/* Header */}
-        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur">
-          <div className="px-4 md:px-6 lg:px-8 py-4">
-            <div className="flex flex-col gap-3">
-              <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Link to="/inventario" className="hover:text-slate-900">
-                  Inventario
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <Link to="/inventory/docs" className="hover:text-slate-900">
-                  Documentos
-                </Link>
-                <ChevronRight className="h-3 w-3" />
-                <span className="text-slate-900 font-medium">Editor</span>
-              </nav>
-
+        <section className="flex-1 min-h-0 overflow-auto pt-6">
+          <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-blue-50">
-                    <TypeIcon className="h-5 w-5 text-blue-700" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">
+                      {doc?.doc_no ?? (loading ? 'Cargando…' : 'Documento')}
+                    </h1>
+
+                    {badge ? (
+                      <span
+                        className={cx(
+                          'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px] font-semibold',
+                          badge.className
+                        )}
+                      >
+                        <span className={cx('h-1.5 w-1.5 rounded-full', badge.dot)} />
+                        {badge.text}
+                      </span>
+                    ) : null}
+
+                    {doc ? (
+                      <span
+                        className={cx(
+                          'inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-medium',
+                          docTypeBadgeClass(doc.doc_type)
+                        )}
+                      >
+                        {labelType(doc.doc_type)}
+                      </span>
+                    ) : null}
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h1 className="text-lg md:text-xl font-bold tracking-tight truncate">
-                        {doc?.doc_no ?? (loading ? 'Cargando…' : 'Documento')}
-                      </h1>
+                  <div className="flex items-center gap-3 mt-1">
+                    {doc ? <StatusTimeline status={doc.status} /> : null}
 
-                      {badge ? (
-                        <span
-                          className={cx(
-                            'inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px] font-semibold',
-                            badge.className
-                          )}
-                        >
-                          <span
-                            className={cx(
-                              'h-1.5 w-1.5 rounded-full',
-                              badge.dot
-                            )}
-                          />
-                          {badge.text}
-                        </span>
-                      ) : null}
-
-                      {doc ? (
-                        <span
-                          className={cx(
-                            'inline-flex items-center px-2 py-1 rounded-full border text-[11px] font-medium',
-                            docTypeBadgeClass(doc.doc_type)
-                          )}
-                        >
-                          {labelType(doc.doc_type)}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="flex items-center gap-3 mt-1">
-                      {doc ? <StatusTimeline status={doc.status} /> : null}
-
-                      {doc?.status === 'DRAFT' && hasUnsavedChanges ? (
-                        <span className="flex items-center gap-1 text-xs text-amber-700">
-                          <CircleDot className="h-3 w-3" />
-                          Cambios sin guardar
-                        </span>
-                      ) : null}
-                    </div>
+                    {doc?.status === 'DRAFT' && hasUnsavedChanges ? (
+                      <span className="flex items-center gap-1 text-xs text-amber-700">
+                        <CircleDot className="h-3 w-3" />
+                        Cambios sin guardar
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                   <Link
                     to="/inventory/docs"
@@ -799,9 +748,7 @@ export default function InventoryDocEditorPage() {
                       <button
                         type="button"
                         onClick={() => void onSaveDraft()}
-                        disabled={
-                          !canWrite || !hasUnsavedChanges || isSavingDraft
-                        }
+                        disabled={!canWrite || !hasUnsavedChanges || isSavingDraft}
                         className={cx(
                           'inline-flex items-center h-9 px-3 rounded-md border text-sm font-semibold',
                           !canWrite || !hasUnsavedChanges || isSavingDraft
@@ -864,12 +811,7 @@ export default function InventoryDocEditorPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Body */}
-        <section className="flex-1 min-h-0 overflow-auto">
-          <div className="px-4 md:px-6 lg:px-8 py-6">
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
               {/* LEFT */}
               <div className="xl:col-span-4 space-y-5">

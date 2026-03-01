@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import { showToastError } from '../../../notifications';
 
@@ -18,7 +17,6 @@ import {
 
 import { Boxes } from 'lucide-react';
 import { PageShell } from './components/PageShell';
-import { InventoryDocsHeader } from './components/InventoryDocsHeader';
 import { InventoryDocsToolbar } from './components/InventoryDocsToolbar';
 import { InventoryDocsMobileList } from './components/InventoryDocsMobileList';
 import { InventoryDocsTable } from './components/InventoryDocsTable';
@@ -184,7 +182,6 @@ export default function InventoryDocsPage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyAccessState />
         </main>
@@ -194,17 +191,10 @@ export default function InventoryDocsPage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <InventoryDocsHeader
-          total={rows.length}
-          loading={loading}
-          canWrite={canWrite}
-        />
-
         <InventoryDocsToolbar
           isLoading={loading}
+          canWrite={canWrite}
           docType={docType}
           status={status}
           warehouseId={warehouseId}

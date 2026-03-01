@@ -1,110 +1,153 @@
+import { type RefObject } from 'react';
 import type { VendorRow } from '../../../../types/inventory';
 import { Pencil, Trash2 } from 'lucide-react';
-import { DangerButton, GhostButton } from './buttons';
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ');
+}
 
 export function VendorsTable({
   rows,
   loading,
-  isReadOnly,
+  canManage,
+  selectedRows,
+  setSelectedRows,
+  checked,
+  onToggleAll,
+  checkboxRef,
   onEdit,
   onDelete,
 }: {
   rows: VendorRow[];
   loading: boolean;
-  isReadOnly: boolean;
+  canManage: boolean;
+  selectedRows: VendorRow[];
+  setSelectedRows: React.Dispatch<React.SetStateAction<VendorRow[]>>;
+  checked: boolean;
+  onToggleAll: () => void;
+  checkboxRef: RefObject<HTMLInputElement | null>;
   onEdit: (row: VendorRow) => void;
   onDelete: (row: VendorRow) => void;
 }) {
   return (
-    <div className="hidden md:block">
-      <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div className="h-11 border-b border-slate-200 bg-blue-50/60" />
+    <div className="hidden md:block overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead className="bg-white sticky top-0 z-10">
+          <tr className="border-b border-slate-200">
+            <th className="px-5 py-3 w-12">
+              <input
+                ref={checkboxRef}
+                type="checkbox"
+                disabled={!canManage || rows.length === 0 || loading}
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                checked={checked}
+                onChange={onToggleAll}
+                aria-label="Seleccionar todo"
+              />
+            </th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">Nombre</th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">Email</th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">Teléfono</th>
+            <th className="text-left font-semibold text-slate-600 px-5 py-3">Estado</th>
+            <th className="text-right font-semibold text-slate-600 px-5 py-3">Acciones</th>
+          </tr>
+        </thead>
 
-        <div className="-mt-6 p-4">
-          <div className="overflow-auto rounded-xl ring-1 ring-slate-200 bg-white">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 sticky top-0 z-10">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Nombre
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Teléfono
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 w-60">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
+        <tbody className="divide-y divide-slate-100">
+          {loading ? (
+            <tr>
+              <td colSpan={6} className="py-10 text-center text-slate-400">
+                Cargando...
+              </td>
+            </tr>
+          ) : rows.length === 0 ? (
+            <tr>
+              <td colSpan={6} className="py-10 text-center text-slate-400">
+                Sin proveedores.
+              </td>
+            </tr>
+          ) : (
+            rows.map((row) => {
+              const selected = selectedRows.includes(row);
 
-              <tbody className="divide-y divide-slate-200">
-                {loading ? (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center text-slate-400">
-                      Cargando...
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center text-slate-400">
-                      Sin proveedores.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-4 font-medium text-slate-900">
-                        {row.name}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {row.email ?? '—'}
-                      </td>
-                      <td className="px-4 py-4 text-slate-700">
-                        {row.phone ?? '—'}
-                      </td>
-                      <td className="px-4 py-4">
-                        {row.is_active ? (
-                          <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-xs font-medium">
-                            Activo
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 rounded bg-slate-100 text-slate-700 text-xs font-medium">
-                            Inactivo
-                          </span>
+              return (
+                <tr
+                  key={row.id}
+                  className={cx(
+                    'hover:bg-slate-50/70 transition',
+                    selected && 'bg-blue-50/50'
+                  )}
+                >
+                  <td className="px-5 py-3 w-12">
+                    <input
+                      type="checkbox"
+                      disabled={!canManage}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                      checked={selected}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          setSelectedRows((prev) => [...prev, row]);
+                          return;
+                        }
+                        setSelectedRows((prev) =>
+                          prev.filter((item) => item !== row)
+                        );
+                      }}
+                      aria-label={`Seleccionar ${row.name}`}
+                    />
+                  </td>
+                  <td className="px-5 py-3 font-medium text-slate-900">{row.name}</td>
+                  <td className="px-5 py-3 text-slate-700">{row.email ?? '—'}</td>
+                  <td className="px-5 py-3 text-slate-700">{row.phone ?? '—'}</td>
+                  <td className="px-5 py-3">
+                    {row.is_active ? (
+                      <span className="inline-flex px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                        Activo
+                      </span>
+                    ) : (
+                      <span className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+                        Inactivo
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                          !canManage
+                            ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                            : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                         )}
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex justify-end gap-2">
-                          <GhostButton
-                            disabled={isReadOnly}
-                            onClick={() => onEdit(row)}
-                            icon={Pencil}
-                          >
-                            Editar
-                          </GhostButton>
-                          <DangerButton
-                            disabled={isReadOnly}
-                            onClick={() => onDelete(row)}
-                            icon={Trash2}
-                          >
-                            Eliminar
-                          </DangerButton>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+                        disabled={!canManage}
+                        onClick={() => onEdit(row)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className={cx(
+                          'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                          !canManage
+                            ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                            : 'bg-rose-600 hover:bg-rose-700 text-white'
+                        )}
+                        disabled={!canManage}
+                        onClick={() => onDelete(row)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
   );
 }

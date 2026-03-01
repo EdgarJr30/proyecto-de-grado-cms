@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import Sidebar from '../../components/layout/Sidebar';
+import { Boxes, Filter, RefreshCcw, Search } from 'lucide-react';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 
@@ -13,7 +13,6 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 function formatQty(n: number) {
-  // Mantén simple: entero si no tiene decimales; si no, 2 decimales
   const isInt = Number.isInteger(n);
   return new Intl.NumberFormat('es-DO', {
     minimumFractionDigits: isInt ? 0 : 2,
@@ -30,17 +29,17 @@ function QtyBadge({
 }) {
   const cls =
     tone === 'good'
-      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
       : tone === 'warn'
-        ? 'bg-amber-50 text-amber-800 border-amber-200'
+        ? 'bg-amber-50 text-amber-700 border-amber-200'
         : tone === 'bad'
-          ? 'bg-rose-50 text-rose-800 border-rose-200'
-          : 'bg-gray-50 text-gray-800 border-gray-200';
+          ? 'bg-rose-50 text-rose-700 border-rose-200'
+          : 'bg-slate-100 text-slate-700 border-slate-200';
 
   return (
     <span
       className={cx(
-        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium',
+        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold tabular-nums',
         cls
       )}
     >
@@ -61,13 +60,13 @@ function StockRow({ r }: { r: VAvailableStockRow }) {
     r.reserved_qty > 0 ? 'warn' : 'neutral';
 
   return (
-    <tr className="border-b last:border-b-0 hover:bg-gray-50/60">
+    <tr className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70">
       <td className="px-4 py-3">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-gray-900 truncate">
+          <div className="text-sm font-semibold text-slate-900 truncate">
             {r.part_code} — {r.part_name}
           </div>
-          <div className="text-xs text-gray-500 truncate">
+          <div className="text-xs text-slate-500 truncate">
             {r.warehouse_code} — {r.warehouse_name}
           </div>
         </div>
@@ -88,6 +87,23 @@ function StockRow({ r }: { r: VAvailableStockRow }) {
   );
 }
 
+function StatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="text-xs text-slate-500">{label}</div>
+      <div className="mt-1 text-2xl font-bold text-slate-900 tabular-nums">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function StockOverviewPage() {
   const { has } = usePermissions();
   const canRead = has('inventory:read');
@@ -95,9 +111,8 @@ export default function StockOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [warehouses, setWarehouses] = useState<WarehouseRow[]>([]);
   const [rows, setRows] = useState<VAvailableStockRow[]>([]);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
 
-  // Filtros UI
   const [warehouseId, setWarehouseId] = useState<UUID | ''>('');
   const [query, setQuery] = useState('');
   const [onlyAvailable, setOnlyAvailable] = useState(false);
@@ -137,7 +152,6 @@ export default function StockOverviewPage() {
   useEffect(() => {
     if (!canRead) return;
     void load();
-    // recargar cuando cambia el warehouse
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead, warehouseId]);
 
@@ -160,7 +174,6 @@ export default function StockOverviewPage() {
         return hay;
       })
       .sort((a, b) => {
-        // Orden por part_code, luego warehouse_code
         const pc = a.part_code.localeCompare(b.part_code);
         if (pc !== 0) return pc;
         return a.warehouse_code.localeCompare(b.warehouse_code);
@@ -183,11 +196,10 @@ export default function StockOverviewPage() {
 
   if (!canRead) {
     return (
-      <div className="h-screen flex bg-gray-100">
-        <Sidebar />
+      <div className="h-screen flex bg-slate-50 text-slate-900">
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
           <div className="p-6">
-            <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
               No tienes permisos para acceder a disponibilidad de inventario.
             </div>
           </div>
@@ -197,157 +209,157 @@ export default function StockOverviewPage() {
   }
 
   return (
-    <div className="h-screen flex bg-gray-100">
-      <Sidebar />
-
+    <div className="h-screen flex bg-slate-50 text-slate-900">
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-3xl font-bold">Disponibilidad</h2>
-                <p className="text-sm text-gray-600">
-                  Vista <span className="font-mono">v_available_stock</span> (on
-                  hand / reservado / disponible real).
-                </p>
-              </div>
+        <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto">
+          <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-blue-50">
+                      <Filter className="h-5 w-5 text-blue-700" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        Filtros de disponibilidad
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        Vista de existencias, reservas y disponible real.
+                      </div>
+                    </div>
+                  </div>
 
-              <button
-                type="button"
-                onClick={() => void load()}
-                className={cx(
-                  'shrink-0 rounded-xl border bg-white px-4 py-2 text-sm shadow-sm',
-                  'hover:bg-gray-50 active:scale-[0.99]'
-                )}
-              >
-                Refrescar
-              </button>
-            </div>
-          </div>
-        </header>
+                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      <Boxes className="h-3.5 w-3.5 text-blue-700" />
+                      {loading ? 'Cargando…' : `${filtered.length} resultados`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void load()}
+                      className={cx(
+                        'inline-flex items-center h-9 px-3 rounded-md border border-slate-200 bg-white text-sm font-semibold text-slate-700',
+                        'hover:bg-slate-50'
+                      )}
+                    >
+                      <RefreshCcw className="h-4 w-4 mr-2" />
+                      Refrescar
+                    </button>
+                  </div>
+                </div>
 
-        <section className="px-4 md:px-6 lg:px-8 py-4 overflow-auto">
-          {/* Filtros */}
-          <div className="rounded-2xl border bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-              <div className="lg:col-span-5">
-                <label className="block text-xs font-medium text-gray-700">
-                  Buscar
-                </label>
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Código o nombre del repuesto, almacén…"
-                  className={cx(
-                    'mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none',
-                    'focus:ring-2 focus:ring-gray-200'
-                  )}
-                />
-              </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                  <div className="lg:col-span-5">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Buscar
+                    </label>
+                    <div className="relative mt-1">
+                      <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Código o nombre del repuesto, almacén..."
+                        className={cx(
+                          'h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm focus:outline-none',
+                          'focus:ring-2 focus:ring-blue-500/30'
+                        )}
+                      />
+                    </div>
+                  </div>
 
-              <div className="lg:col-span-4">
-                <label className="block text-xs font-medium text-gray-700">
-                  Almacén
-                </label>
-                <select
-                  value={warehouseId}
-                  onChange={(e) =>
-                    setWarehouseId((e.target.value as UUID) || '')
-                  }
-                  className={cx(
-                    'mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none',
-                    'focus:ring-2 focus:ring-gray-200'
-                  )}
-                >
-                  <option value="">Todos</option>
-                  {warehouses.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.code} — {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div className="lg:col-span-4">
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      Almacén
+                    </label>
+                    <select
+                      value={warehouseId}
+                      onChange={(e) =>
+                        setWarehouseId((e.target.value as UUID) || '')
+                      }
+                      className={cx(
+                        'mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none',
+                        'focus:ring-2 focus:ring-blue-500/30'
+                      )}
+                    >
+                      <option value="">Todos</option>
+                      {warehouses.map((w) => (
+                        <option key={w.id} value={w.id}>
+                          {w.code} — {w.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className="lg:col-span-3 flex items-end gap-3">
-                <label className="flex items-center gap-2 rounded-xl border bg-gray-50 px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={onlyAvailable}
-                    onChange={(e) => setOnlyAvailable(e.target.checked)}
+                  <div className="lg:col-span-3 flex items-end gap-3">
+                    <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={onlyAvailable}
+                        onChange={(e) => setOnlyAvailable(e.target.checked)}
+                        className="rounded border-slate-300"
+                      />
+                      Solo disponibles
+                    </label>
+
+                    <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={onlyReserved}
+                        onChange={(e) => setOnlyReserved(e.target.checked)}
+                        className="rounded border-slate-300"
+                      />
+                      Solo reservados
+                    </label>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <StatCard label="Filas" value={totals.count} />
+                  <StatCard
+                    label="En existencia (suma)"
+                    value={formatQty(totals.onHand)}
                   />
-                  Solo disponibles
-                </label>
-
-                <label className="flex items-center gap-2 rounded-xl border bg-gray-50 px-3 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={onlyReserved}
-                    onChange={(e) => setOnlyReserved(e.target.checked)}
+                  <StatCard
+                    label="Reservado (suma)"
+                    value={formatQty(totals.reserved)}
                   />
-                  Solo reservados
-                </label>
-              </div>
-            </div>
-
-            {/* KPIs */}
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="rounded-2xl border bg-white p-4">
-                <div className="text-xs text-gray-500">Filas</div>
-                <div className="mt-1 text-2xl font-bold text-gray-900">
-                  {totals.count}
-                </div>
-              </div>
-              <div className="rounded-2xl border bg-white p-4">
-                <div className="text-xs text-gray-500">En existencia (suma)</div>
-                <div className="mt-1 text-2xl font-bold text-gray-900">
-                  {formatQty(totals.onHand)}
-                </div>
-              </div>
-              <div className="rounded-2xl border bg-white p-4">
-                <div className="text-xs text-gray-500">Reservado (sum)</div>
-                <div className="mt-1 text-2xl font-bold text-gray-900">
-                  {formatQty(totals.reserved)}
-                </div>
-              </div>
-              <div className="rounded-2xl border bg-white p-4">
-                <div className="text-xs text-gray-500">Disponible (sum)</div>
-                <div className="mt-1 text-2xl font-bold text-gray-900">
-                  {formatQty(totals.available)}
+                  <StatCard
+                    label="Disponible (suma)"
+                    value={formatQty(totals.available)}
+                  />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Tabla */}
-          <div className="mt-4 rounded-2xl border bg-white shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-900">
+            <div className="px-4 py-3 border-b border-slate-100 bg-white flex items-center justify-between">
+              <div className="text-sm font-semibold text-slate-900">
                 Disponibilidad por repuesto/almacén
               </div>
-              <div className="text-xs text-gray-500">
-                {loading ? 'Cargando…' : `${filtered.length} resultados`}
+              <div className="text-xs text-slate-500">
+                {loading ? 'Cargando...' : `${filtered.length} resultados`}
               </div>
             </div>
 
             {error ? (
-              <div className="p-4 text-sm text-rose-700 bg-rose-50 border-t">
+              <div className="p-4 text-sm text-rose-700 bg-rose-50 border-t border-rose-200">
                 {error}
               </div>
             ) : null}
 
             {loading ? (
-              <div className="p-6 text-sm text-gray-600">
-                Cargando disponibilidad…
+              <div className="p-6 text-sm text-slate-500">
+                Cargando disponibilidad...
               </div>
             ) : filtered.length === 0 ? (
-              <div className="p-6 text-sm text-gray-600">
+              <div className="p-6 text-sm text-slate-500">
                 No hay datos para los filtros seleccionados.
               </div>
             ) : (
               <div className="overflow-auto">
                 <table className="min-w-[860px] w-full">
-                  <thead className="bg-gray-50">
-                    <tr className="text-xs text-gray-600">
+                  <thead className="bg-slate-50">
+                    <tr className="text-xs text-slate-600">
                       <th className="px-4 py-3 text-left font-semibold">
                         Repuesto / Almacén
                       </th>
@@ -370,11 +382,13 @@ export default function StockOverviewPage() {
                 </table>
               </div>
             )}
-          </div>
 
-          <div className="mt-4 text-xs text-gray-500">
-            Tip: “Disponible” viene de{' '}
-            <span className="font-mono">on_hand_qty - reserved_qty</span>.
+            <div className="px-5 py-4 border-t border-slate-100 bg-white">
+              <div className="text-xs text-slate-500">
+                Tip: “Disponible” viene de{' '}
+                <span className="font-mono">on_hand_qty - reserved_qty</span>.
+              </div>
+            </div>
           </div>
         </section>
       </main>

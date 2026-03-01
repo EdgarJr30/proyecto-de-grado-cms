@@ -55,6 +55,30 @@ function CollapseToggleIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function normalizePath(path: string) {
+  if (path.length > 1 && path.endsWith('/')) {
+    return path.slice(0, -1);
+  }
+  return path;
+}
+
+function isMenuRouteActive(itemPath: string, currentPath: string) {
+  const normalizedItemPath = normalizePath(itemPath);
+  const normalizedCurrentPath = normalizePath(currentPath);
+
+  if (normalizedItemPath === '/inventario') {
+    return (
+      normalizedCurrentPath === '/inventario' ||
+      normalizedCurrentPath.startsWith('/inventory/')
+    );
+  }
+
+  return (
+    normalizedCurrentPath === normalizedItemPath ||
+    normalizedCurrentPath.startsWith(`${normalizedItemPath}/`)
+  );
+}
+
 type SidebarProps = {
   persistent?: boolean;
 };
@@ -235,12 +259,15 @@ function SidebarContent() {
           initial={prefersReducedMotion ? false : 'hidden'}
           animate={prefersReducedMotion ? undefined : 'visible'}
         >
-          {visibleMenu.map((item) => (
-            <motion.div key={item.path} variants={menuItemVariants}>
-              <Link
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={`group relative flex items-center rounded-md transition text-sm font-medium leading-5
+          {visibleMenu.map((item) => {
+            const isActive = isMenuRouteActive(item.path, location_id.pathname);
+
+            return (
+              <motion.div key={item.path} variants={menuItemVariants}>
+                <Link
+                  to={item.path}
+                  onClick={() => setIsOpen(false)}
+                  className={`group relative flex items-center rounded-md transition text-sm font-medium leading-5
                           [&_svg]:h-5 [&_svg]:w-5 [&_svg]:mr-0 [&_svg]:shrink-0
                           ${
                             isDesktopCollapsed
@@ -248,24 +275,25 @@ function SidebarContent() {
                               : 'gap-2 px-3 py-2'
                           }
                           ${
-                            location_id.pathname === item.path
+                            isActive
                               ? 'bg-blue-600 text-white'
                               : 'hover:bg-gray-800'
                           }`}
-              >
-                {item.icon}
-                <span className={isDesktopCollapsed ? 'md:hidden' : ''}>
-                  {item.name}
-                </span>
-
-                {isDesktopCollapsed ? (
-                  <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 md:block md:group-hover:opacity-100">
+                >
+                  {item.icon}
+                  <span className={isDesktopCollapsed ? 'md:hidden' : ''}>
                     {item.name}
                   </span>
-                ) : null}
-              </Link>
-            </motion.div>
-          ))}
+
+                  {isDesktopCollapsed ? (
+                    <span className="pointer-events-none absolute left-full top-1/2 z-30 ml-2 hidden -translate-y-1/2 whitespace-nowrap rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 md:block md:group-hover:opacity-100">
+                      {item.name}
+                    </span>
+                  ) : null}
+                </Link>
+              </motion.div>
+            );
+          })}
           {visibleMenu.length === 0 && (
             <div className="px-4 py-3 text-sm text-gray-400">
               No tienes menús disponibles.

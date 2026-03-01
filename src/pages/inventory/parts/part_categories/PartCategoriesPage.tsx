@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Sidebar from '../../../../components/layout/Sidebar';
 import { usePermissions } from '../../../../rbac/PermissionsContext';
 import {
   showConfirmAlert,
@@ -20,7 +19,6 @@ import {
 } from '../../../../services/inventory';
 
 import { PageShell } from './components/PageShell';
-import { PartCategoriesHeader } from './components/PartCategoriesHeader';
 import { PartCategoriesToolbar } from './components/PartCategoriesToolbar';
 import { PartCategoriesMobileList } from './components/PartCategoriesMobileList';
 import { PartCategoriesTable } from './components/PartCategoriesTable';
@@ -61,10 +59,26 @@ export default function PartCategoriesPage() {
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [search, setSearch] = useState('');
 
   const isEditing = typeof form.id === 'string';
 
   const helpers = useMemo(() => buildCategoryLabelMap(rows), [rows]);
+
+  const filteredRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return rows;
+
+    return rows.filter((row) => {
+      const parent = helpers.labelOf(row.parent_id)?.toLowerCase() ?? '';
+      const breadcrumb = helpers.breadcrumbOf(row.id).toLowerCase();
+      return (
+        row.name.toLowerCase().includes(query) ||
+        parent.includes(query) ||
+        breadcrumb.includes(query)
+      );
+    });
+  }, [rows, search, helpers]);
 
   const parentOptions = useMemo(() => {
     const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name));
@@ -94,7 +108,7 @@ export default function PartCategoriesPage() {
 
   // sync selection state + checkbox indeterminate
   useEffect(() => {
-    const total = rows.length;
+    const total = filteredRows.length;
     const selected = selectedRows.length;
 
     const nextChecked = total > 0 && selected === total;
@@ -104,7 +118,11 @@ export default function PartCategoriesPage() {
     setIndeterminate(nextInd);
 
     if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
-  }, [rows.length, selectedRows.length]);
+  }, [filteredRows.length, selectedRows.length]);
+
+  useEffect(() => {
+    setSelectedRows((prev) => prev.filter((row) => filteredRows.includes(row)));
+  }, [filteredRows]);
 
   useEffect(() => {
     void reload();
@@ -127,7 +145,7 @@ export default function PartCategoriesPage() {
 
   function toggleAll() {
     const shouldSelectAll = !(checked || indeterminate);
-    setSelectedRows(shouldSelectAll ? rows : []);
+    setSelectedRows(shouldSelectAll ? filteredRows : []);
     setChecked(shouldSelectAll);
     setIndeterminate(false);
     if (checkboxRef.current) checkboxRef.current.indeterminate = false;
@@ -222,7 +240,6 @@ export default function PartCategoriesPage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyState
             title="Acceso restringido"
@@ -235,45 +252,55 @@ export default function PartCategoriesPage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <PartCategoriesHeader count={rows.length} canManage={canManage} />
+        <section className="flex-1 min-h-0 overflow-auto">
+          <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <PartCategoriesToolbar
+                search={search}
+                onSearchChange={setSearch}
+                totalCount={filteredRows.length}
+                canManage={canManage}
+                isLoading={isLoading}
+                selectedCount={selectedRows.length}
+                onCreate={openCreate}
+                onBulkDelete={handleBulkDelete}
+              />
 
-        <PartCategoriesToolbar
-          canManage={canManage}
-          isLoading={isLoading}
-          selectedCount={selectedRows.length}
-          onCreate={openCreate}
-          onBulkDelete={handleBulkDelete}
-        />
+              <PartCategoriesMobileList
+                rows={filteredRows}
+                helpers={helpers}
+                isLoading={isLoading}
+                selectedRows={selectedRows}
+                setSelectedRows={setSelectedRows}
+                canManage={canManage}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+              />
 
-        <section className="flex-1 min-h-0 overflow-auto px-4 md:px-6 lg:px-8 pb-6">
-          <PartCategoriesMobileList
-            rows={rows}
-            helpers={helpers}
-            isLoading={isLoading}
-            selectedRows={selectedRows}
-            setSelectedRows={setSelectedRows}
-            canManage={canManage}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-          />
+              <PartCategoriesTable
+                rows={filteredRows}
+                helpers={helpers}
+                isLoading={isLoading}
+                selectedRows={selectedRows}
+                setSelectedRows={setSelectedRows}
+                canManage={canManage}
+                checked={checked}
+                indeterminate={indeterminate}
+                onToggleAll={toggleAll}
+                checkboxRef={checkboxRef}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+              />
 
-          <PartCategoriesTable
-            rows={rows}
-            helpers={helpers}
-            isLoading={isLoading}
-            selectedRows={selectedRows}
-            setSelectedRows={setSelectedRows}
-            canManage={canManage}
-            checked={checked}
-            indeterminate={indeterminate}
-            onToggleAll={toggleAll}
-            checkboxRef={checkboxRef}
-            onEdit={openEdit}
-            onDelete={handleDelete}
-          />
+              <div className="px-5 py-4 border-t border-slate-100 bg-white">
+                <div className="text-xs text-slate-500">
+                  Tip: usa la búsqueda para encontrar categorías por nombre,
+                  padre o ruta completa.
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <PartCategoryModal

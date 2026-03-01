@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import Sidebar from '../../components/layout/Sidebar';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import {
   showConfirmAlert,
@@ -22,6 +21,17 @@ import {
   updateWarehouseBin,
 } from '../../services/inventory';
 import AnimatedDialog from '../../components/ui/AnimatedDialog';
+import {
+  Boxes,
+  ChevronLeft,
+  Filter,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Trash2,
+  Pencil,
+} from 'lucide-react';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -52,12 +62,20 @@ export default function WarehouseBinsPage() {
   const canRead = has('inventory:read');
   const canWrite = has('inventory:full_access');
 
+  const checkboxRef = useRef<HTMLInputElement>(null);
+
   const [warehouse, setWarehouse] = useState<WarehouseRow | null>(null);
   const [rows, setRows] = useState<WarehouseBinRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [query, setQuery] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>(
+    'active'
+  );
+
+  const [selectedRows, setSelectedRows] = useState<WarehouseBinRow[]>([]);
+  const [checked, setChecked] = useState(false);
+  const [indeterminate, setIndeterminate] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<WarehouseBinRow | null>(null);
@@ -75,7 +93,6 @@ export default function WarehouseBinsPage() {
       const w = all.find((x) => x.id === warehouseId) ?? null;
       setWarehouse(w);
     } catch (error: unknown) {
-      // no bloquea bins; solo info del header
       console.warn(getErrorMessage(error));
     }
   }
@@ -86,11 +103,11 @@ export default function WarehouseBinsPage() {
     try {
       const data = await listWarehouseBins(warehouseId, {
         limit: 1000,
-        is_active: showInactive ? undefined : true,
         orderBy: 'code',
         ascending: true,
       });
       setRows(data);
+      setSelectedRows([]);
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
     } finally {
@@ -106,28 +123,67 @@ export default function WarehouseBinsPage() {
   useEffect(() => {
     void refreshBins();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [warehouseId, showInactive]);
+  }, [warehouseId]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
-      return (
-        r.code.toLowerCase().includes(q) ||
-        (r.name ?? '').toLowerCase().includes(q)
-      );
+    return rows.filter((row) => {
+      const matchesQuery =
+        !q ||
+        row.code.toLowerCase().includes(q) ||
+        (row.name ?? '').toLowerCase().includes(q);
+      const matchesStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'active'
+            ? row.is_active
+            : !row.is_active;
+      return matchesQuery && matchesStatus;
     });
-  }, [rows, query]);
+  }, [rows, query, statusFilter]);
+
+  useEffect(() => {
+    setSelectedRows((prev) => prev.filter((row) => filtered.includes(row)));
+  }, [filtered]);
+
+  useEffect(() => {
+    const total = filtered.length;
+    const selected = selectedRows.length;
+
+    const nextChecked = total > 0 && selected === total;
+    const nextInd = selected > 0 && selected < total;
+
+    setChecked(nextChecked);
+    setIndeterminate(nextInd);
+
+    if (checkboxRef.current) checkboxRef.current.indeterminate = nextInd;
+  }, [filtered.length, selectedRows.length]);
+
+  function toggleAll() {
+    const shouldSelectAll = !(checked || indeterminate);
+    setSelectedRows(shouldSelectAll ? filtered : []);
+    setChecked(shouldSelectAll);
+    setIndeterminate(false);
+    if (checkboxRef.current) checkboxRef.current.indeterminate = false;
+  }
 
   function openCreate() {
+    if (!canWrite) {
+      showToastError('No tienes permisos para gestionar ubicaciones.');
+      return;
+    }
     setEditing(null);
     setForm(toFormDefaults());
     setIsModalOpen(true);
   }
 
-  function openEdit(b: WarehouseBinRow) {
-    setEditing(b);
-    setForm(toFormDefaults(b));
+  function openEdit(bin: WarehouseBinRow) {
+    if (!canWrite) {
+      showToastError('No tienes permisos para gestionar ubicaciones.');
+      return;
+    }
+    setEditing(bin);
+    setForm(toFormDefaults(bin));
     setIsModalOpen(true);
   }
 
@@ -184,18 +240,47 @@ export default function WarehouseBinsPage() {
     }
   }
 
-  async function onDelete(id: UUID) {
-    if (!canWrite) return;
+  async function onDelete(row: WarehouseBinRow) {
+    if (!canWrite) {
+      showToastError('No tienes permisos para gestionar ubicaciones.');
+      return;
+    }
+
     const ok = await showConfirmAlert({
       title: 'Eliminar ubicación',
-      text: 'Se eliminará esta ubicación. La acción puede fallar si existe inventario asociado.',
+      text: `¿Eliminar la ubicación "${row.code}"? La acción puede fallar si existe inventario asociado.`,
       confirmButtonText: 'Sí, eliminar',
     });
     if (!ok) return;
 
     try {
-      await deleteWarehouseBin(id);
+      await deleteWarehouseBin(row.id);
       showToastSuccess('Ubicación eliminada');
+      await refreshBins();
+    } catch (error: unknown) {
+      showToastError(getErrorMessage(error));
+    }
+  }
+
+  async function onBulkDelete() {
+    if (!canWrite) {
+      showToastError('No tienes permisos para gestionar ubicaciones.');
+      return;
+    }
+    if (selectedRows.length === 0) return;
+
+    const ok = await showConfirmAlert({
+      title: 'Eliminar selección',
+      text: `¿Eliminar ${selectedRows.length} ubicación(es) seleccionada(s)?`,
+      confirmButtonText: 'Sí, eliminar',
+    });
+    if (!ok) return;
+
+    try {
+      for (const row of selectedRows) {
+        await deleteWarehouseBin(row.id);
+      }
+      showToastSuccess(`Se eliminaron ${selectedRows.length} ubicación(es).`);
       await refreshBins();
     } catch (error: unknown) {
       showToastError(getErrorMessage(error));
@@ -204,11 +289,10 @@ export default function WarehouseBinsPage() {
 
   if (!canRead) {
     return (
-      <div className="h-screen flex bg-gray-100">
-        <Sidebar />
+      <div className="h-screen flex bg-slate-50 text-slate-900">
         <main className="flex-1 h-[100dvh] overflow-hidden">
           <div className="p-6">
-            <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
               No tienes permisos para acceder a ubicaciones.
             </div>
           </div>
@@ -219,11 +303,10 @@ export default function WarehouseBinsPage() {
 
   if (!warehouseId) {
     return (
-      <div className="h-screen flex bg-gray-100">
-        <Sidebar />
+      <div className="h-screen flex bg-slate-50 text-slate-900">
         <main className="flex-1 h-[100dvh] overflow-hidden">
           <div className="p-6">
-            <div className="rounded-2xl border bg-white p-6 text-sm text-gray-700">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-600">
               Falta el ID de almacén en la ruta.
             </div>
           </div>
@@ -232,117 +315,336 @@ export default function WarehouseBinsPage() {
     );
   }
 
+  const warehouseLabel = warehouse
+    ? `${warehouse.code} - ${warehouse.name}`
+    : 'Ubicaciones por almacén';
+
   return (
-    <div className="h-screen flex bg-gray-100">
-      <Sidebar />
-
+    <div className="h-screen flex bg-slate-50 text-slate-900">
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1">
-        <header className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-2xl md:text-3xl font-bold truncate">
-                  Ubicaciones {warehouse ? `— ${warehouse.code}` : ''}
-                </h2>
-                <p className="text-sm text-gray-600">
-                  {warehouse ? warehouse.name : 'Ubicaciones por almacén'}
-                </p>
+        <section className="flex-1 min-h-0 overflow-auto">
+          <div className="px-4 md:px-6 lg:px-8 py-6">
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+                <div className="text-xs text-slate-500 mb-3">Almacén: {warehouseLabel}</div>
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                      <Filter className="h-4 w-4 text-blue-700" />
+                      Filtros
+                    </span>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Buscar
+                      </label>
+                      <div className="relative w-full sm:w-[320px]">
+                        <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <input
+                          value={query}
+                          onChange={(event) => setQuery(event.target.value)}
+                          placeholder="Código o nombre de ubicación..."
+                          className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                        Estado
+                      </label>
+                      <select
+                        className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                        value={statusFilter}
+                        onChange={(event) =>
+                          setStatusFilter(
+                            event.target.value as 'all' | 'active' | 'inactive'
+                          )
+                        }
+                      >
+                        <option value="all">Todos</option>
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      to="/inventory/warehouses"
+                      className="inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-2" />
+                      Almacenes
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void refreshBins()}
+                      disabled={loading}
+                      className={cx(
+                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                        loading
+                          ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      )}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refrescar
+                    </button>
+                    <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      <Boxes className="h-3.5 w-3.5 text-blue-700" />
+                      {filtered.length} items
+                    </span>
+                    {selectedRows.length > 0 ? (
+                      <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                        {selectedRows.length} seleccionadas
+                      </span>
+                    ) : null}
+                    {!canWrite ? (
+                      <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                        <ShieldAlert className="h-3.5 w-3.5" />
+                        Solo lectura
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={openCreate}
+                      disabled={!canWrite}
+                      className={cx(
+                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                        !canWrite
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      )}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuevo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onBulkDelete()}
+                      disabled={!canWrite || loading || selectedRows.length === 0}
+                      className={cx(
+                        'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                        !canWrite || loading || selectedRows.length === 0
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                          : 'bg-rose-600 hover:bg-rose-700 text-white'
+                      )}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar selección
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <Link
-                  to="/inventory/warehouses"
-                  className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
-                >
-                  ← Almacenes
-                </Link>
-                {canWrite && (
-                  <button
-                    onClick={openCreate}
-                    className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
-                  >
-                    + Nuevo
-                  </button>
-                )}
-              </div>
-            </div>
+              <div className="md:hidden p-4 space-y-3">
+                {loading ? (
+                  <div className="py-10 text-center text-slate-400">Cargando...</div>
+                ) : filtered.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400">Sin resultados.</div>
+                ) : (
+                  filtered.map((row) => {
+                    const selected = selectedRows.includes(row);
+                    return (
+                      <div
+                        key={row.id}
+                        className={cx(
+                          'rounded-xl border border-slate-200 bg-white p-4 shadow-sm',
+                          selected && 'ring-2 ring-blue-500/20'
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-5 w-5 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-600"
+                            checked={selected}
+                            disabled={!canWrite}
+                            onChange={(event) => {
+                              if (event.target.checked) {
+                                setSelectedRows((prev) => [...prev, row]);
+                                return;
+                              }
+                              setSelectedRows((prev) =>
+                                prev.filter((item) => item !== row)
+                              );
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-semibold text-slate-900">{row.code}</div>
+                            <div className="mt-1 text-xs text-slate-600">{row.name ?? 'Sin nombre'}</div>
+                            <div className="mt-2">
+                              {row.is_active ? (
+                                <span className="inline-flex px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                                  Activo
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+                                  Inactivo
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar ubicación por código o nombre..."
-                className="w-full sm:max-w-md rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-black/10"
-              />
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300"
-                  checked={showInactive}
-                  onChange={(e) => setShowInactive(e.target.checked)}
-                />
-                Mostrar inactivos
-              </label>
-              <button
-                onClick={() => void refreshBins()}
-                className="rounded-xl px-4 py-2 text-sm border bg-white hover:shadow-sm"
-              >
-                Refrescar
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <section className="px-4 md:px-6 lg:px-8 py-6 overflow-auto">
-          <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
-            <div className="grid grid-cols-12 border-b bg-gray-50 text-xs font-semibold text-gray-600">
-              <div className="col-span-4 px-4 py-3">Código</div>
-              <div className="col-span-6 px-4 py-3">Nombre</div>
-              <div className="col-span-2 px-4 py-3 text-right">Acciones</div>
-            </div>
-
-            {loading ? (
-              <div className="p-4 text-sm text-gray-600">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="p-4 text-sm text-gray-600">Sin resultados.</div>
-            ) : (
-              filtered.map((b) => (
-                <div
-                  key={b.id}
-                  className={cx(
-                    'grid grid-cols-12 border-b last:border-b-0 text-sm',
-                    !b.is_active && 'bg-gray-50'
-                  )}
-                >
-                  <div className="col-span-4 px-4 py-3 font-medium">
-                    {b.code}
-                  </div>
-                  <div className="col-span-6 px-4 py-3 text-gray-700">
-                    {b.name ?? <span className="text-gray-400">—</span>}
-                  </div>
-                  <div className="col-span-2 px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      {canWrite && (
-                        <>
+                        <div className="mt-3 flex justify-end gap-2">
                           <button
-                            onClick={() => openEdit(b)}
-                            className="rounded-lg border px-3 py-1.5 text-xs bg-white hover:shadow-sm"
+                            type="button"
+                            className={cx(
+                              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                              !canWrite
+                                ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                            )}
+                            disabled={!canWrite}
+                            onClick={() => openEdit(row)}
                           >
+                            <Pencil className="h-4 w-4 mr-2" />
                             Editar
                           </button>
                           <button
-                            onClick={() => void onDelete(b.id)}
-                            className="rounded-lg border px-3 py-1.5 text-xs bg-white hover:shadow-sm text-red-600 border-red-200"
+                            type="button"
+                            className={cx(
+                              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                              !canWrite
+                                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                : 'bg-rose-600 hover:bg-rose-700 text-white'
+                            )}
+                            disabled={!canWrite}
+                            onClick={() => void onDelete(row)}
                           >
+                            <Trash2 className="h-4 w-4 mr-2" />
                             Eliminar
                           </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-white sticky top-0 z-10">
+                    <tr className="border-b border-slate-200">
+                      <th className="px-5 py-3 w-12">
+                        <input
+                          ref={checkboxRef}
+                          type="checkbox"
+                          disabled={!canWrite || filtered.length === 0 || loading}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                          checked={checked}
+                          onChange={toggleAll}
+                          aria-label="Seleccionar todo"
+                        />
+                      </th>
+                      <th className="text-left font-semibold text-slate-600 px-5 py-3">Código</th>
+                      <th className="text-left font-semibold text-slate-600 px-5 py-3">Nombre</th>
+                      <th className="text-left font-semibold text-slate-600 px-5 py-3">Estado</th>
+                      <th className="text-right font-semibold text-slate-600 px-5 py-3">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center text-slate-400">
+                          Cargando...
+                        </td>
+                      </tr>
+                    ) : filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center text-slate-400">
+                          Sin resultados.
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map((row) => {
+                        const selected = selectedRows.includes(row);
+                        return (
+                          <tr
+                            key={row.id}
+                            className={cx(
+                              'hover:bg-slate-50/70 transition',
+                              selected && 'bg-blue-50/50'
+                            )}
+                          >
+                            <td className="px-5 py-3 w-12">
+                              <input
+                                type="checkbox"
+                                disabled={!canWrite}
+                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                checked={selected}
+                                onChange={(event) => {
+                                  if (event.target.checked) {
+                                    setSelectedRows((prev) => [...prev, row]);
+                                    return;
+                                  }
+                                  setSelectedRows((prev) =>
+                                    prev.filter((item) => item !== row)
+                                  );
+                                }}
+                              />
+                            </td>
+                            <td className="px-5 py-3 font-mono font-semibold text-slate-900">{row.code}</td>
+                            <td className="px-5 py-3 text-slate-700">{row.name ?? '—'}</td>
+                            <td className="px-5 py-3">
+                              {row.is_active ? (
+                                <span className="inline-flex px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                                  Activo
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold">
+                                  Inactivo
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-5 py-3">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  className={cx(
+                                    'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border',
+                                    !canWrite
+                                      ? 'border-slate-200 text-slate-400 bg-white cursor-not-allowed'
+                                      : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                                  )}
+                                  disabled={!canWrite}
+                                  onClick={() => openEdit(row)}
+                                >
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className={cx(
+                                    'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                                    !canWrite
+                                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                      : 'bg-rose-600 hover:bg-rose-700 text-white'
+                                  )}
+                                  disabled={!canWrite}
+                                  onClick={() => void onDelete(row)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="px-5 py-4 border-t border-slate-100 bg-white">
+                <div className="text-xs text-slate-500">
+                  Tip: usa códigos cortos y únicos por almacén para localizar
+                  rápido pasillos y estantes.
                 </div>
-              ))
-            )}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -351,85 +653,88 @@ export default function WarehouseBinsPage() {
             open
             onClose={closeModal}
             overlayClassName="bg-black/30"
-            panelClassName="w-full max-w-lg rounded-2xl border bg-white shadow-xl"
+            panelClassName="w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-xl"
           >
-                <div className="p-5 border-b">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold">
-                        {editing ? 'Editar ubicación' : 'Nueva ubicación'}
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        El código debe ser único por almacén.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                      aria-label="Cerrar"
-                      title="Cerrar"
-                    >
-                      ✕
-                    </button>
-                  </div>
+            <div className="h-10 border-b border-slate-200 bg-blue-50/60" />
+
+            <div className="p-5 -mt-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-900">
+                    {editing ? 'Editar ubicación' : 'Nueva ubicación'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    El código debe ser único por almacén.
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                  aria-label="Cerrar"
+                  title="Cerrar"
+                >
+                  x
+                </button>
+              </div>
 
-                <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="text-sm">
-                    <span className="text-gray-700">Código</span>
-                    <input
-                      value={form.code}
-                      onChange={(e) =>
-                        setForm((s) => ({ ...s, code: e.target.value }))
-                      }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                    />
-                  </label>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label className="text-sm">
+                  <span className="font-semibold text-slate-700">Código</span>
+                  <input
+                    value={form.code}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, code: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
 
-                  <label className="text-sm">
-                    <span className="text-gray-700">Nombre (opcional)</span>
-                    <input
-                      value={form.name}
-                      onChange={(e) =>
-                        setForm((s) => ({ ...s, name: e.target.value }))
-                      }
-                      className="mt-1 w-full rounded-xl border px-3 py-2 outline-none focus:ring-2 focus:ring-black/10"
-                    />
-                  </label>
+                <label className="text-sm">
+                  <span className="font-semibold text-slate-700">Nombre (opcional)</span>
+                  <input
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, name: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </label>
 
-                  <label className="inline-flex items-center gap-2 text-sm text-gray-700 md:col-span-2">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300"
-                      checked={form.is_active}
-                      onChange={(e) =>
-                        setForm((s) => ({ ...s, is_active: e.target.checked }))
-                      }
-                    />
-                    Activo
-                  </label>
-                </div>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300"
+                    checked={form.is_active}
+                    onChange={(e) =>
+                      setForm((s) => ({ ...s, is_active: e.target.checked }))
+                    }
+                  />
+                  Activo
+                </label>
+              </div>
 
-                <div className="p-5 border-t flex justify-end gap-2">
-                  <button
-                    onClick={closeModal}
-                    className="rounded-xl border px-4 py-2 text-sm bg-white hover:shadow-sm"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    disabled={!canWrite || saving}
-                    onClick={() => void onSave()}
-                    className={cx(
-                      'rounded-xl px-4 py-2 text-sm font-medium border shadow-sm',
-                      'bg-gray-900 text-white border-gray-900 hover:opacity-95',
-                      (!canWrite || saving) && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    {saving ? 'Guardando...' : 'Guardar'}
-                  </button>
-                </div>
+              <div className="pt-5 flex justify-end gap-2">
+                <button
+                  onClick={closeModal}
+                  className="inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  disabled={!canWrite || saving}
+                  onClick={() => void onSave()}
+                  className={cx(
+                    'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+                    !canWrite || saving
+                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  )}
+                >
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
           </AnimatedDialog>
         )}
       </main>

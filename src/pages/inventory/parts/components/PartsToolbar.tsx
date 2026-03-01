@@ -1,5 +1,5 @@
 import type { PartCriticality } from '../../../../types/inventory';
-import { Boxes, Filter, Search, ShieldAlert } from 'lucide-react';
+import { Boxes, Filter, Plus, Search, ShieldAlert, Trash2 } from 'lucide-react';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -29,7 +29,11 @@ export default function PartsToolbar(props: {
   critFilter: PartCriticality | '';
   setCritFilter: (v: PartCriticality | '') => void;
   totalCount: number;
+  selectedCount: number;
   canManage: boolean;
+  isLoading: boolean;
+  onCreate: () => void;
+  onBulkDelete: () => void;
 }) {
   const {
     q,
@@ -39,7 +43,11 @@ export default function PartsToolbar(props: {
     critFilter,
     setCritFilter,
     totalCount,
+    selectedCount,
     canManage,
+    isLoading,
+    onCreate,
+    onBulkDelete,
   } = props;
 
   return (
@@ -117,12 +125,50 @@ export default function PartsToolbar(props: {
             <Boxes className="h-3.5 w-3.5 text-blue-700" />
             {totalCount} items
           </span>
+          {selectedCount > 0 ? (
+            <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {selectedCount} seleccionados
+            </span>
+          ) : null}
           {!canManage ? (
             <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
               <ShieldAlert className="h-3.5 w-3.5" />
               Solo lectura
             </span>
           ) : null}
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={!canManage}
+            className={cx(
+              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+              !canManage
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            )}
+            title={
+              !canManage
+                ? 'No tienes permiso para gestionar maestros'
+                : undefined
+            }
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo
+          </button>
+          <button
+            type="button"
+            onClick={onBulkDelete}
+            disabled={!canManage || isLoading || selectedCount === 0}
+            className={cx(
+              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+              !canManage || isLoading || selectedCount === 0
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-rose-600 hover:bg-rose-700 text-white'
+            )}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar selección
+          </button>
         </div>
       </div>
     </div>

@@ -1,12 +1,14 @@
-import { Ruler, Plus, Trash2 } from 'lucide-react';
-import { DangerButton, PrimaryButton } from './buttons';
+import { Boxes, Filter, Plus, Search, ShieldAlert, Trash2 } from 'lucide-react';
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(' ');
+}
 
 export function UomsToolbar({
   canManage,
   isLoading,
   selectedCount,
   totalCount,
-  filteredCount,
   search,
   onSearchChange,
   onCreate,
@@ -16,116 +18,92 @@ export function UomsToolbar({
   isLoading: boolean;
   selectedCount: number;
   totalCount: number;
-  filteredCount: number;
   search: string;
   onSearchChange: (v: string) => void;
   onCreate: () => void;
   onBulkDelete: () => void;
 }) {
-  const isFiltering = search.trim().length >= 2;
-
   return (
-    <div className="px-4 md:px-6 lg:px-8 py-4">
-      <div className="rounded-2xl border border-slate-200 bg-white p-4">
-        <div className="flex flex-col gap-4">
-          {/* Top row: icon + description + actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center h-10 w-10 rounded-xl border border-slate-200 bg-indigo-50">
-                <Ruler className="h-5 w-5 text-indigo-700" />
-              </span>
-              <div>
-                <div className="text-sm font-semibold text-slate-900">
-                  Acciones
-                </div>
-                <div className="text-xs text-slate-500">
-                  Crea, edita o elimina unidades de medida para compras, consumo
-                  e inventario.
-                </div>
-              </div>
-            </div>
+    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <Filter className="h-4 w-4 text-blue-700" />
+            Filtros
+          </span>
 
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <PrimaryButton
-                onClick={onCreate}
-                disabled={!canManage}
-                title={
-                  !canManage
-                    ? 'No tienes permiso para gestionar maestros'
-                    : undefined
-                }
-                icon={Plus}
-              >
-                Nueva UdM
-              </PrimaryButton>
-
-              <DangerButton
-                onClick={onBulkDelete}
-                disabled={!canManage || isLoading || selectedCount === 0}
-                title={
-                  !canManage
-                    ? 'No tienes permiso para gestionar maestros'
-                    : selectedCount === 0
-                      ? 'Selecciona al menos 1 UdM'
-                      : undefined
-                }
-                icon={Trash2}
-              >
-                Eliminar selección
-              </DangerButton>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Buscar
+            </label>
+            <div className="relative w-full sm:w-[360px]">
+              <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                placeholder="Código o nombre de la UdM..."
+                value={search}
+                onChange={(event) => onSearchChange(event.target.value)}
+              />
             </div>
           </div>
+        </div>
 
-          {/* Bottom row: search + counters */}
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <div className="flex-1">
-              <label className="sr-only">Buscar</label>
-              <div className="relative">
-                <input
-                  value={search}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="Buscar por código o nombre (min. 2 caracteres)…"
-                  className={[
-                    'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pl-10 text-sm',
-                    'text-slate-900 placeholder:text-slate-400',
-                    'focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300',
-                  ].join(' ')}
-                />
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  🔎
-                </div>
-              </div>
-
-              <div className="mt-2 text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
-                {isFiltering ? (
-                  <span>
-                    Mostrando{' '}
-                    <span className="font-semibold text-slate-700">
-                      {filteredCount}
-                    </span>{' '}
-                    de{' '}
-                    <span className="font-semibold text-slate-700">
-                      {totalCount}
-                    </span>
-                  </span>
-                ) : (
-                  <span>
-                    Total:{' '}
-                    <span className="font-semibold text-slate-700">
-                      {totalCount}
-                    </span>
-                  </span>
-                )}
-
-                {selectedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700">
-                    Seleccionadas:{' '}
-                    <span className="font-semibold">{selectedCount}</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+            <Boxes className="h-3.5 w-3.5 text-blue-700" />
+            {totalCount} items
+          </span>
+          {selectedCount > 0 ? (
+            <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+              {selectedCount} seleccionadas
+            </span>
+          ) : null}
+          {!canManage ? (
+            <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Solo lectura
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={onCreate}
+            disabled={!canManage}
+            className={cx(
+              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+              !canManage
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            )}
+            title={
+              !canManage
+                ? 'No tienes permiso para gestionar maestros'
+                : undefined
+            }
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva UdM
+          </button>
+          <button
+            type="button"
+            onClick={onBulkDelete}
+            disabled={!canManage || isLoading || selectedCount === 0}
+            className={cx(
+              'inline-flex items-center h-9 px-3 rounded-md text-sm font-semibold',
+              !canManage || isLoading || selectedCount === 0
+                ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                : 'bg-rose-600 hover:bg-rose-700 text-white'
+            )}
+            title={
+              !canManage
+                ? 'No tienes permiso para gestionar maestros'
+                : selectedCount === 0
+                  ? 'Selecciona al menos 1 UdM'
+                  : undefined
+            }
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Eliminar selección
+          </button>
         </div>
       </div>
     </div>

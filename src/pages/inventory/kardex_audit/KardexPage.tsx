@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
 
@@ -26,7 +25,6 @@ import {
 
 // Shell / UI atoms (siguiendo tu patrón)
 import { PageShell } from './components/PageShell';
-import { KardexHeader } from './components/KardexHeader';
 import { KardexToolbar } from './components/KardexToolbar';
 import { KardexMobileList } from './components/KardexMobileList';
 import { KardexTable } from './components/KardexTable';
@@ -408,7 +406,6 @@ export default function KardexPage() {
   if (!canRead) {
     return (
       <PageShell>
-        <Sidebar />
         <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 p-6">
           <EmptyState
             title="Acceso restringido"
@@ -421,11 +418,7 @@ export default function KardexPage() {
 
   return (
     <PageShell>
-      <Sidebar />
-
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
-        <KardexHeader count={count} />
-
         <KardexToolbar
           isLoading={isLoading}
           optionsLoading={optionsLoading}
