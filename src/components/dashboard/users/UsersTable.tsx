@@ -23,6 +23,7 @@ import {
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
 import UserEditModal from './UserEditModal';
 import PasswordInput from '../../ui/password-input';
+import AnimatedDialog from '../../ui/AnimatedDialog';
 
 interface Role {
   id: number;
@@ -951,12 +952,12 @@ export default function UsersTable({
 
       {/* Modal Detalle simple */}
       {detail && (
-        <div className="fixed inset-0 z-50" onClick={() => setDetail(null)}>
-          <div className="fixed inset-0 bg-black/30" />
-          <div
-            className="fixed inset-0 flex items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <AnimatedDialog
+          open
+          onClose={() => setDetail(null)}
+          overlayClassName="bg-black/30"
+          panelClassName="w-full max-w-xl"
+        >
             <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Detalle del usuario</h2>
@@ -1029,15 +1030,17 @@ export default function UsersTable({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </AnimatedDialog>
       )}
 
       {/* Modal Crear usuario */}
       {openCreate && (
-        <div className="fixed inset-0 z-50">
-          <div className="fixed inset-0 bg-black/30" onClick={closeCreate} />
-          <div className="fixed inset-0 flex items-center justify-center p-4">
+        <AnimatedDialog
+          open
+          onClose={closeCreate}
+          overlayClassName="bg-black/30"
+          panelClassName="w-full max-w-md"
+        >
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Crear usuario</h2>
@@ -1238,8 +1241,7 @@ export default function UsersTable({
                 </div>
               </form>
             </div>
-          </div>
-        </div>
+        </AnimatedDialog>
       )}
 
       {/* Modal Editar usuario (separado) */}

@@ -2,7 +2,7 @@
 import { Navigate } from 'react-router-dom';
 import type { JSX } from 'react';
 import { usePermissions } from '../rbac/PermissionsContext';
-import Spinner from '../components/ui/Spinner';
+import ScreenLoader from '../components/ui/ScreenLoader';
 
 export default function RequirePerm({
   allow,
@@ -15,9 +15,10 @@ export default function RequirePerm({
 
   if (!ready) {
     return (
-      <div className="min-h-[40vh] grid place-items-center">
-        <Spinner />
-      </div>
+      <ScreenLoader
+        title="Cargando permisos"
+        hint="Sincronizando accesos del usuario..."
+      />
     );
   }
 

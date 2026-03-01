@@ -5,6 +5,7 @@ import { Can } from '../../../rbac/PermissionsContext';
 import { syncPermissions } from '../../../rbac/syncPermissions';
 import { Plus, RefreshCw, ShieldCheck } from 'lucide-react';
 import { showToastError, showToastSuccess } from '../../../notifications';
+import AnimatedDialog from '../../ui/AnimatedDialog';
 
 export type Role = { id: number; name: string; description?: string | null };
 
@@ -267,12 +268,6 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const createRole = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMsg(null);
@@ -299,18 +294,12 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="fixed inset-0 bg-black/40"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5"
-        >
+    <AnimatedDialog
+      open
+      onClose={onClose}
+      overlayClassName="bg-black/40"
+      panelClassName="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5"
+    >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Nuevo rol</h2>
             <button
@@ -376,8 +365,6 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

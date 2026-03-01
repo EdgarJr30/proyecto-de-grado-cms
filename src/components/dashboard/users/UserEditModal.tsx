@@ -9,6 +9,7 @@ import {
   type DbUser,
 } from '../../../services/userAdminService';
 import PasswordInput from '../../ui/password-input';
+import AnimatedDialog from '../../ui/AnimatedDialog';
 import { generateSecurePassword } from '../../../utils/passwordGenerator';
 import { formatDateInTimezone } from '../../../utils/formatDate';
 import { MAX_EMAIL_LENGTH } from '../../../utils/validators';
@@ -173,15 +174,6 @@ export default function UserEditModal({
     };
   }, [open, lastResetById, lastResetByName, lastResetByEmail]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
-
   const errors: Partial<Record<keyof FormState, string>> = {};
 
   async function submitForm(e: React.FormEvent) {
@@ -308,10 +300,12 @@ export default function UserEditModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="fixed inset-0 bg-black/30" onClick={onClose} />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
+    <AnimatedDialog
+      open
+      onClose={onClose}
+      overlayClassName="bg-black/30"
+      panelClassName="w-full max-w-md rounded-xl bg-white p-6 shadow-lg"
+    >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
               {isEditing ? 'Editar usuario' : 'Usuario'}
@@ -558,8 +552,6 @@ export default function UserEditModal({
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

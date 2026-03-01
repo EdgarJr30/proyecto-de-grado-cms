@@ -14,6 +14,7 @@ import {
   showToastError,
   showToastSuccess,
 } from '../../../notifications';
+import AnimatedDialog from '../../ui/AnimatedDialog';
 
 interface Props {
   searchTerm: string;
@@ -688,12 +689,12 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
 
       {/* Modal Detalle */}
       {detail && (
-        <div className="fixed inset-0 z-50" onClick={() => setDetail(null)}>
-          <div className="fixed inset-0 bg-black/30" />
-          <div
-            className="fixed inset-0 flex items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <AnimatedDialog
+          open
+          onClose={() => setDetail(null)}
+          overlayClassName="bg-black/30"
+          panelClassName="w-full max-w-xl"
+        >
             <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">
@@ -760,18 +761,17 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </AnimatedDialog>
       )}
 
       {/* Modal Crear/Editar */}
       {openForm && (
-        <div className="fixed inset-0 z-50">
-          <div
-            className="fixed inset-0 bg-black/30"
-            onClick={() => setOpenForm(false)}
-          />
-          <div className="fixed inset-0 flex items-center justify-center p-4">
+        <AnimatedDialog
+          open
+          onClose={() => setOpenForm(false)}
+          overlayClassName="bg-black/30"
+          panelClassName="w-full max-w-md"
+        >
             <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">
@@ -882,8 +882,7 @@ export default function SpecialIncidentsTable({ searchTerm }: Props) {
                 </div>
               </form>
             </div>
-          </div>
-        </div>
+        </AnimatedDialog>
       )}
     </div>
   );

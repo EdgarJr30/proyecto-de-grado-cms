@@ -17,6 +17,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from '../../components/layout/Sidebar';
 import { Can, useCan } from '../../rbac/PermissionsContext';
 import { cn } from '../../utils/cn';
@@ -141,6 +142,7 @@ function SettingsModuleNav({
   value: TabKey;
   onChange: (tab: TabKey) => void;
 }) {
+  const prefersReducedMotion = useReducedMotion();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
   const enabledIndices = useMemo(
     () => modules.flatMap((module, index) => (module.enabled ? [index] : [])),
@@ -205,62 +207,76 @@ function SettingsModuleNav({
           const selected = value === module.key;
 
           return (
-            <button
+            <motion.div
               key={module.key}
-              ref={(el) => {
-                refs.current[idx] = el;
-              }}
-              type="button"
-              role="tab"
-              id={`settings-tab-${module.key}`}
-              aria-controls={`settings-panel-${module.key}`}
-              aria-selected={selected}
-              tabIndex={selected ? 0 : -1}
-              disabled={!module.enabled}
-              onClick={() => onChange(module.key)}
-              onKeyDown={(event) => handleKeyboard(event, idx)}
-              className={cn(
-                'w-full rounded-xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2',
-                module.tone.focusRing,
-                selected
-                  ? `${module.tone.selectedBg} ${module.tone.selectedBorder}`
-                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-slate-600 dark:hover:bg-slate-800/70',
-                !module.enabled &&
-                  'cursor-not-allowed border-gray-200 bg-gray-100 opacity-70 dark:border-slate-700 dark:bg-slate-800'
-              )}
-              title={module.enabled ? module.description : 'Sin permisos'}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={
+                prefersReducedMotion
+                  ? undefined
+                  : {
+                      duration: 0.3,
+                      delay: idx * 0.045,
+                      ease: [0.22, 1, 0.36, 1],
+                    }
+              }
             >
-              <div className="flex items-start gap-3">
-                <span
-                  className={cn(
-                    'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                    module.tone.iconBg,
-                    module.tone.iconColor
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                </span>
-
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-gray-900 dark:text-slate-100">
-                    {module.label}
-                  </span>
-                  <span className="mt-1 block text-xs text-gray-500 dark:text-slate-400">
-                    {module.helper}
-                  </span>
+              <button
+                ref={(el) => {
+                  refs.current[idx] = el;
+                }}
+                type="button"
+                role="tab"
+                id={`settings-tab-${module.key}`}
+                aria-controls={`settings-panel-${module.key}`}
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                disabled={!module.enabled}
+                onClick={() => onChange(module.key)}
+                onKeyDown={(event) => handleKeyboard(event, idx)}
+                className={cn(
+                  'w-full rounded-xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2',
+                  module.tone.focusRing,
+                  selected
+                    ? `${module.tone.selectedBg} ${module.tone.selectedBorder}`
+                    : 'border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-slate-600 dark:hover:bg-slate-800/70',
+                  !module.enabled &&
+                    'cursor-not-allowed border-gray-200 bg-gray-100 opacity-70 dark:border-slate-700 dark:bg-slate-800'
+                )}
+                title={module.enabled ? module.description : 'Sin permisos'}
+              >
+                <div className="flex items-start gap-3">
                   <span
                     className={cn(
-                      'mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                      module.enabled
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                        : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300'
+                      'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                      module.tone.iconBg,
+                      module.tone.iconColor
                     )}
                   >
-                    {module.enabled ? 'Disponible' : 'Sin acceso'}
+                    <Icon className="h-4 w-4" />
                   </span>
-                </span>
-              </div>
-            </button>
+
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-900 dark:text-slate-100">
+                      {module.label}
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500 dark:text-slate-400">
+                      {module.helper}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
+                        module.enabled
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
+                          : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300'
+                      )}
+                    >
+                      {module.enabled ? 'Disponible' : 'Sin acceso'}
+                    </span>
+                  </span>
+                </div>
+              </button>
+            </motion.div>
           );
         })}
       </div>
@@ -271,6 +287,7 @@ function SettingsModuleNav({
 export default function AdminSettingsHubPage() {
   const q = useQuery();
   const navigate = useNavigate();
+  const prefersReducedMotion = useReducedMotion();
 
   const canSeePermissions = useCan('rbac:manage_permissions');
   const canManageRoles = useCan('rbac:manage_roles');
@@ -420,12 +437,28 @@ export default function AdminSettingsHubPage() {
 
   const ActiveIcon = activeModule.icon;
 
+  const revealProps = (delay: number) =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14, scale: 0.996 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          transition: {
+            duration: 0.46,
+            delay,
+            ease: [0.22, 1, 0.36, 1] as const,
+          },
+        };
+
   return (
     <div className="h-screen flex bg-[#f4f6fb] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <Sidebar />
 
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 min-w-0">
-        <header className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-0">
+        <motion.header
+          className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-0"
+          {...revealProps(0.04)}
+        >
           <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/70 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
@@ -464,11 +497,14 @@ export default function AdminSettingsHubPage() {
               </div>
             </div>
           </div>
-        </header>
+        </motion.header>
 
         <section className="flex-1 overflow-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
           <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="space-y-4 xl:sticky xl:top-4 self-start">
+            <motion.aside
+              className="space-y-4 xl:sticky xl:top-4 self-start"
+              {...revealProps(0.1)}
+            >
               <SettingsModuleNav
                 modules={modules}
                 value={tab}
@@ -483,10 +519,21 @@ export default function AdminSettingsHubPage() {
                   Los módulos bloqueados requieren permisos adicionales.
                 </p>
                 <div className="mt-3 space-y-2 text-xs">
-                  {modules.map((module) => (
-                    <div
+                  {modules.map((module, index) => (
+                    <motion.div
                       key={`${module.key}-status`}
                       className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 dark:border-slate-700"
+                      initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={
+                        prefersReducedMotion
+                          ? undefined
+                          : {
+                              duration: 0.26,
+                              delay: 0.05 + index * 0.04,
+                              ease: [0.22, 1, 0.36, 1],
+                            }
+                      }
                     >
                       <span className="font-medium text-slate-700 dark:text-slate-200">
                         {module.label}
@@ -501,13 +548,16 @@ export default function AdminSettingsHubPage() {
                       >
                         {module.enabled ? 'OK' : 'Bloqueado'}
                       </span>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               </div>
-            </aside>
+            </motion.aside>
 
-            <div className="space-y-4 min-w-0">
+            <motion.div
+              className="space-y-4 min-w-0"
+              {...revealProps(0.16)}
+            >
               <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex items-start gap-3">
@@ -561,52 +611,66 @@ export default function AdminSettingsHubPage() {
                 aria-labelledby={`settings-tab-${tab}`}
                 className="rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
               >
-                {tab === 'roles' && (
-                  <Can perm="rbac:manage_roles">
-                    <div className="space-y-6">
-                      <RoleList
-                        searchTerm={searchTerm}
-                        onOpenUsers={(roleId: number) =>
-                          setRoleUsersModal({ open: true, roleId })
-                        }
-                      />
-                      <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                        Tip: usa el botón “Usuarios” para gestionar miembros del
-                        rol sin salir de esta pantalla.
-                      </p>
-                    </div>
-                  </Can>
-                )}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={tab}
+                    initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={prefersReducedMotion ? undefined : { opacity: 0, y: -8 }}
+                    transition={
+                      prefersReducedMotion
+                        ? undefined
+                        : { duration: 0.26, ease: [0.22, 1, 0.36, 1] }
+                    }
+                  >
+                    {tab === 'roles' && (
+                      <Can perm="rbac:manage_roles">
+                        <div className="space-y-6">
+                          <RoleList
+                            searchTerm={searchTerm}
+                            onOpenUsers={(roleId: number) =>
+                              setRoleUsersModal({ open: true, roleId })
+                            }
+                          />
+                          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                            Tip: usa el botón “Usuarios” para gestionar miembros del
+                            rol sin salir de esta pantalla.
+                          </p>
+                        </div>
+                      </Can>
+                    )}
 
-                {tab === 'permissions' && (
-                  <Can perm="rbac:manage_permissions">
-                    <PermissionsTable searchTerm={searchTerm} />
-                  </Can>
-                )}
+                    {tab === 'permissions' && (
+                      <Can perm="rbac:manage_permissions">
+                        <PermissionsTable searchTerm={searchTerm} />
+                      </Can>
+                    )}
 
-                {tab === 'incidents' && (
-                  <SpecialIncidentsTable searchTerm={searchTerm} />
-                )}
+                    {tab === 'incidents' && (
+                      <SpecialIncidentsTable searchTerm={searchTerm} />
+                    )}
 
-                {tab === 'announcements' && (
-                  <Can perm="announcements:read">
-                    <AnnouncementsTable searchTerm={searchTerm} />
-                  </Can>
-                )}
+                    {tab === 'announcements' && (
+                      <Can perm="announcements:read">
+                        <AnnouncementsTable searchTerm={searchTerm} />
+                      </Can>
+                    )}
 
-                {tab === 'sociedad' && (
-                  <Can perm="society:read">
-                    <SocietySettingsTable />
-                  </Can>
-                )}
+                    {tab === 'sociedad' && (
+                      <Can perm="society:read">
+                        <SocietySettingsTable />
+                      </Can>
+                    )}
 
-                {tab === 'general' && (
-                  <div className="max-w-5xl">
-                    <GeneralSettings />
-                  </div>
-                )}
+                    {tab === 'general' && (
+                      <div className="max-w-5xl">
+                        <GeneralSettings />
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </section>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>

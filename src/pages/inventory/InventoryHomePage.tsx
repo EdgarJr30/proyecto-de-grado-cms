@@ -20,6 +20,7 @@ import {
   DollarSign,
   Wrench,
 } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 type InventoryNavCard = {
   title: string;
@@ -179,6 +180,7 @@ function Card({
 export default function InventoryHomePage() {
   const { has } = usePermissions();
   const canRead = has('inventory:read');
+  const prefersReducedMotion = useReducedMotion();
 
   const cards: InventoryNavCard[] = [
     {
@@ -285,6 +287,21 @@ export default function InventoryHomePage() {
     },
   ];
 
+  const visibleCards = cards.filter((card) => (card.perm ? has(card.perm) : true));
+
+  const revealProps = (delay: number) =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14, scale: 0.996 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          transition: {
+            duration: 0.46,
+            delay,
+            ease: [0.22, 1, 0.36, 1] as const,
+          },
+        };
+
   if (!canRead) {
     return (
       <div className="h-screen flex bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -306,7 +323,10 @@ export default function InventoryHomePage() {
 
       <main className="flex-1 min-w-0 flex flex-col h-[100dvh] overflow-hidden">
         {/* Header */}
-        <header className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
+        <motion.header
+          className="shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80"
+          {...revealProps(0.04)}
+        >
           <div className="px-4 md:px-6 lg:px-8 py-4">
             <div className="flex flex-col gap-3">
               <nav className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -330,18 +350,19 @@ export default function InventoryHomePage() {
 
                 <span className="inline-flex items-center gap-2 text-[11px] font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 self-start dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                   <Boxes className="h-3.5 w-3.5 text-blue-700 dark:text-blue-300" />
-                  {
-                    cards.filter((c) => (c.perm ? has(c.perm) : true)).length
-                  }{' '}
+                  {visibleCards.length}{' '}
                   módulos
                 </span>
               </div>
             </div>
           </div>
-        </header>
+        </motion.header>
 
         {/* Body */}
-        <section className="flex-1 min-h-0 overflow-auto bg-slate-100/60 dark:bg-slate-950">
+        <motion.section
+          className="flex-1 min-h-0 overflow-auto bg-slate-100/60 dark:bg-slate-950"
+          {...revealProps(0.1)}
+        >
           <div className="px-4 md:px-6 lg:px-8 py-6">
             <div className="rounded-3xl border border-slate-200/90 bg-white p-4 md:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -352,22 +373,21 @@ export default function InventoryHomePage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {cards
-                  .filter((c) => (c.perm ? has(c.perm) : true))
-                  .map((c) => (
+                {visibleCards.map((card, index) => (
+                  <motion.div key={card.to} {...revealProps(0.14 + index * 0.05)}>
                     <Card
-                      key={c.to}
-                      title={c.title}
-                      description={c.description}
-                      to={c.to}
-                      tone={c.tone}
-                      Icon={c.icon ?? Boxes}
+                      title={card.title}
+                      description={card.description}
+                      to={card.to}
+                      tone={card.tone}
+                      Icon={card.icon ?? Boxes}
                     />
-                  ))}
+                  </motion.div>
+                ))}
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
       </main>
     </div>
   );

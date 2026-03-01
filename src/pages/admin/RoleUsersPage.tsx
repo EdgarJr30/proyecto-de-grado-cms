@@ -11,6 +11,7 @@ import {
 import { showToastError, showToastSuccess } from '../../notifications';
 import { useCan } from '../../rbac/PermissionsContext';
 import { useLocationCatalog } from '../../hooks/useLocationCatalog';
+import AnimatedDialog from '../../components/ui/AnimatedDialog';
 
 const PAGE_SIZE = 8;
 
@@ -410,14 +411,6 @@ function AddUsersModal({
   const [loading, setLoading] = useState(true);
   const PAGE_SIZE = 8;
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -465,13 +458,12 @@ function AddUsersModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="fixed inset-0 bg-black/40"
-        onClick={() => onClose(false)}
-      />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl">
+    <AnimatedDialog
+      open
+      onClose={() => onClose(false)}
+      overlayClassName="bg-black/40"
+      panelClassName="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-xl"
+    >
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">
               Agregar usuarios al rol:{' '}
@@ -620,8 +612,6 @@ function AddUsersModal({
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

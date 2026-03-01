@@ -1,4 +1,5 @@
 import { ToastContainer } from 'react-toastify';
+import { MotionConfig } from 'framer-motion';
 import { useTheme } from '../../context/ThemeContext';
 import AppRouterContent from './AppRouterContent';
 
@@ -6,7 +7,7 @@ export default function ThemedAppRoot() {
   const { isDark } = useTheme();
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <ToastContainer
         position="bottom-right"
         autoClose={3000}
@@ -19,6 +20,6 @@ export default function ThemedAppRoot() {
         theme={isDark ? 'dark' : 'light'}
       />
       <AppRouterContent />
-    </>
+    </MotionConfig>
   );
 }

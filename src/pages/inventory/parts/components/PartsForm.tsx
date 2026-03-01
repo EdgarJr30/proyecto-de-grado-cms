@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type {
   PartCriticality,
   PartCategoryRow,
@@ -47,6 +48,7 @@ function Modal(props: {
   children: React.ReactNode;
 }) {
   const { open, title, subtitle, onClose, children } = props;
+  const prefersReducedMotion = useReducedMotion();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -56,42 +58,71 @@ function Modal(props: {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px]"
-        onClick={onClose}
-      />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-start justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                {title}
-              </div>
-              {subtitle ? (
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  {subtitle}
-                </div>
-              ) : null}
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
-              aria-label="Cerrar"
-              title="Cerrar"
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-50"
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.18 }}
+        >
+          <motion.div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px]"
+            onClick={onClose}
+          />
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : { opacity: 0, y: 10, scale: 0.985 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : { opacity: 0, y: 6, scale: 0.99 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+              }
+              className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl overflow-hidden"
+              onClick={(event) => event.stopPropagation()}
             >
-              <X className="h-4 w-4 text-slate-600" />
-            </button>
-          </div>
+              <div className="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-900">
+                    {title}
+                  </div>
+                  {subtitle ? (
+                    <div className="text-[11px] text-slate-500 mt-0.5">
+                      {subtitle}
+                    </div>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="inline-flex items-center justify-center h-9 w-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50"
+                  aria-label="Cerrar"
+                  title="Cerrar"
+                >
+                  <X className="h-4 w-4 text-slate-600" />
+                </button>
+              </div>
 
-          <div className="p-5">{children}</div>
-        </div>
-      </div>
-    </div>
+              <div className="p-5">{children}</div>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

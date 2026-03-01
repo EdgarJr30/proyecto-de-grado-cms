@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import DefaultSidebarLogo from '../../assets/logo.png';
 import { signOut } from '../../utils/auth';
 import { useAuth } from '../../context/AuthContext';
@@ -21,6 +22,7 @@ export default function Sidebar() {
   const location_id = useLocation();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const handleOpenSidebar = () => setIsOpen(true);
@@ -69,6 +71,23 @@ export default function Sidebar() {
     .map((chunk) => chunk.charAt(0))
     .join('')
     .toUpperCase() || 'U';
+
+  const menuContainerVariants = {
+    hidden: {},
+    visible: prefersReducedMotion
+      ? {}
+      : {
+          transition: {
+            staggerChildren: 0.025,
+            delayChildren: 0.03,
+          },
+        },
+  };
+
+  const menuItemVariants = {
+    hidden: prefersReducedMotion ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 },
+    visible: { opacity: 1, x: 0 },
+  };
 
   // Mientras carga auth o permisos → skeleton
   if (loading || !ready) {
@@ -119,29 +138,35 @@ export default function Sidebar() {
         </div>
 
         {/* Menú */}
-        <nav className="flex flex-col gap-1 flex-1 px-2 py-3">
+        <motion.nav
+          className="flex flex-col gap-1 flex-1 px-2 py-3"
+          variants={menuContainerVariants}
+          initial={prefersReducedMotion ? false : 'hidden'}
+          animate={prefersReducedMotion ? undefined : 'visible'}
+        >
           {visibleMenu.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => setIsOpen(false)}
-              className={`px-3 py-2 rounded-md transition text-sm font-medium leading-5 flex items-center gap-2
+            <motion.div key={item.path} variants={menuItemVariants}>
+              <Link
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={`px-3 py-2 rounded-md transition text-sm font-medium leading-5 flex items-center gap-2
                           [&_svg]:h-4 [&_svg]:w-4 [&_svg]:mr-0 [&_svg]:shrink-0 ${
-                location_id.pathname === item.path
-                  ? 'bg-blue-600 text-white'
-                  : 'hover:bg-gray-800'
-              }`}
-            >
-              {item.icon}
-              <span>{item.name}</span>
-            </Link>
+                  location_id.pathname === item.path
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-800'
+                }`}
+              >
+                {item.icon}
+                <span>{item.name}</span>
+              </Link>
+            </motion.div>
           ))}
           {visibleMenu.length === 0 && (
             <div className="px-4 py-3 text-sm text-gray-400">
               No tienes menús disponibles.
             </div>
           )}
-        </nav>
+        </motion.nav>
 
         {/* User card */}
         <div className="px-2.5 pt-1.5 pb-1.5 border-t border-gray-800">

@@ -17,6 +17,7 @@ import {
   showToastError,
   showToastSuccess,
 } from '../../../../notifications/toast';
+import AnimatedDialog from '../../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -345,13 +346,12 @@ export default function AssetCategoriesSettings() {
 
       {/* Modal */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={closeModal}
-            role="button"
-            tabIndex={-1}
-          />
+        <AnimatedDialog
+          open
+          onClose={closeModal}
+          overlayClassName="bg-black/40"
+          panelClassName="relative w-full max-w-lg"
+        >
           <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl border">
             <div className="p-5 border-b">
               <div className="flex items-start justify-between gap-3">
@@ -446,7 +446,7 @@ export default function AssetCategoriesSettings() {
               </button>
             </div>
           </div>
-        </div>
+        </AnimatedDialog>
       )}
     </div>
   );

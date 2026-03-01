@@ -1,8 +1,8 @@
 // src/components/Routes/ProtectedRoute.tsx
 import { Navigate, useLocation } from 'react-router-dom';
-import Spinner from '../components/ui/Spinner';
 import { useAuth } from '../context/AuthContext';
 import AppTopBar from '../components/layout/AppTopBar';
+import ScreenLoader from '../components/ui/ScreenLoader';
 
 export default function ProtectedRoute({
   children,
@@ -16,9 +16,11 @@ export default function ProtectedRoute({
 
   if (loading) {
     return (
-      <div className="h-screen w-screen grid place-items-center">
-        <Spinner />
-      </div>
+      <ScreenLoader
+        fullScreen
+        title="Validando sesion"
+        hint="Comprobando autenticacion y permisos..."
+      />
     );
   }
 

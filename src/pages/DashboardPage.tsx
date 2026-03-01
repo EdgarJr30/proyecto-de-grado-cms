@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import { Bell, CalendarClock, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useUser } from '../context/UserContext';
+import { motion, useReducedMotion } from 'framer-motion';
 
 export default function DashboardPage() {
   const [now, setNow] = useState<Date>(() => new Date());
+  const prefersReducedMotion = useReducedMotion();
 
   const { profile } = useUser();
 
@@ -73,6 +75,19 @@ export default function DashboardPage() {
     [now]
   );
 
+  const revealProps = (delay: number) =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 16, scale: 0.995 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          transition: {
+            duration: 0.5,
+            delay,
+            ease: [0.22, 1, 0.36, 1] as const,
+          },
+        };
+
   return (
     <div className="h-screen flex bg-gray-100">
       <Sidebar />
@@ -83,7 +98,10 @@ export default function DashboardPage() {
           {/* padding extra arriba en mobile para no chocar con el menú */}
           <div className="max-w-6xl mx-auto pt-16 sm:pt-6 pb-6 space-y-6">
             {/* Bloque de bienvenida */}
-            <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white shadow-md">
+            <motion.section
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 text-white shadow-md"
+              {...revealProps(0.04)}
+            >
               <div className="absolute inset-y-0 right-0 opacity-20 pointer-events-none">
                 <div className="h-full w-64 bg-[radial-gradient(circle_at_top,_#ffffff55,_transparent_60%)]" />
               </div>
@@ -120,14 +138,20 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-            </section>
+            </motion.section>
 
             {/* Layout principal: Guía + Notificaciones */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <motion.section
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+              {...revealProps(0.1)}
+            >
               {/* Columna izquierda: contenido genérico para todos los usuarios */}
               <div className="lg:col-span-2 space-y-4">
                 {/* Guía rápida (acordeón) */}
-                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <motion.div
+                  className="rounded-2xl bg-white border border-gray-100 shadow-sm"
+                  {...revealProps(0.16)}
+                >
                   <button
                     type="button"
                     onClick={() => setIsHowToOpen((prev) => !prev)}
@@ -239,10 +263,13 @@ export default function DashboardPage() {
                       </li>
                     </ol>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Uso responsable (acordeón) */}
-                <div className="rounded-2xl bg-slate-900 text-white shadow-sm">
+                <motion.div
+                  className="rounded-2xl bg-slate-900 text-white shadow-sm"
+                  {...revealProps(0.22)}
+                >
                   <button
                     type="button"
                     onClick={() => setIsResponsibleOpen((prev) => !prev)}
@@ -288,13 +315,16 @@ export default function DashboardPage() {
                       fundamentadas.
                     </p>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
               {/* Columna derecha: Notificaciones / estado general */}
               <aside className="space-y-4">
                 {/* Notificaciones generales (acordeón) */}
-                <div className="rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <motion.div
+                  className="rounded-2xl bg-white border border-gray-100 shadow-sm"
+                  {...revealProps(0.28)}
+                >
                   <button
                     type="button"
                     onClick={() => setIsNotificationsOpen((prev) => !prev)}
@@ -371,10 +401,13 @@ export default function DashboardPage() {
                       </li>
                     </ul>
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Buenas prácticas (acordeón) */}
-                <div className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-sm">
+                <motion.div
+                  className="rounded-2xl bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-sm"
+                  {...revealProps(0.34)}
+                >
                   <button
                     type="button"
                     onClick={() => setIsBestPracticesOpen((prev) => !prev)}
@@ -419,9 +452,9 @@ export default function DashboardPage() {
                       incorporan al proceso más adelante.
                     </p>
                   </div>
-                </div>
+                </motion.div>
               </aside>
-            </section>
+            </motion.section>
           </div>
         </div>
       </main>

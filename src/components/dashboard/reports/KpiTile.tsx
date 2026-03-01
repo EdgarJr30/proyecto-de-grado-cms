@@ -1,3 +1,5 @@
+import CountUpText from '../../ui/CountUpText';
+
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
@@ -10,13 +12,6 @@ interface KpiTileProps {
   description?: string;
   unit?: string;
   tone?: KpiTone;
-}
-
-function formatValue(value: number | string) {
-  if (typeof value === 'number') {
-    return new Intl.NumberFormat('es-DO').format(value);
-  }
-  return value;
 }
 
 export default function KpiTile({
@@ -41,9 +36,10 @@ export default function KpiTile({
         {label}
       </div>
       <div className="mt-1 flex items-end gap-1">
-        <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-          {formatValue(value)}
-        </span>
+        <CountUpText
+          value={value}
+          className="text-2xl font-bold text-gray-900 dark:text-slate-100"
+        />
         {unit ? (
           <span className="text-xs text-gray-500 dark:text-slate-400 pb-1">
             {unit}

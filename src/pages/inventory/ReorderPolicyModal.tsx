@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { UUID, ReorderPolicyRow } from '../../types/inventory';
 import type { OptionRow } from '../../services/inventory/lookupsService';
 import { X } from 'lucide-react';
@@ -149,6 +150,7 @@ export default function ReorderPolicyModal({
 }) {
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
   const [tab, setTab] = useState<'context' | 'summary'>('context');
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
@@ -197,31 +199,51 @@ export default function ReorderPolicyModal({
     editor.safety_stock,
   ]);
 
-  if (!open) return null;
-
   return createPortal(
-    <div className="fixed inset-0 z-[9999]">
-      {/* ✅ Backdrop como tu lightbox: sólido y blur suave */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Center */}
-      <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
-        <div
-          role="dialog"
-          aria-modal="true"
-          className={cx(
-            'w-full max-w-6xl',
-            'rounded-2xl border border-slate-200 dark:border-slate-700',
-            'bg-white dark:bg-slate-900', // ✅ sólido
-            'shadow-2xl',
-            'overflow-hidden',
-            'max-h-[92vh]'
-          )}
-          onClick={(e) => e.stopPropagation()}
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          className="fixed inset-0 z-[9999]"
+          initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+          transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2 }}
         >
+          <motion.div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+          />
+
+          <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              initial={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : { opacity: 0, y: 12, scale: 0.985 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={
+                prefersReducedMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : { opacity: 0, y: 8, scale: 0.99 }
+              }
+              transition={
+                prefersReducedMotion
+                  ? { duration: 0 }
+                  : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }
+              }
+              className={cx(
+                'w-full max-w-6xl',
+                'rounded-2xl border border-slate-200 dark:border-slate-700',
+                'bg-white dark:bg-slate-900',
+                'shadow-2xl',
+                'overflow-hidden',
+                'max-h-[92vh]'
+              )}
+              onClick={(e) => e.stopPropagation()}
+            >
           {/* ✅ Header sólido */}
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
             <div className="flex items-start justify-between gap-4">
@@ -682,9 +704,11 @@ export default function ReorderPolicyModal({
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>,
+            </motion.div>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>,
     document.body
   );
 }

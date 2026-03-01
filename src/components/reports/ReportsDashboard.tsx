@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import {
   getAdminReportsData,
@@ -318,6 +319,7 @@ function SectionLoading({ title }: { title: string }) {
 
 export default function ReportsDashboard() {
   const permissions = usePermissions();
+  const prefersReducedMotion = useReducedMotion();
 
   const canAssets = permissions.has(['assets:read', 'assets:full_access']);
   const canInventory = permissions.has(['inventory:read', 'inventory:full_access']);
@@ -358,6 +360,13 @@ export default function ReportsDashboard() {
   const [partsState, setPartsState] =
     useState<SectionState<InventoryPartsReport>>(emptySection());
   const [adminState, setAdminState] = useState<SectionState<AdminReportsData>>(emptySection());
+  const [reportAnimationRevision, setReportAnimationRevision] = useState<Record<TabId, number>>({
+    executive: 0,
+    work: 0,
+    assets: 0,
+    parts: 0,
+    admin: 0,
+  });
 
   const filters = useMemo(
     () =>
@@ -463,6 +472,7 @@ export default function ReportsDashboard() {
     try {
       const data = await getExecutiveSummaryReport(filters);
       setExecutiveState({ data, loading: false, error: null });
+      setReportAnimationRevision((prev) => ({ ...prev, executive: prev.executive + 1 }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error cargando resumen ejecutivo';
       setExecutiveState((prev) => ({ ...prev, loading: false, error: message }));
@@ -474,6 +484,7 @@ export default function ReportsDashboard() {
     try {
       const data = await getWorkManagementReport(filters);
       setWorkState({ data, loading: false, error: null });
+      setReportAnimationRevision((prev) => ({ ...prev, work: prev.work + 1 }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error cargando Gestión de trabajo';
       setWorkState((prev) => ({ ...prev, loading: false, error: message }));
@@ -485,6 +496,7 @@ export default function ReportsDashboard() {
     try {
       const data = await getAssetsReport(filters);
       setAssetsState({ data, loading: false, error: null });
+      setReportAnimationRevision((prev) => ({ ...prev, assets: prev.assets + 1 }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error cargando reportes de activos';
       setAssetsState((prev) => ({ ...prev, loading: false, error: message }));
@@ -496,6 +508,7 @@ export default function ReportsDashboard() {
     try {
       const data = await getInventoryPartsReport(filters);
       setPartsState({ data, loading: false, error: null });
+      setReportAnimationRevision((prev) => ({ ...prev, parts: prev.parts + 1 }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error cargando reportes de repuestos';
       setPartsState((prev) => ({ ...prev, loading: false, error: message }));
@@ -507,6 +520,7 @@ export default function ReportsDashboard() {
     try {
       const data = await getAdminReportsData(filters);
       setAdminState({ data, loading: false, error: null });
+      setReportAnimationRevision((prev) => ({ ...prev, admin: prev.admin + 1 }));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error cargando reportes admin';
       setAdminState((prev) => ({ ...prev, loading: false, error: message }));
@@ -649,6 +663,29 @@ export default function ReportsDashboard() {
   }
 
   const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? '';
+  const tabAnimationSeed = useMemo(
+    () => ({
+      executive: `executive-${filterKey}-${reportAnimationRevision.executive}`,
+      work: `work-${filterKey}-${reportAnimationRevision.work}`,
+      assets: `assets-${filterKey}-${reportAnimationRevision.assets}`,
+      parts: `parts-${filterKey}-${reportAnimationRevision.parts}`,
+      admin: `admin-${filterKey}-${reportAnimationRevision.admin}`,
+    }),
+    [filterKey, reportAnimationRevision]
+  );
+
+  const revealProps = (delay: number) =>
+    prefersReducedMotion
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14, scale: 0.996 },
+          animate: { opacity: 1, y: 0, scale: 1 },
+          transition: {
+            duration: 0.42,
+            delay,
+            ease: [0.22, 1, 0.36, 1] as const,
+          },
+        };
 
   const techColumns = useMemo<ReportTableColumn<WorkManagementReport['byTechnician'][number]>[]>(
     () => [
@@ -1177,7 +1214,10 @@ export default function ReportsDashboard() {
 
   return (
     <div className="space-y-4 text-slate-900 dark:text-slate-100">
-      <section className="rounded-3xl border bg-gradient-to-r from-blue-700 via-sky-700 to-teal-700 p-5 text-white shadow-sm">
+      <motion.section
+        className="rounded-3xl border bg-gradient-to-r from-blue-700 via-sky-700 to-teal-700 p-5 text-white shadow-sm"
+        {...revealProps(0.02)}
+      >
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.22em] text-blue-100">CMMS Intelligence</p>
@@ -1196,9 +1236,12 @@ export default function ReportsDashboard() {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <motion.section
+        className="rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+        {...revealProps(0.08)}
+      >
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-gray-800 dark:text-slate-100">
@@ -1334,15 +1377,20 @@ export default function ReportsDashboard() {
             {resettingAllLayouts ? 'Reseteando todo...' : 'Resetear todo'}
           </button>
         </div>
-      </section>
+      </motion.section>
 
-      <ReportTabs
-        tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
-        activeTab={activeTab}
-        onChange={(tabId) => setActiveTab(tabId as TabId)}
-      />
+      <motion.div {...revealProps(0.12)}>
+        <ReportTabs
+          tabs={tabs.map((tab) => ({ id: tab.id, label: tab.label }))}
+          activeTab={activeTab}
+          onChange={(tabId) => setActiveTab(tabId as TabId)}
+        />
+      </motion.div>
 
-      <section className="rounded-2xl border border-dashed bg-blue-50/60 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200">
+      <motion.section
+        className="rounded-2xl border border-dashed bg-blue-50/60 px-3 py-2 text-xs text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-200"
+        {...revealProps(0.15)}
+      >
         Arrastra y suelta los KPI y bloques de reportes para reordenarlos. El orden se guarda automáticamente en tu usuario.
         Puedes usar "Orden por defecto" para la pestaña actual o "Resetear todo" para restaurar todas las vistas.
         {layoutError ? (
@@ -1350,10 +1398,10 @@ export default function ReportsDashboard() {
             {layoutError}
           </div>
         ) : null}
-      </section>
+      </motion.section>
 
       {activeTab === 'executive' ? (
-        <section className="space-y-4">
+        <motion.section className="space-y-4" {...revealProps(0.18)}>
           {!executiveState.data && executiveState.loading ? (
             <SectionLoading title="Resumen Ejecutivo" />
           ) : null}
@@ -1374,6 +1422,7 @@ export default function ReportsDashboard() {
                   id: kpi.id,
                   content: <KpiTile label={kpi.label} value={kpi.value} tone={kpi.tone} />,
                 }))}
+                animationSeed={`${tabAnimationSeed.executive}-kpis`}
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('executive', nextOrder);
                 }}
@@ -1386,6 +1435,7 @@ export default function ReportsDashboard() {
                   executiveReportCards,
                   reportCardOrderByGroup.executiveCards
                 )}
+                animationSeed={`${tabAnimationSeed.executive}-cards`}
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('executiveCards', nextOrder);
                 }}
@@ -1393,11 +1443,11 @@ export default function ReportsDashboard() {
               />
             </>
           ) : null}
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === 'work' ? (
-        <section className="space-y-4">
+        <motion.section className="space-y-4" {...revealProps(0.18)}>
           {!workState.data && workState.loading ? <SectionLoading title="Gestión de trabajo" /> : null}
 
           {workState.error && !workState.data ? (
@@ -1416,6 +1466,7 @@ export default function ReportsDashboard() {
                   id: kpi.id,
                   content: <KpiTile label={kpi.label} value={kpi.value} tone={kpi.tone} />,
                 }))}
+                animationSeed={`${tabAnimationSeed.work}-kpis`}
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('work', nextOrder);
                 }}
@@ -1425,6 +1476,7 @@ export default function ReportsDashboard() {
               <SortableKpiGrid
                 className="grid grid-cols-1 xl:grid-cols-2 gap-4"
                 items={sortBySavedOrder(workReportCards, reportCardOrderByGroup.workCards)}
+                animationSeed={`${tabAnimationSeed.work}-cards`}
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('workCards', nextOrder);
                 }}
@@ -1432,11 +1484,11 @@ export default function ReportsDashboard() {
               />
             </>
           ) : null}
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === 'assets' ? (
-        <section className="space-y-4">
+        <motion.section className="space-y-4" {...revealProps(0.18)}>
           {!assetsState.data && assetsState.loading ? <SectionLoading title="Activos" /> : null}
 
           {assetsState.error && !assetsState.data ? (
@@ -1456,6 +1508,7 @@ export default function ReportsDashboard() {
                   id: kpi.id,
                   content: <KpiTile label={kpi.label} value={kpi.value} tone={kpi.tone} />,
                 }))}
+                animationSeed={`${tabAnimationSeed.assets}-kpis`}
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('assets', nextOrder);
                 }}
@@ -1465,6 +1518,7 @@ export default function ReportsDashboard() {
               <SortableKpiGrid
                 className="grid grid-cols-1 xl:grid-cols-3 gap-4"
                 items={sortBySavedOrder(assetsReportCards, reportCardOrderByGroup.assetsCards)}
+                animationSeed={`${tabAnimationSeed.assets}-cards`}
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('assetsCards', nextOrder);
                 }}
@@ -1472,11 +1526,11 @@ export default function ReportsDashboard() {
               />
             </>
           ) : null}
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === 'parts' ? (
-        <section className="space-y-4">
+        <motion.section className="space-y-4" {...revealProps(0.18)}>
           {!partsState.data && partsState.loading ? (
             <SectionLoading title="Inventario Repuestos" />
           ) : null}
@@ -1498,6 +1552,7 @@ export default function ReportsDashboard() {
                   id: kpi.id,
                   content: <KpiTile label={kpi.label} value={kpi.value} tone={kpi.tone} />,
                 }))}
+                animationSeed={`${tabAnimationSeed.parts}-kpis`}
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('parts', nextOrder);
                 }}
@@ -1507,6 +1562,7 @@ export default function ReportsDashboard() {
               <SortableKpiGrid
                 className="grid grid-cols-1 xl:grid-cols-3 gap-4"
                 items={sortBySavedOrder(partsReportCards, reportCardOrderByGroup.partsCards)}
+                animationSeed={`${tabAnimationSeed.parts}-cards`}
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('partsCards', nextOrder);
                 }}
@@ -1514,11 +1570,11 @@ export default function ReportsDashboard() {
               />
             </>
           ) : null}
-        </section>
+        </motion.section>
       ) : null}
 
       {activeTab === 'admin' ? (
-        <section className="space-y-4">
+        <motion.section className="space-y-4" {...revealProps(0.18)}>
           {!adminState.data && adminState.loading ? <SectionLoading title="Administración y control de acceso" /> : null}
 
           {adminState.error && !adminState.data ? (
@@ -1538,6 +1594,7 @@ export default function ReportsDashboard() {
                   id: kpi.id,
                   content: <KpiTile label={kpi.label} value={kpi.value} tone={kpi.tone} />,
                 }))}
+                animationSeed={`${tabAnimationSeed.admin}-kpis`}
                 onOrderChange={(nextOrder) => {
                   persistKpiOrder('admin', nextOrder);
                 }}
@@ -1547,6 +1604,7 @@ export default function ReportsDashboard() {
               <SortableKpiGrid
                 className="grid grid-cols-1 xl:grid-cols-2 gap-4"
                 items={sortBySavedOrder(adminReportCards, reportCardOrderByGroup.adminCards)}
+                animationSeed={`${tabAnimationSeed.admin}-cards`}
                 onOrderChange={(nextOrder) => {
                   persistReportCardOrder('adminCards', nextOrder);
                 }}
@@ -1554,7 +1612,7 @@ export default function ReportsDashboard() {
               />
             </>
           ) : null}
-        </section>
+        </motion.section>
       ) : null}
 
       <footer className="pb-3 text-xs text-gray-500 dark:text-slate-400">

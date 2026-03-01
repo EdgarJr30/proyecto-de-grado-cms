@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Menu, Moon, Sun, X } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { useTheme } from '../../context/ThemeContext';
 import { cn } from '../../utils/cn';
@@ -31,6 +32,7 @@ export default function AppTopBar() {
   const location_id = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const handleSidebarState = (event: Event) => {
@@ -56,7 +58,20 @@ export default function AppTopBar() {
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur md:left-60 dark:border-slate-700 dark:bg-slate-900/95">
+    <motion.header
+      initial={
+        prefersReducedMotion
+          ? { opacity: 1, y: 0 }
+          : { opacity: 0, y: -8 }
+      }
+      animate={{ opacity: 1, y: 0 }}
+      transition={
+        prefersReducedMotion
+          ? { duration: 0 }
+          : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+      }
+      className="fixed inset-x-0 top-0 z-40 h-16 border-b border-slate-200 bg-white/95 backdrop-blur md:left-60 dark:border-slate-700 dark:bg-slate-900/95"
+    >
       <div className="mx-auto flex h-full items-center justify-between gap-3 px-3 md:px-6">
         <div className="flex min-w-0 items-center gap-2">
           <button
@@ -136,6 +151,6 @@ export default function AppTopBar() {
           <UserQuickMenu />
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

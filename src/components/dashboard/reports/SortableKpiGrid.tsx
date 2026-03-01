@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -23,6 +24,7 @@ interface SortableKpiGridProps {
   onOrderChange: (nextOrder: string[]) => void;
   className?: string;
   ariaLabel?: string;
+  animationSeed?: string;
 }
 
 export default function SortableKpiGrid({
@@ -30,7 +32,9 @@ export default function SortableKpiGrid({
   onOrderChange,
   className = 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3',
   ariaLabel,
+  animationSeed = 'default',
 }: SortableKpiGridProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
@@ -53,7 +57,7 @@ export default function SortableKpiGrid({
 
   return (
     <div className={className} aria-label={ariaLabel}>
-      {items.map((item) => {
+      {items.map((item, index) => {
         const isDragging = draggingId === item.id;
         const isDropTarget = !isDragging && dropTargetId === item.id;
 
@@ -92,7 +96,22 @@ export default function SortableKpiGrid({
               isDropTarget && 'rounded-2xl ring-2 ring-blue-300 ring-offset-2'
             )}
           >
-            {item.content}
+            <motion.div
+              key={`${item.id}-${animationSeed}`}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 14, scale: 0.995 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={
+                prefersReducedMotion
+                  ? undefined
+                  : {
+                      duration: 0.42,
+                      delay: index * 0.06,
+                      ease: [0.22, 1, 0.36, 1],
+                    }
+              }
+            >
+              {item.content}
+            </motion.div>
           </div>
         );
       })}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { AssetUpdate, AssetView } from '../../../../types/Asset';
 import {
   updateAsset,
@@ -6,6 +6,7 @@ import {
 } from '../../../../services/assetsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetFormFields from './AssetFormFields';
+import AnimatedDialog from '../../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -72,14 +73,6 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
     const ok = String(form.code ?? '').trim() && String(form.name ?? '').trim();
     return Boolean(ok) && !isSaving;
   }, [form.code, form.name, isSaving]);
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,14 +157,13 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* Wrapper scroll */}
-      <div className="relative flex h-full w-full items-start justify-center overflow-y-auto p-4 sm:p-6">
-        {/* Panel */}
-        <div className="w-full max-w-3xl overflow-hidden rounded-2xl border bg-white shadow-xl">
+    <AnimatedDialog
+      open
+      onClose={onClose}
+      overlayClassName="bg-black/40"
+      containerClassName="relative flex h-full w-full items-start justify-center overflow-y-auto p-4 sm:p-6"
+      panelClassName="w-full max-w-3xl overflow-hidden rounded-2xl border bg-white shadow-xl"
+    >
           {/* Header sticky */}
           <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b bg-white px-4 py-3 sm:px-6 sm:py-4">
             <div className="min-w-0">
@@ -263,8 +255,6 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
               </div>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

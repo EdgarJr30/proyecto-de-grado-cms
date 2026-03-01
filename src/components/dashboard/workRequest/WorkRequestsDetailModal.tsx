@@ -15,6 +15,7 @@ import {
   makeSpecialIncidentMap,
 } from '../../../services/specialIncidentsService';
 import { showToastError, showToastSuccess } from '../../../notifications';
+import AnimatedDialog from '../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -81,12 +82,6 @@ export default function WorkRequestsDetailModal({
   const SECTIONS_ORDER: Array<
     'SIN ASIGNAR' | 'Internos' | 'TERCEROS' | 'OTROS'
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
-
-  useEffect(() => {
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onEsc);
-    return () => window.removeEventListener('keydown', onEsc);
-  }, [onClose]);
 
   const [submitting, setSubmitting] = useState(false);
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
@@ -157,14 +152,12 @@ export default function WorkRequestsDetailModal({
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+    <AnimatedDialog
+      open
+      onClose={onClose}
+      overlayClassName="bg-black/40 backdrop-blur-sm"
+      panelClassName="w-full max-w-5xl max-h-[86vh] overflow-y-auto no-x-scroll rounded-xl bg-white shadow-2xl"
     >
-      <div
-        className="w-full max-w-5xl max-h-[86vh] overflow-y-auto no-x-scroll rounded-xl bg-white shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
         <header className="flex items-center justify-between px-6 py-4 border-b">
           <div className="flex-1 min-w-0">
             <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -344,7 +337,6 @@ export default function WorkRequestsDetailModal({
             )}
           </div>
         </section>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import RoleUsersPage from './RoleUsersPage';
+import AnimatedDialog from '../../components/ui/AnimatedDialog';
 
 export default function RoleUsersModal({
   roleId,
@@ -8,22 +8,14 @@ export default function RoleUsersModal({
   roleId: number;
   onClose: (changed?: boolean) => void;
 }) {
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-[60]">
-      <div
-        className="fixed inset-0 bg-black/40"
-        onClick={() => onClose(false)}
-      />
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <div className="relative w-full max-w-5xl rounded-2xl bg-white p-5 shadow-2xl">
+    <AnimatedDialog
+      open
+      onClose={() => onClose(false)}
+      zIndexClassName="z-[60]"
+      overlayClassName="bg-black/40"
+      panelClassName="relative w-full max-w-5xl rounded-2xl bg-white p-5 shadow-2xl"
+    >
           <button
             type="button"
             onClick={() => onClose(false)}
@@ -34,8 +26,6 @@ export default function RoleUsersModal({
             ✕
           </button>
           <RoleUsersPage roleId={roleId} onClose={onClose} hideBackLink />
-        </div>
-      </div>
-    </div>
+    </AnimatedDialog>
   );
 }

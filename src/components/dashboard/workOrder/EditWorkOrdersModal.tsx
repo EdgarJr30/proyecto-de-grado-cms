@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, type JSX } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { WorkOrder } from '../../../types/Ticket';
 import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
@@ -48,6 +49,7 @@ export default function EditWorkOrdersModal({
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
+  const prefersReducedMotion = useReducedMotion();
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
   const { maxSecondary } = useSettings();
@@ -698,60 +700,87 @@ export default function EditWorkOrdersModal({
       </div>
 
       {/* Lightbox imágenes */}
-      {fullImageIdx !== null &&
-        (() => {
-          const imagePaths = getTicketImagePaths(ticket.image ?? '[]');
-          const path = imagePaths[fullImageIdx];
-          if (!path) return null;
-          return (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/20"
-              onClick={() => setFullImageIdx(null)}
-            >
-              <div className="relative" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => setFullImageIdx(null)}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
-                  aria-label="Cerrar"
-                  type="button"
+      <AnimatePresence>
+        {fullImageIdx !== null &&
+          (() => {
+            const imagePaths = getTicketImagePaths(ticket.image ?? '[]');
+            const path = imagePaths[fullImageIdx];
+            if (!path) return null;
+            return (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/20"
+                onClick={() => setFullImageIdx(null)}
+                initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : { duration: 0.18 }
+                }
+              >
+                <motion.div
+                  className="relative"
+                  onClick={(e) => e.stopPropagation()}
+                  initial={
+                    prefersReducedMotion
+                      ? { opacity: 1, scale: 1 }
+                      : { opacity: 0, scale: 0.97 }
+                  }
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={
+                    prefersReducedMotion
+                      ? { opacity: 1, scale: 1 }
+                      : { opacity: 0, scale: 0.98 }
+                  }
+                  transition={
+                    prefersReducedMotion
+                      ? { duration: 0 }
+                      : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }
+                  }
                 >
-                  ✕
-                </button>
-                <img
-                  src={getPublicImageUrl(path)}
-                  alt="Vista ampliada"
-                  className="max-w-full max-h-[80vh] rounded shadow-lg"
-                />
-                {imagePaths.length > 1 && (
-                  <>
-                    <button
-                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
-                      onClick={() =>
-                        setFullImageIdx((prev) =>
-                          prev! > 0 ? prev! - 1 : imagePaths.length - 1
-                        )
-                      }
-                      type="button"
-                    >
-                      ◀️
-                    </button>
-                    <button
-                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
-                      onClick={() =>
-                        setFullImageIdx((prev) =>
-                          prev! < imagePaths.length - 1 ? prev! + 1 : 0
-                        )
-                      }
-                      type="button"
-                    >
-                      ▶️
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+                  <button
+                    onClick={() => setFullImageIdx(null)}
+                    className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/90 backdrop-blur-md text-gray-800 shadow-lg flex items-center justify-center transition-all duration-200 hover:bg-white hover:text-red-500 cursor-pointer"
+                    aria-label="Cerrar"
+                    type="button"
+                  >
+                    ✕
+                  </button>
+                  <img
+                    src={getPublicImageUrl(path)}
+                    alt="Vista ampliada"
+                    className="max-w-full max-h-[80vh] rounded shadow-lg"
+                  />
+                  {imagePaths.length > 1 && (
+                    <>
+                      <button
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                        onClick={() =>
+                          setFullImageIdx((prev) =>
+                            prev! > 0 ? prev! - 1 : imagePaths.length - 1
+                          )
+                        }
+                        type="button"
+                      >
+                        ◀️
+                      </button>
+                      <button
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white p-2 rounded-full"
+                        onClick={() =>
+                          setFullImageIdx((prev) =>
+                            prev! < imagePaths.length - 1 ? prev! + 1 : 0
+                          )
+                        }
+                        type="button"
+                      >
+                        ▶️
+                      </button>
+                    </>
+                  )}
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+      </AnimatePresence>
 
       {/* Footer acciones */}
       <div className="flex justify-end gap-2 mt-6">

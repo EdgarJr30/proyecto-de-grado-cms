@@ -21,6 +21,7 @@ import {
   listWarehouses,
   updateWarehouseBin,
 } from '../../services/inventory';
+import AnimatedDialog from '../../components/ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -346,13 +347,12 @@ export default function WarehouseBinsPage() {
         </section>
 
         {isModalOpen && (
-          <div className="fixed inset-0 z-50">
-            <div className="absolute inset-0 bg-black/30" onClick={closeModal} />
-            <div className="fixed inset-0 flex items-center justify-center p-4">
-              <div
-                className="w-full max-w-lg rounded-2xl border bg-white shadow-xl"
-                onClick={(event) => event.stopPropagation()}
-              >
+          <AnimatedDialog
+            open
+            onClose={closeModal}
+            overlayClassName="bg-black/30"
+            panelClassName="w-full max-w-lg rounded-2xl border bg-white shadow-xl"
+          >
                 <div className="p-5 border-b">
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -430,9 +430,7 @@ export default function WarehouseBinsPage() {
                     {saving ? 'Guardando...' : 'Guardar'}
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
+          </AnimatedDialog>
         )}
       </main>
     </div>

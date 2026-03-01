@@ -7,6 +7,7 @@ import {
   PlusCircle,
   Settings,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { APP_ROUTES } from '../../Routes/appRoutes';
 import { usePermissions } from '../../rbac/PermissionsContext';
 import { useUser } from '../../context/UserContext';
@@ -31,6 +32,7 @@ export default function UserQuickMenu() {
   const { has, roles } = usePermissions();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const canGoProfile = has(PROFILE_PERMS);
   const canCreateTicket = has(CREATE_TICKET_PERMS);
@@ -124,56 +126,74 @@ export default function UserQuickMenu() {
         />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900"
-        >
-          {canGoProfile && (
-            <button
-              type="button"
-              onClick={() => goTo(PROFILE_PATH)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <CircleUserRound className="h-4 w-4" />
-              Mi perfil
-            </button>
-          )}
-
-          {canCreateTicket && (
-            <button
-              type="button"
-              onClick={() => goTo(CREATE_TICKET_PATH)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <PlusCircle className="h-4 w-4" />
-              Crear ticket
-            </button>
-          )}
-
-          {canGoSettings && (
-            <button
-              type="button"
-              onClick={() => goTo(SETTINGS_PATH)}
-              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              <Settings className="h-4 w-4" />
-              Configuración
-            </button>
-          )}
-
-          <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:text-rose-300 dark:hover:bg-rose-500/20"
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            initial={
+              prefersReducedMotion
+                ? { opacity: 1, y: 0, scale: 1 }
+                : { opacity: 0, y: -6, scale: 0.98 }
+            }
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={
+              prefersReducedMotion
+                ? { opacity: 1, y: 0, scale: 1 }
+                : { opacity: 0, y: -6, scale: 0.98 }
+            }
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }
+            }
+            className="absolute right-0 z-50 mt-2 w-56 origin-top-right rounded-2xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900"
           >
-            <LogOut className="h-4 w-4" />
-            Cerrar sesión
-          </button>
-        </div>
-      )}
+            {canGoProfile && (
+              <button
+                type="button"
+                onClick={() => goTo(PROFILE_PATH)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <CircleUserRound className="h-4 w-4" />
+                Mi perfil
+              </button>
+            )}
+
+            {canCreateTicket && (
+              <button
+                type="button"
+                onClick={() => goTo(CREATE_TICKET_PATH)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Crear ticket
+              </button>
+            )}
+
+            {canGoSettings && (
+              <button
+                type="button"
+                onClick={() => goTo(SETTINGS_PATH)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                <Settings className="h-4 w-4" />
+                Configuración
+              </button>
+            )}
+
+            <div className="my-2 border-t border-slate-200 dark:border-slate-700" />
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:text-rose-300 dark:hover:bg-rose-500/20"
+            >
+              <LogOut className="h-4 w-4" />
+              Cerrar sesión
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

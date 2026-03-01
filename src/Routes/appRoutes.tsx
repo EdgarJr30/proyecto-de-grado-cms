@@ -1,41 +1,63 @@
+import { lazy } from 'react';
 import type { JSX } from 'react';
 import { Navigate } from 'react-router-dom';
-import CreateTicketPage from '../pages/CreateTicketPage';
-import LoginPage from '../pages/LoginPage';
-import WorkOrdersPage from '../pages/WorkOrdersPage';
-import WorkRequestsPage from '../pages/WorkRequestsPage';
-import UserManagementPage from '../pages/UserManagementPage';
-import MyTicketsPage from '../pages/MyTicketsPage';
-import ForbiddenPage from '../pages/ForbiddenPage';
-import ReportsPage from '../pages/ReportsPage';
-import AssigneeManagementPage from '../pages/admin/AssigneePage';
-import RoleManagementPage from '../pages/admin/RoleManagementPage';
-import RoleEditPage from '../pages/admin/RoleEditPage';
-import DashboardPage from '../pages/DashboardPage';
-import AdminSettingsPage from '../pages/admin/AdminSettingsPage';
-import AdminSettingsHubPage from '../pages/admin/AdminSettingsHubPage';
-import SpecialIncidentsManagementPage from '../pages/admin/SpecialIncidentsPage';
-import AnnouncementsManagmentPage from '../pages/admin/AnnouncementsManagementPage';
-import SocietiesManagementPage from '../pages/admin/SocietiesManagementPage';
-import InventoryHomePage from '../pages/inventory/InventoryHomePage';
-import AssetsPage from '../pages/inventory/AssetsPage';
-import UomsPage from '../pages/inventory/uoms/UomsPage';
-import PartCategoriesPage from '../pages/inventory/parts/part_categories/PartCategoriesPage';
-import PartsPage from '../pages/inventory/parts/PartsPage';
-import WarehousesPage from '../pages/inventory/warehouses/WarehousesPage';
-import WarehouseBinsPage from '../pages/inventory/WarehouseBinsPage';
-import StockOverviewPage from '../pages/inventory/StockOverviewPage';
-import StockByLocationPage from '../pages/inventory/StockByLocationPage';
-import InventoryDocsPage from '../pages/inventory/inventory_docs/InventoryDocsPage';
-import InventoryDocsCreatePage from '../pages/inventory/inventory_docs/InventoryDocsCreatePage';
-import InventoryDocEditorPage from '../pages/inventory/InventoryDocEditorPage';
-import VendorsPage from '../pages/inventory/vendors/VendorsPage';
-import PartVendorsPage from '../pages/inventory/PartVendorsPage';
-import ReorderPoliciesPage from '../pages/inventory/ReorderPoliciesPage';
-import ReorderSuggestionsPage from '../pages/inventory/ReorderSuggestionsPage';
-import KardexPage from '../pages/inventory/kardex_audit/KardexPage';
-import PartCostsPage from '../pages/inventory/parts/parts_costs/PartCostsPage';
-import InventoryReservationsPage from '../pages/inventory/InventoryReservationsPage';
+
+const CreateTicketPage = lazy(() => import('../pages/CreateTicketPage'));
+const LoginPage = lazy(() => import('../pages/LoginPage'));
+const WorkOrdersPage = lazy(() => import('../pages/WorkOrdersPage'));
+const WorkRequestsPage = lazy(() => import('../pages/WorkRequestsPage'));
+const UserManagementPage = lazy(() => import('../pages/UserManagementPage'));
+const MyTicketsPage = lazy(() => import('../pages/MyTicketsPage'));
+const ForbiddenPage = lazy(() => import('../pages/ForbiddenPage'));
+const ReportsPage = lazy(() => import('../pages/ReportsPage'));
+const AssigneeManagementPage = lazy(() => import('../pages/admin/AssigneePage'));
+const RoleManagementPage = lazy(() => import('../pages/admin/RoleManagementPage'));
+const RoleEditPage = lazy(() => import('../pages/admin/RoleEditPage'));
+const DashboardPage = lazy(() => import('../pages/DashboardPage'));
+const AdminSettingsPage = lazy(() => import('../pages/admin/AdminSettingsPage'));
+const AdminSettingsHubPage = lazy(() => import('../pages/admin/AdminSettingsHubPage'));
+const SpecialIncidentsManagementPage = lazy(
+  () => import('../pages/admin/SpecialIncidentsPage')
+);
+const AnnouncementsManagmentPage = lazy(
+  () => import('../pages/admin/AnnouncementsManagementPage')
+);
+const SocietiesManagementPage = lazy(
+  () => import('../pages/admin/SocietiesManagementPage')
+);
+const InventoryHomePage = lazy(() => import('../pages/inventory/InventoryHomePage'));
+const AssetsPage = lazy(() => import('../pages/inventory/AssetsPage'));
+const UomsPage = lazy(() => import('../pages/inventory/uoms/UomsPage'));
+const PartCategoriesPage = lazy(
+  () => import('../pages/inventory/parts/part_categories/PartCategoriesPage')
+);
+const PartsPage = lazy(() => import('../pages/inventory/parts/PartsPage'));
+const WarehousesPage = lazy(() => import('../pages/inventory/warehouses/WarehousesPage'));
+const WarehouseBinsPage = lazy(() => import('../pages/inventory/WarehouseBinsPage'));
+const StockOverviewPage = lazy(() => import('../pages/inventory/StockOverviewPage'));
+const StockByLocationPage = lazy(() => import('../pages/inventory/StockByLocationPage'));
+const InventoryDocsPage = lazy(
+  () => import('../pages/inventory/inventory_docs/InventoryDocsPage')
+);
+const InventoryDocsCreatePage = lazy(
+  () => import('../pages/inventory/inventory_docs/InventoryDocsCreatePage')
+);
+const InventoryDocEditorPage = lazy(
+  () => import('../pages/inventory/InventoryDocEditorPage')
+);
+const VendorsPage = lazy(() => import('../pages/inventory/vendors/VendorsPage'));
+const PartVendorsPage = lazy(() => import('../pages/inventory/PartVendorsPage'));
+const ReorderPoliciesPage = lazy(() => import('../pages/inventory/ReorderPoliciesPage'));
+const ReorderSuggestionsPage = lazy(
+  () => import('../pages/inventory/ReorderSuggestionsPage')
+);
+const KardexPage = lazy(() => import('../pages/inventory/kardex_audit/KardexPage'));
+const PartCostsPage = lazy(
+  () => import('../pages/inventory/parts/parts_costs/PartCostsPage')
+);
+const InventoryReservationsPage = lazy(
+  () => import('../pages/inventory/InventoryReservationsPage')
+);
 
 // Tipado de la ruta
 export type AppRoute = {

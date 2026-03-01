@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from '../../../components/layout/Sidebar';
 import { usePermissions } from '../../../rbac/PermissionsContext';
 import { showToastError, showToastSuccess } from '../../../notifications';
@@ -147,6 +148,7 @@ function normalizeIntegerDraft(value: string): string {
 }
 
 export default function KardexPage() {
+  const prefersReducedMotion = useReducedMotion();
   const { has } = usePermissions();
   const canRead = has('inventory:read');
 
@@ -550,14 +552,39 @@ export default function KardexPage() {
         </div>
       </main>
 
-      {detailRow ? (
-        <div className="fixed inset-0 z-50">
-          <div
+      <AnimatePresence>
+        {detailRow ? (
+          <motion.div
+            className="fixed inset-0 z-50"
+            initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0 }}
+            transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.18 }}
+          >
+          <motion.div
             className="absolute inset-0 bg-slate-900/45"
             onClick={() => setDetailRow(null)}
           />
 
-          <aside className="absolute right-0 top-0 h-full w-full max-w-xl overflow-auto border-l border-slate-200 bg-white shadow-2xl">
+          <motion.aside
+            initial={
+              prefersReducedMotion
+                ? { opacity: 1, x: 0 }
+                : { opacity: 0, x: 20 }
+            }
+            animate={{ opacity: 1, x: 0 }}
+            exit={
+              prefersReducedMotion
+                ? { opacity: 1, x: 0 }
+                : { opacity: 0, x: 24 }
+            }
+            transition={
+              prefersReducedMotion
+                ? { duration: 0 }
+                : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }
+            }
+            className="absolute right-0 top-0 h-full w-full max-w-xl overflow-auto border-l border-slate-200 bg-white shadow-2xl"
+          >
             <header className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -675,9 +702,10 @@ export default function KardexPage() {
                 )}
               </div>
             </div>
-          </aside>
-        </div>
+          </motion.aside>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </PageShell>
   );
 }
