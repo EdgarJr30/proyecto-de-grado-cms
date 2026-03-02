@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Clock3, MessageSquare } from 'lucide-react';
 import type { Ticket } from '../../../types/Ticket';
 import type { SpecialIncident } from '../../../types/SpecialIncident';
 import { formatDateInTimezone } from '../../../utils/formatDate';
@@ -16,6 +17,12 @@ import {
 } from '../../../services/specialIncidentsService';
 import { showToastError, showToastSuccess } from '../../../notifications';
 import AnimatedDialog from '../../ui/AnimatedDialog';
+import { supabase } from '../../../lib/supabaseClient';
+import {
+  addTicketComment,
+  listTicketComments,
+  type TicketComment,
+} from '../../../services/ticketCommentsService';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -59,6 +66,8 @@ function StatusChip({ value }: { value: string }) {
   );
 }
 
+type DetailTab = 'details' | 'comments' | 'history';
+
 export default function WorkRequestsDetailModal({
   ticket,
   locationLabel,
@@ -84,9 +93,16 @@ export default function WorkRequestsDetailModal({
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<DetailTab>('details');
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [postingComment, setPostingComment] = useState(false);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
     Record<number, SpecialIncident>
   >({});
+  const numericTicketId = useMemo(() => Number(ticket.id), [ticket.id]);
   const assigneeValue = useMemo(
     () => getAssigneeFor(Number(ticket.id)),
     [getAssigneeFor, ticket.id]
@@ -136,6 +152,16 @@ export default function WorkRequestsDetailModal({
 
   const acceptDisabled = !canFullWR || !assigneeValue || submitting;
 
+  const loadComments = useCallback(async () => {
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
+      setComments([]);
+      return;
+    }
+
+    const rows = await listTicketComments(numericTicketId);
+    setComments(rows);
+  }, [numericTicketId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -151,6 +177,99 @@ export default function WorkRequestsDetailModal({
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!cancelled) setCurrentUserId(user?.id ?? null);
+      } catch {
+        if (!cancelled) setCurrentUserId(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setActiveTab('details');
+    setCommentDraft('');
+    setComments([]);
+  }, [ticket.id]);
+
+  useEffect(() => {
+    if (activeTab !== 'comments') return;
+
+    let alive = true;
+    setCommentsLoading(true);
+    void loadComments()
+      .catch((error: unknown) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'No se pudieron cargar comentarios.';
+        showToastError(message);
+      })
+      .finally(() => {
+        if (alive) setCommentsLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [activeTab, loadComments]);
+
+  useEffect(() => {
+    if (activeTab !== 'comments') return;
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
+
+    const channel = supabase
+      .channel(`work-request-comments:${numericTicketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_comments',
+          filter: `ticket_id=eq.${numericTicketId}`,
+        },
+        () => {
+          void loadComments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [activeTab, loadComments, numericTicketId]);
+
+  async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
+
+    setPostingComment(true);
+    try {
+      await addTicketComment(numericTicketId, commentDraft);
+      setCommentDraft('');
+      await loadComments();
+      showToastSuccess('Comentario agregado.');
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo registrar el comentario.';
+      showToastError(message);
+    } finally {
+      setPostingComment(false);
+    }
+  }
+
   return (
     <AnimatedDialog
       open
@@ -158,76 +277,107 @@ export default function WorkRequestsDetailModal({
       overlayClassName="bg-black/40 backdrop-blur-sm"
       panelClassName="w-full max-w-5xl max-h-[86vh] overflow-y-auto no-x-scroll rounded-xl bg-white shadow-2xl"
     >
-        <header className="flex items-center justify-between px-6 py-4 border-b">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-semibold flex items-center gap-2">
-              <span>Solicitud #{ticket.id}</span>
-              {(() => {
-                const siId = (ticket as TicketWithSpecialIncident)
-                  .special_incident_id;
-                const chip = renderSpecialIncidentChip(siId);
-                return chip ? (
-                  <span className="inline-flex items-center gap-1">
-                    {chip}
-                    <span
-                      role="img"
-                      aria-label="incidente especial"
-                      title="Incidente especial"
-                    >
-                      🚨
-                    </span>
+      <header className="flex items-center justify-between border-b px-6 py-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="flex items-center gap-2 text-xl font-semibold">
+            <span>Solicitud #{ticket.id}</span>
+            {(() => {
+              const siId = (ticket as TicketWithSpecialIncident).special_incident_id;
+              const chip = renderSpecialIncidentChip(siId);
+              return chip ? (
+                <span className="inline-flex items-center gap-1">
+                  {chip}
+                  <span
+                    role="img"
+                    aria-label="incidente especial"
+                    title="Incidente especial"
+                  >
+                    🚨
                   </span>
-                ) : null;
-              })()}
-            </h3>
-            <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
-          </div>
+                </span>
+              ) : null;
+            })()}
+          </h3>
+          <p className="text-gray-500 wrap-anywhere">{ticket.title}</p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleAccept}
-              disabled={acceptDisabled}
-              title={
-                !canFullWR
-                  ? 'No tienes permiso para aceptar'
-                  : !assigneeValue
-                    ? 'Selecciona un responsable'
-                    : undefined
-              }
-              className={
-                'inline-flex items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer'
-              }
-            >
-              {submitting ? 'Aceptando…' : 'Aceptar solicitud'}
-            </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAccept}
+            disabled={acceptDisabled}
+            title={
+              !canFullWR
+                ? 'No tienes permiso para aceptar'
+                : !assigneeValue
+                  ? 'Selecciona un responsable'
+                  : undefined
+            }
+            className={
+              'inline-flex cursor-pointer items-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40'
+            }
+          >
+            {submitting ? 'Aceptando…' : 'Aceptar solicitud'}
+          </button>
 
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 grid place-items-center cursor-pointer"
-              aria-label="Cerrar"
-            >
-              ✕
-            </button>
-          </div>
-        </header>
+          <button
+            onClick={onClose}
+            className="grid h-10 w-10 cursor-pointer place-items-center rounded-full bg-gray-100 hover:bg-gray-200"
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+      </header>
 
-        <nav className="px-6 pt-3">
-          <div className="flex gap-6 text-sm">
-            <span className="font-medium text-indigo-600">Detalles</span>
-            <span className="text-gray-400">Comentarios</span>
-            <span className="text-gray-400">Historial</span>
-          </div>
-        </nav>
+      <nav className="px-6 pt-3">
+        <div className="flex gap-6 text-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab('details')}
+            className={cx(
+              'border-b-2 pb-1 transition',
+              activeTab === 'details'
+                ? 'border-indigo-600 font-medium text-indigo-600'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            )}
+          >
+            Detalles
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('comments')}
+            className={cx(
+              'border-b-2 pb-1 transition',
+              activeTab === 'comments'
+                ? 'border-indigo-600 font-medium text-indigo-600'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            )}
+          >
+            Comentarios ({comments.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('history')}
+            className={cx(
+              'border-b-2 pb-1 transition',
+              activeTab === 'history'
+                ? 'border-indigo-600 font-medium text-indigo-600'
+                : 'border-transparent text-gray-400 hover:text-gray-600'
+            )}
+          >
+            Historial
+          </button>
+        </div>
+      </nav>
 
-        <section className="px-6 py-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+      {activeTab === 'details' ? (
+        <section className="grid grid-cols-1 gap-8 px-6 py-6 md:grid-cols-2">
           <div>
-            <h4 className="text-lg font-semibold mb-4">Información General</h4>
+            <h4 className="mb-4 text-lg font-semibold">Información General</h4>
             <dl className="grid grid-cols-1 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Solicitante</dt>
-                <dd className="text-gray-900 wrap-anywhere">
-                  {ticket.requester}
-                </dd>
+                <dd className="wrap-anywhere text-gray-900">{ticket.requester}</dd>
               </div>
               <div>
                 <dt className="text-gray-500">Ubicación</dt>
@@ -245,7 +395,7 @@ export default function WorkRequestsDetailModal({
           </div>
 
           <div>
-            <h4 className="text-lg font-semibold mb-4">Estado y Prioridad</h4>
+            <h4 className="mb-4 text-lg font-semibold">Estado y Prioridad</h4>
             <dl className="grid grid-cols-1 gap-3 text-sm">
               <div>
                 <dt className="text-gray-500">Estado actual</dt>
@@ -262,37 +412,34 @@ export default function WorkRequestsDetailModal({
             </dl>
           </div>
 
-          {/* Asignación */}
           <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-2">Asignación</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <h4 className="mb-2 text-lg font-semibold">Asignación</h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm text-gray-600">
-                  Responsable
-                </label>
+                <label className="block text-sm text-gray-600">Responsable</label>
                 <select
                   className={
-                    'mt-1 w-full rounded border-gray-300 cursor-pointer' +
+                    'mt-1 w-full cursor-pointer rounded border-gray-300' +
                     (!canFullWR
-                      ? ' opacity-50 cursor-not-allowed bg-gray-100'
+                      ? ' cursor-not-allowed bg-gray-100 opacity-50'
                       : '')
                   }
                   disabled={loading || !canFullWR}
                   value={assigneeValue}
-                  onChange={(e) =>
-                    setAssigneeFor(Number(ticket.id), Number(e.target.value))
+                  onChange={(event) =>
+                    setAssigneeFor(Number(ticket.id), Number(event.target.value))
                   }
                 >
                   <option value="" disabled>
                     Selecciona…
                   </option>
-                  {SECTIONS_ORDER.map((g) => (
-                    <optgroup key={g} label={g}>
-                      {(bySectionActive[g] ?? []).map(
-                        (a: Assignee | undefined) =>
-                          a ? (
-                            <option key={a.id} value={a.id}>
-                              {formatAssigneeFullName(a)}
+                  {SECTIONS_ORDER.map((group) => (
+                    <optgroup key={group} label={group}>
+                      {(bySectionActive[group] ?? []).map(
+                        (assignee: Assignee | undefined) =>
+                          assignee ? (
+                            <option key={assignee.id} value={assignee.id}>
+                              {formatAssigneeFullName(assignee)}
                             </option>
                           ) : null
                       )}
@@ -304,32 +451,30 @@ export default function WorkRequestsDetailModal({
           </div>
 
           <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-2">
-              Descripción del Problema
-            </h4>
-            <p className="text-gray-700 wrap-anywhere whitespace-pre-wrap">
+            <h4 className="mb-2 text-lg font-semibold">Descripción del Problema</h4>
+            <p className="wrap-anywhere whitespace-pre-wrap text-gray-700">
               {ticket.description || '—'}
             </p>
           </div>
 
           <div className="md:col-span-2">
-            <h4 className="text-lg font-semibold mb-3">Fotos Adjuntas</h4>
+            <h4 className="mb-3 text-lg font-semibold">Fotos Adjuntas</h4>
             {imagePaths.length === 0 ? (
               <p className="text-sm text-gray-500">No hay imágenes.</p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {imagePaths.map((p, i) => (
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {imagePaths.map((path, index) => (
                   <a
-                    key={i}
-                    href={getPublicImageUrl(p)}
+                    key={index}
+                    href={getPublicImageUrl(path)}
                     target="_blank"
                     rel="noreferrer"
                     className="block"
                   >
                     <img
-                      src={getPublicImageUrl(p)}
-                      alt={`Adjunto ${i + 1}`}
-                      className="w-full h-28 object-cover rounded"
+                      src={getPublicImageUrl(path)}
+                      alt={`Adjunto ${index + 1}`}
+                      className="h-28 w-full rounded object-cover"
                     />
                   </a>
                 ))}
@@ -337,6 +482,92 @@ export default function WorkRequestsDetailModal({
             )}
           </div>
         </section>
+      ) : null}
+
+      {activeTab === 'comments' ? (
+        <section className="space-y-4 px-6 py-6">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-indigo-600" />
+            <h4 className="text-lg font-semibold">
+              Chat interno ({comments.length})
+            </h4>
+          </div>
+
+          <form onSubmit={handleCommentSubmit} className="space-y-2">
+            <textarea
+              value={commentDraft}
+              onChange={(event) => setCommentDraft(event.target.value)}
+              rows={3}
+              placeholder="Escribe una respuesta para este ticket..."
+              disabled={postingComment}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            />
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={postingComment || commentDraft.trim().length === 0}
+                className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {postingComment ? 'Guardando...' : 'Enviar comentario'}
+              </button>
+            </div>
+          </form>
+
+          <div className="max-h-[380px] space-y-3 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3">
+            {commentsLoading ? (
+              <p className="text-sm text-gray-500">Cargando comentarios...</p>
+            ) : comments.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No hay comentarios registrados todavía.
+              </p>
+            ) : (
+              comments.map((comment) => {
+                const isCurrentUser = currentUserId === comment.author_user_id;
+                return (
+                  <article
+                    key={comment.id}
+                    className={cx(
+                      'max-w-[88%] rounded-xl border px-3 py-2',
+                      isCurrentUser
+                        ? 'ml-auto border-indigo-600 bg-indigo-600 text-white'
+                        : 'border-gray-200 bg-white text-gray-900'
+                    )}
+                  >
+                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <p
+                        className={cx(
+                          'font-semibold uppercase',
+                          isCurrentUser ? 'text-indigo-100' : 'text-gray-600'
+                        )}
+                      >
+                        {comment.author_name || 'Usuario'}
+                      </p>
+                      <p
+                        className={cx(
+                          'inline-flex items-center gap-1',
+                          isCurrentUser ? 'text-indigo-100' : 'text-gray-500'
+                        )}
+                      >
+                        <Clock3 className="h-3 w-3" />
+                        {formatDateInTimezone(comment.created_at)}
+                      </p>
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+                  </article>
+                );
+              })
+            )}
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === 'history' ? (
+        <section className="px-6 py-6">
+          <p className="text-sm text-gray-500">
+            El historial de auditoría estará disponible en esta pestaña.
+          </p>
+        </section>
+      ) : null}
     </AnimatedDialog>
   );
 }

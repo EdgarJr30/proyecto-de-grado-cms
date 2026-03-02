@@ -58,6 +58,10 @@ const PartCostsPage = lazy(
 const InventoryReservationsPage = lazy(
   () => import('../pages/inventory/InventoryReservationsPage')
 );
+const NotificationCenterPage = lazy(
+  () => import('../pages/NotificationCenterPage')
+);
+const TicketDetailsPage = lazy(() => import('../pages/TicketDetailsPage'));
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -329,6 +333,35 @@ export const APP_ROUTES: AppRoute[] = [
     name: 'Informes',
     icon: IconReports,
     showInSidebar: true,
+  },
+  {
+    path: '/notificaciones',
+    element: <NotificationCenterPage />,
+    allowPerms: [
+      'home:read',
+      'work_orders:read',
+      'work_orders:read_own',
+      'work_orders:full_access',
+      'work_requests:read',
+      'work_requests:full_access',
+      'work_orders:create',
+    ],
+    name: 'Notificaciones',
+    showInSidebar: false,
+  },
+  {
+    path: '/tickets/:ticketId',
+    element: <TicketDetailsPage />,
+    allowPerms: [
+      'home:read',
+      'work_orders:read',
+      'work_orders:read_own',
+      'work_orders:full_access',
+      'work_requests:read',
+      'work_requests:full_access',
+      'work_orders:create',
+    ],
+    showInSidebar: false,
   },
   {
     path: '/admin/incidencias',

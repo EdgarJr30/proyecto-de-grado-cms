@@ -121,6 +121,24 @@ export async function getAllTickets(page: number): Promise<Ticket[]> {
   ) as Ticket[];
 }
 
+export async function getTicketById(id: number): Promise<WorkOrder | null> {
+  const { data, error } = await supabase
+    .from('v_tickets_compat')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Error al obtener el ticket: ${error.message}`);
+  }
+  if (!data) return null;
+
+  const normalized = normalizeRequesterInRow(
+    data as WorkOrder & { created_by_name?: string | null }
+  );
+  return normalized as WorkOrder;
+}
+
 export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
   const { error } = await supabase
     .from('tickets')

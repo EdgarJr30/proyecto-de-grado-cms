@@ -1,0 +1,281 @@
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import { Loader2, MessageSquare } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { getTicketById } from '../services/ticketService';
+import {
+  addTicketComment,
+  listTicketComments,
+  type TicketComment,
+} from '../services/ticketCommentsService';
+import type { WorkOrder } from '../types/Ticket';
+import { showToastError, showToastSuccess } from '../notifications';
+import { formatDateInTimezone } from '../utils/formatDate';
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'N/A';
+  return formatDateInTimezone(value, 'America/Santo_Domingo', 'display');
+}
+
+export default function TicketDetailsPage() {
+  const { ticketId } = useParams<{ ticketId: string }>();
+  const numericTicketId = useMemo(() => Number(ticketId), [ticketId]);
+  const [ticket, setTicket] = useState<WorkOrder | null>(null);
+  const [comments, setComments] = useState<TicketComment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [posting, setPosting] = useState(false);
+  const [newComment, setNewComment] = useState('');
+
+  const loadTicket = useCallback(async () => {
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
+      setTicket(null);
+      return;
+    }
+
+    const row = await getTicketById(numericTicketId);
+    setTicket(row);
+  }, [numericTicketId]);
+
+  const loadComments = useCallback(async () => {
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
+      setComments([]);
+      return;
+    }
+
+    const rows = await listTicketComments(numericTicketId);
+    setComments(rows);
+  }, [numericTicketId]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const bootstrap = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([loadTicket(), loadComments()]);
+      } catch (error: unknown) {
+        const msg =
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar el detalle del ticket.';
+        showToastError(msg);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+
+    void bootstrap();
+    return () => {
+      alive = false;
+    };
+  }, [loadComments, loadTicket]);
+
+  useEffect(() => {
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
+
+    const channel = supabase
+      .channel(`ticket-comments:${numericTicketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ticket_comments',
+          filter: `ticket_id=eq.${numericTicketId}`,
+        },
+        () => {
+          void loadComments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [loadComments, numericTicketId]);
+
+  const handleSubmitComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
+
+    setPosting(true);
+    try {
+      await addTicketComment(numericTicketId, newComment);
+      setNewComment('');
+      await loadComments();
+      showToastSuccess('Comentario agregado.');
+    } catch (error: unknown) {
+      const msg =
+        error instanceof Error
+          ? error.message
+          : 'No se pudo guardar el comentario.';
+      showToastError(msg);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-[calc(100dvh-4rem)] bg-slate-50 px-4 pb-8 pt-4 md:px-6 lg:px-8 dark:bg-slate-950">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Detalle de ticket
+          </h1>
+          <Link
+            to="/notificaciones"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            Volver al centro
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-12 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Cargando ticket...
+          </div>
+        ) : !ticket ? (
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-12 text-center text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            No se encontró el ticket solicitado.
+          </div>
+        ) : (
+          <>
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  Ticket #{ticket.id}
+                </span>
+                <span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
+                  {ticket.status}
+                </span>
+              </div>
+
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                {ticket.title}
+              </h2>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+                {ticket.description}
+              </p>
+
+              <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Solicitante
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {ticket.requester || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Prioridad
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {ticket.priority}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Urgente
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {ticket.is_urgent ? 'Sí' : 'No'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Fecha límite
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {ticket.deadline_date || 'Sin definir'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Ubicación
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {ticket.location_name || 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
+                    Última actualización
+                  </p>
+                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                    {formatDateTime(
+                      (
+                        ticket as WorkOrder & {
+                          updated_at?: string | null;
+                        }
+                      ).updated_at ?? ticket.created_at
+                    )}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-3 flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Comentarios ({comments.length})
+                </h3>
+              </div>
+
+              <form onSubmit={handleSubmitComment} className="mb-4 space-y-2">
+                <textarea
+                  value={newComment}
+                  onChange={(event) => setNewComment(event.target.value)}
+                  placeholder="Escribe un comentario para este ticket..."
+                  rows={3}
+                  disabled={posting}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={posting || newComment.trim().length === 0}
+                    className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {posting ? 'Guardando...' : 'Agregar comentario'}
+                  </button>
+                </div>
+              </form>
+
+              {comments.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  No hay comentarios registrados todavía.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {comments.map((comment) => (
+                    <li
+                      key={comment.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60"
+                    >
+                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
+                          {comment.author_name || 'Usuario'}
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {formatDateTime(comment.created_at)}
+                        </p>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
+                        {comment.body}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

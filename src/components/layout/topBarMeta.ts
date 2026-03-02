@@ -295,6 +295,26 @@ const GENERAL_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
     ],
   },
   {
+    path: '/notificaciones',
+    title: 'Centro de notificaciones',
+    description:
+      'Revisa alertas recientes, administra estados de lectura y configura tus preferencias.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Notificaciones' },
+    ],
+  },
+  {
+    path: '/tickets/:ticketId',
+    title: 'Detalle de ticket',
+    description: 'Consulta el historial del ticket y registra comentarios.',
+    breadcrumbs: [
+      { label: 'Inicio', to: '/inicio' },
+      { label: 'Notificaciones', to: '/notificaciones' },
+      { label: 'Detalle de ticket' },
+    ],
+  },
+  {
     path: '/admin/incidencias',
     title: 'Incidencias',
     description:
