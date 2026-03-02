@@ -273,6 +273,23 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error && error.message.trim()) return error.message;
+    if (error && typeof error === 'object') {
+      const e = error as {
+        message?: unknown;
+        details?: unknown;
+        hint?: unknown;
+      };
+      const parts = [e.message, e.details, e.hint]
+        .filter((part): part is string => typeof part === 'string')
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (parts.length > 0) return parts.join(' · ');
+    }
+    return 'Error creando rol';
+  };
+
   const createRole = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setMsg(null);
@@ -285,12 +302,16 @@ function RoleCreateModal({ onClose }: { onClose: () => void }) {
       setSubmitting(true);
       const { error } = await supabase
         .from('roles')
-        .insert({ name: name.trim(), description: description.trim() || null });
+        .insert({
+          name: name.trim(),
+          description: description.trim() || null,
+          is_system: false,
+        });
       if (error) throw error;
       showToastSuccess('Rol creado.');
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error creando rol';
+      const msg = getErrorMessage(err);
       setMsg(msg);
       showToastError(msg);
     } finally {
