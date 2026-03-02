@@ -1,4 +1,4 @@
-import { type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   animate,
@@ -25,25 +25,9 @@ const SIDEBAR_COLLAPSED_STORAGE_KEY = 'app:sidebar-desktop-collapsed:v1';
 const MOBILE_SIDEBAR_WIDTH_PX = 240;
 const SWIPE_THRESHOLD_PX = 56;
 const SWIPE_VELOCITY_THRESHOLD = 420;
-const EDGE_SWIPE_MIN_WIDTH_PX = 24;
-const EDGE_SWIPE_MAX_WIDTH_PX = 40;
-const GHOST_TAP_SUPPRESSION_MS = 320;
-const MENU_INTERACTION_LOCK_MS = 450;
-const IOS_MENU_INTERACTION_LOCK_MS = 800;
-const IOS_EDGE_GESTURE_EXCLUSION_PX = 10;
-const IOS_EDGE_SWIPE_EXTRA_WIDTH_PX = 12;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-function resolveEdgeSwipeWidth(viewportWidth: number) {
-  // Escala por tamaño de pantalla para mantener gesto cómodo sin activaciones accidentales.
-  return clamp(
-    Math.round(viewportWidth * 0.07),
-    EDGE_SWIPE_MIN_WIDTH_PX,
-    EDGE_SWIPE_MAX_WIDTH_PX
-  );
 }
 
 function getInitialDesktopCollapsedState() {
@@ -126,15 +110,8 @@ function SidebarContent() {
     getInitialDesktopCollapsedState
   );
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
-  const [isMenuInteractionLocked, setIsMenuInteractionLocked] = useState(false);
-  const [isSwipeTapShieldActive, setIsSwipeTapShieldActive] = useState(false);
-  const [isIOSDevice, setIsIOSDevice] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
-  const [edgeSwipeWidth, setEdgeSwipeWidth] = useState(EDGE_SWIPE_MIN_WIDTH_PX);
   const prefersReducedMotion = useReducedMotion();
-  const suppressMenuClickUntilRef = useRef(0);
-  const unlockMenuTimerRef = useRef<number | null>(null);
-  const interactionLockMsRef = useRef(MENU_INTERACTION_LOCK_MS);
   const sidebarX = useMotionValue(-MOBILE_SIDEBAR_WIDTH_PX);
   const overlayOpacity = useTransform(
     sidebarX,
@@ -179,20 +156,8 @@ function SidebarContent() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const isIOSDevice =
-      /iP(hone|ad|od)/i.test(window.navigator.userAgent) ||
-      (window.navigator.platform === 'MacIntel' &&
-        window.navigator.maxTouchPoints > 1);
-    setIsIOSDevice(isIOSDevice);
-    interactionLockMsRef.current = isIOSDevice
-      ? IOS_MENU_INTERACTION_LOCK_MS
-      : MENU_INTERACTION_LOCK_MS;
-
     const mobileMediaQuery = window.matchMedia('(max-width: 767px)');
-    const updateViewportState = () => {
-      setIsMobileViewport(mobileMediaQuery.matches);
-      setEdgeSwipeWidth(resolveEdgeSwipeWidth(window.innerWidth));
-    };
+    const updateViewportState = () => setIsMobileViewport(mobileMediaQuery.matches);
 
     updateViewportState();
     mobileMediaQuery.addEventListener('change', updateViewportState);
@@ -201,14 +166,6 @@ function SidebarContent() {
     return () => {
       mobileMediaQuery.removeEventListener('change', updateViewportState);
       window.removeEventListener('resize', updateViewportState);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (unlockMenuTimerRef.current !== null) {
-        window.clearTimeout(unlockMenuTimerRef.current);
-      }
     };
   }, []);
 
@@ -290,67 +247,11 @@ function SidebarContent() {
     visible: { opacity: 1, x: 0 },
   };
 
-  const shouldOpenBySwipe = (info: PanInfo) =>
-    info.offset.x >= SWIPE_THRESHOLD_PX ||
-    info.velocity.x >= SWIPE_VELOCITY_THRESHOLD;
-
   const shouldCloseBySwipe = (info: PanInfo) => {
     return (
       info.offset.x <= -SWIPE_THRESHOLD_PX ||
       info.velocity.x <= -SWIPE_VELOCITY_THRESHOLD
     );
-  };
-
-  const activateMenuInteractionGuard = (durationMs: number) => {
-    suppressMenuClickUntilRef.current = Date.now() + durationMs;
-    setIsMenuInteractionLocked(true);
-    setIsSwipeTapShieldActive(true);
-
-    if (unlockMenuTimerRef.current !== null) {
-      window.clearTimeout(unlockMenuTimerRef.current);
-    }
-
-    unlockMenuTimerRef.current = window.setTimeout(() => {
-      setIsMenuInteractionLocked(false);
-      setIsSwipeTapShieldActive(false);
-      unlockMenuTimerRef.current = null;
-    }, durationMs);
-  };
-
-  const handleEdgeSwipeDrag = (
-    _event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo
-  ) => {
-    const nextX = clamp(
-      -MOBILE_SIDEBAR_WIDTH_PX + Math.max(0, info.offset.x),
-      -MOBILE_SIDEBAR_WIDTH_PX,
-      0
-    );
-    sidebarX.set(nextX);
-  };
-
-  const handleEdgeSwipeEnd = (
-    _event: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo
-  ) => {
-    setIsDraggingSidebar(false);
-    const openedBySwipe = shouldOpenBySwipe(info);
-    if (openedBySwipe) {
-      activateMenuInteractionGuard(
-        Math.max(GHOST_TAP_SUPPRESSION_MS, interactionLockMsRef.current)
-      );
-    }
-    setIsOpen(openedBySwipe);
-  };
-
-  const shouldSuppressMenuInteraction =
-    isMenuInteractionLocked ||
-    Date.now() < suppressMenuClickUntilRef.current;
-
-  const handleMenuInteractionCapture = (event: SyntheticEvent) => {
-    if (!shouldSuppressMenuInteraction) return;
-    event.preventDefault();
-    event.stopPropagation();
   };
 
   const handlePanelSwipeDrag = (
@@ -392,18 +293,6 @@ function SidebarContent() {
 
   return (
     <>
-      {isMobileViewport && isSwipeTapShieldActive ? (
-        <div
-          aria-hidden
-          className="fixed inset-0 z-[70] md:hidden"
-          onTouchStart={handleMenuInteractionCapture}
-          onTouchEnd={handleMenuInteractionCapture}
-          onPointerDown={handleMenuInteractionCapture}
-          onPointerUp={handleMenuInteractionCapture}
-          onClick={handleMenuInteractionCapture}
-        />
-      ) : null}
-
       {/* Overlay (móvil) */}
       <motion.div
         className={`fixed inset-0 z-40 bg-black/40 md:hidden ${
@@ -420,32 +309,6 @@ function SidebarContent() {
         onDragStart={() => setIsDraggingSidebar(true)}
         onDrag={handlePanelSwipeDrag}
         onDragEnd={handlePanelSwipeEnd}
-      />
-
-      {/* Zona de swipe desde el borde izquierdo (móvil) */}
-      <motion.div
-        aria-hidden
-        className={`fixed top-[var(--app-topbar-height)] z-[45] h-[calc(100dvh-var(--app-topbar-height))] touch-pan-y md:hidden ${
-          isOpen ? 'pointer-events-none' : ''
-        }`}
-        style={{
-          left: isIOSDevice ? IOS_EDGE_GESTURE_EXCLUSION_PX : 0,
-          width: isIOSDevice
-            ? edgeSwipeWidth + IOS_EDGE_SWIPE_EXTRA_WIDTH_PX
-            : edgeSwipeWidth,
-        }}
-        drag="x"
-        dragDirectionLock
-        dragConstraints={{ left: 0, right: MOBILE_SIDEBAR_WIDTH_PX }}
-        dragElastic={0.03}
-        dragMomentum={false}
-        dragSnapToOrigin
-        onDragStart={() => {
-          setIsDraggingSidebar(true);
-          activateMenuInteractionGuard(interactionLockMsRef.current);
-        }}
-        onDrag={handleEdgeSwipeDrag}
-        onDragEnd={handleEdgeSwipeEnd}
       />
 
       {/* Sidebar */}
@@ -504,9 +367,6 @@ function SidebarContent() {
           className={`flex flex-col gap-1 flex-1 py-3 ${
             isDesktopCollapsed ? 'px-1.5' : 'px-2'
           }`}
-          onTouchEndCapture={handleMenuInteractionCapture}
-          onPointerUpCapture={handleMenuInteractionCapture}
-          onClickCapture={handleMenuInteractionCapture}
           variants={menuContainerVariants}
           initial={prefersReducedMotion ? false : 'hidden'}
           animate={prefersReducedMotion ? undefined : 'visible'}
@@ -518,14 +378,7 @@ function SidebarContent() {
               <motion.div key={item.path} variants={menuItemVariants}>
                 <Link
                   to={item.path}
-                  onClick={(event) => {
-                    if (shouldSuppressMenuInteraction) {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      return;
-                    }
-                    setIsOpen(false);
-                  }}
+                  onClick={() => setIsOpen(false)}
                   className={`group relative flex items-center rounded-md transition text-sm font-medium leading-5
                           [&_svg]:h-5 [&_svg]:w-5 [&_svg]:mr-0 [&_svg]:shrink-0
                           ${
