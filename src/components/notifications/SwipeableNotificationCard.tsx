@@ -4,6 +4,7 @@ import { cn } from '../../utils/cn';
 const SWIPE_TRIGGER_PX = 72;
 const SWIPE_MAX_PX = 112;
 const TAP_CANCEL_PX = 10;
+const AXIS_LOCK_PX = 8;
 
 type SwipeableNotificationCardProps = {
   isRead: boolean;
@@ -26,11 +27,16 @@ export default function SwipeableNotificationCard({
   const [isSwiping, setIsSwiping] = useState(false);
   const [busy, setBusy] = useState(false);
   const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const touchAxisRef = useRef<'x' | 'y' | null>(null);
   const suppressClickRef = useRef(false);
 
   const resetSwipe = () => {
     setTranslateX(0);
     setIsSwiping(false);
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    touchAxisRef.current = null;
   };
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
@@ -38,17 +44,35 @@ export default function SwipeableNotificationCard({
     const touch = event.touches[0];
     if (!touch) return;
     touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    touchAxisRef.current = null;
     suppressClickRef.current = false;
-    setIsSwiping(true);
+    setIsSwiping(false);
   };
 
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
     const startX = touchStartXRef.current;
-    if (startX === null || busy) return;
+    const startY = touchStartYRef.current;
+    if (startX === null || startY === null || busy) return;
     const touch = event.touches[0];
     if (!touch) return;
 
     const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    if (touchAxisRef.current === null) {
+      if (Math.abs(deltaX) < AXIS_LOCK_PX && Math.abs(deltaY) < AXIS_LOCK_PX) {
+        return;
+      }
+      touchAxisRef.current = Math.abs(deltaX) > Math.abs(deltaY) ? 'x' : 'y';
+    }
+
+    if (touchAxisRef.current !== 'x') {
+      return;
+    }
+
+    event.preventDefault();
+    setIsSwiping(true);
     const clamped = Math.max(-SWIPE_MAX_PX, Math.min(SWIPE_MAX_PX, deltaX));
     if (Math.abs(clamped) > TAP_CANCEL_PX) {
       suppressClickRef.current = true;
@@ -57,12 +81,15 @@ export default function SwipeableNotificationCard({
   };
 
   const handleTouchEnd = async () => {
+    const axis = touchAxisRef.current;
     const deltaX = translateX;
-    touchStartXRef.current = null;
-    setIsSwiping(false);
+    resetSwipe();
+
+    if (axis !== 'x') {
+      return;
+    }
 
     if (busy) {
-      resetSwipe();
       return;
     }
 
@@ -70,7 +97,6 @@ export default function SwipeableNotificationCard({
     const shouldMarkUnread = deltaX <= -SWIPE_TRIGGER_PX && isRead;
 
     if (!shouldMarkRead && !shouldMarkUnread) {
-      resetSwipe();
       return;
     }
 
@@ -83,7 +109,6 @@ export default function SwipeableNotificationCard({
       }
     } finally {
       setBusy(false);
-      resetSwipe();
     }
   };
 
@@ -133,7 +158,7 @@ export default function SwipeableNotificationCard({
         onTouchCancel={resetSwipe}
         style={{
           transform: `translateX(${translateX}px)`,
-          touchAction: 'pan-y',
+          touchAction: 'pan-y pinch-zoom',
         }}
         className={cn(
           className,
