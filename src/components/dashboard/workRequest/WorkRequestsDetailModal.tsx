@@ -19,6 +19,11 @@ import { showToastError, showToastSuccess } from '../../../notifications';
 import AnimatedDialog from '../../ui/AnimatedDialog';
 import { supabase } from '../../../lib/supabaseClient';
 import {
+  getUnreadTicketCommentNotificationCounts,
+  markTicketCommentNotificationsRead,
+  subscribeToMyNotificationDeliveries,
+} from '../../../services/notificationCenterService';
+import {
   addTicketComment,
   listTicketComments,
   type TicketComment,
@@ -99,6 +104,7 @@ export default function WorkRequestsDetailModal({
   const [postingComment, setPostingComment] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pendingCommentCount, setPendingCommentCount] = useState(0);
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
     Record<number, SpecialIncident>
   >({});
@@ -162,6 +168,16 @@ export default function WorkRequestsDetailModal({
     setComments(rows);
   }, [numericTicketId]);
 
+  const loadPendingCommentCount = useCallback(async () => {
+    if (!currentUserId || !Number.isInteger(numericTicketId) || numericTicketId <= 0) {
+      setPendingCommentCount(0);
+      return;
+    }
+
+    const counts = await getUnreadTicketCommentNotificationCounts();
+    setPendingCommentCount(counts[numericTicketId] ?? 0);
+  }, [currentUserId, numericTicketId]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -200,7 +216,24 @@ export default function WorkRequestsDetailModal({
     setActiveTab('details');
     setCommentDraft('');
     setComments([]);
+    setPendingCommentCount(0);
   }, [ticket.id]);
+
+  useEffect(() => {
+    void loadPendingCommentCount().catch(() => {
+      setPendingCommentCount(0);
+    });
+  }, [loadPendingCommentCount]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    return subscribeToMyNotificationDeliveries(currentUserId, () => {
+      void loadPendingCommentCount().catch(() => {
+        setPendingCommentCount(0);
+      });
+    });
+  }, [currentUserId, loadPendingCommentCount]);
 
   useEffect(() => {
     if (activeTab !== 'comments') return;
@@ -248,6 +281,19 @@ export default function WorkRequestsDetailModal({
       void supabase.removeChannel(channel);
     };
   }, [activeTab, loadComments, numericTicketId]);
+
+  useEffect(() => {
+    if (activeTab !== 'comments') return;
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
+    if (pendingCommentCount <= 0) return;
+
+    setPendingCommentCount(0);
+    void markTicketCommentNotificationsRead(numericTicketId)
+      .then(() => loadPendingCommentCount())
+      .catch(() => {
+        void loadPendingCommentCount();
+      });
+  }, [activeTab, loadPendingCommentCount, numericTicketId, pendingCommentCount]);
 
   async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -347,13 +393,25 @@ export default function WorkRequestsDetailModal({
             type="button"
             onClick={() => setActiveTab('comments')}
             className={cx(
-              'border-b-2 pb-1 transition',
+              'inline-flex items-center gap-2 border-b-2 pb-1 transition',
               activeTab === 'comments'
                 ? 'border-indigo-600 font-medium text-indigo-600'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             )}
           >
-            Comentarios ({comments.length})
+            <span>Comentarios ({comments.length})</span>
+            {pendingCommentCount > 0 ? (
+              <span
+                className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
+                title={
+                  pendingCommentCount === 1
+                    ? 'Tienes 1 comentario pendiente por revisar'
+                    : `Tienes ${pendingCommentCount} comentarios pendientes por revisar`
+                }
+              >
+                {pendingCommentCount}
+              </span>
+            ) : null}
           </button>
           <button
             type="button"
