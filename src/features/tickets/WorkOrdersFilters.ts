@@ -7,7 +7,8 @@ export type WorkOrdersFilterKey =
   | 'priority'
   | 'location_id'
   | 'created_at'
-  | 'has_image';
+  | 'has_image'
+  | 'assignee_id';
 
 export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
   id: 'work_orders',

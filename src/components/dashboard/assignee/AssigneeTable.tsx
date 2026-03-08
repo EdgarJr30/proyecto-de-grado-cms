@@ -17,6 +17,10 @@ import {
   bulkSetAssigneeActive,
   formatAssigneeFullName,
 } from '../../../services/assigneeService';
+import {
+  getUsersForAssigneeLinking,
+  type UserLinkOption,
+} from '../../../services/userAdminService';
 import { useCan } from '../../../rbac/PermissionsContext';
 import {
   showConfirmAlert,
@@ -114,6 +118,8 @@ export default function AssigneesTable({
   const [openForm, setOpenForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+  const [platformUsers, setPlatformUsers] = useState<UserLinkOption[]>([]);
+  const [loadingPlatformUsers, setLoadingPlatformUsers] = useState(true);
   const isEditing = useMemo(() => typeof form.id === 'number', [form.id]);
 
   const isSearching = searchTerm.trim().length >= 2;
@@ -174,6 +180,36 @@ export default function AssigneesTable({
   }, [page]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      setLoadingPlatformUsers(true);
+      try {
+        const data = await getUsersForAssigneeLinking();
+        if (!cancelled) {
+          setPlatformUsers(data);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          showToastError(
+            e instanceof Error
+              ? e.message
+              : 'Error cargando usuarios de la plataforma'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingPlatformUsers(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!detail && !openForm) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -187,6 +223,43 @@ export default function AssigneesTable({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [detail, openForm, submitting]);
+
+  const platformUserOptions = useMemo(() => {
+    const options = platformUsers.map((user) => {
+      const fullName = [user.name, user.last_name].filter(Boolean).join(' ').trim();
+      const baseLabel = fullName || user.email || user.id;
+      const suffix = user.email && user.email !== baseLabel ? ` - ${user.email}` : '';
+      const inactive = user.is_active ? '' : ' (inactivo)';
+      return {
+        value: user.id,
+        label: `${baseLabel}${suffix}${inactive}`,
+      };
+    });
+
+    if (
+      form.user_id &&
+      !options.some((option) => option.value === form.user_id)
+    ) {
+      options.unshift({
+        value: form.user_id,
+        label: `${form.user_id} (usuario no disponible)`,
+      });
+    }
+
+    return options;
+  }, [form.user_id, platformUsers]);
+
+  const platformUsersById = useMemo(
+    () =>
+      platformUsers.reduce<Record<string, string>>((acc, user) => {
+        const fullName = [user.name, user.last_name].filter(Boolean).join(' ').trim();
+        const baseLabel = fullName || user.email || user.id;
+        const suffix = user.email && user.email !== baseLabel ? ` - ${user.email}` : '';
+        acc[user.id] = `${baseLabel}${suffix}${user.is_active ? '' : ' (inactivo)'}`;
+        return acc;
+      }, {}),
+    [platformUsers]
+  );
 
   // --- acciones fila ---
   async function handleToggleActive(a: Assignee) {
@@ -831,7 +904,11 @@ export default function AssigneesTable({
                 </div>
                 <div>
                   <div className="text-gray-500">User ID vinculado</div>
-                  <div className="text-gray-900">{detail.user_id || '—'}</div>
+                  <div className="text-gray-900">
+                    {detail.user_id
+                      ? (platformUsersById[detail.user_id] ?? detail.user_id)
+                      : '—'}
+                  </div>
                 </div>
               </div>
 
@@ -979,13 +1056,29 @@ export default function AssigneesTable({
                   <label className="block text-sm font-medium text-gray-700">
                     User ID vinculado (opcional)
                   </label>
-                  <input
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  <select
+                    className="mt-1 block w-full rounded-md border-gray-300 bg-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     value={form.user_id}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, user_id: e.target.value }))
                     }
-                  />
+                    disabled={loadingPlatformUsers}
+                  >
+                    <option value="">
+                      {loadingPlatformUsers
+                        ? 'Cargando usuarios...'
+                        : 'Sin vincular'}
+                    </option>
+                    {platformUserOptions.map((user) => (
+                      <option key={user.value} value={user.value}>
+                        {user.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Selecciona un usuario existente para vincularlo a este
+                    técnico. Sigue siendo opcional.
+                  </p>
                 </div>
 
                 {/* Activo */}

@@ -22,6 +22,7 @@ export interface WorkOrdersFilters {
   status?: Status[];
   priority?: Priority[];
   location_id?: Location;
+  assignee_id?: number;
   assignee?: string;
   requester?: string;
   daterange?: { from?: string; to?: string };
@@ -167,6 +168,19 @@ function buildQuery(filters: WorkOrdersFilters) {
   if (filters.status?.length) q = q.in('status', filters.status);
   if (filters.priority?.length) q = q.in('priority', filters.priority);
   if (filters.location_id) q = q.eq('location_id', filters.location_id);
+  if (
+    typeof filters.assignee_id === 'number' &&
+    Number.isFinite(filters.assignee_id)
+  ) {
+    q = q.filter(
+      'id',
+      'in',
+      `(
+      select work_order_id from v_work_order_assignees_current
+      where assignee_id = ${filters.assignee_id}
+    )`
+    );
+  }
   if (filters.assignee) {
     const term = `%${filters.assignee}%`;
     q = q.or(

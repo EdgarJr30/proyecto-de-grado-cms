@@ -9,9 +9,14 @@ import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 type Props = {
   onApply: (values: Record<WorkOrdersFilterKey, unknown>) => void;
   moduleActions?: ReactNode;
+  exportMerge?: Record<string, unknown>;
 };
 
-export default function WorkOrdersFiltersBar({ onApply, moduleActions }: Props) {
+export default function WorkOrdersFiltersBar({
+  onApply,
+  moduleActions,
+  exportMerge,
+}: Props) {
   const { filterOptions } = useLocationCatalog({
     includeInactive: false,
     activeOnlyOptions: true,
@@ -35,7 +40,7 @@ export default function WorkOrdersFiltersBar({ onApply, moduleActions }: Props) 
         schema={schema}
         onApply={onApply}
         defaultOpenDesktop={false}
-        exportMerge={{ is_accepted: true }}
+        exportMerge={{ is_accepted: true, ...(exportMerge ?? {}) }}
         baseFilename="ordenes_trabajo"
         moduleActions={moduleActions}
       />

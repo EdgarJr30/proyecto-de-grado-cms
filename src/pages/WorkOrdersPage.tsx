@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '../components/layout/Sidebar';
 import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
 import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
@@ -14,18 +14,26 @@ import type { WorkOrder } from '../types/Ticket';
 import { toTicketUpdate } from '../utils/toTicketUpdate';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useCan } from '../rbac/PermissionsContext';
+import { useUser } from '../context/UserContext';
+import { getAssigneeByUserId } from '../services/assigneeService';
 import '../styles/workOrdersAsana.css';
 
 type ViewMode = 'board' | 'list';
 type GroupMode = 'manual' | 'dateAsc' | 'dateDesc';
+type AssignmentScope = 'all' | 'mine';
 
 export default function WorkOrdersPage() {
   const prefersReducedMotion = useReducedMotion();
   const canManageWorkOrderSettings = useCan('work_orders:full_access');
+  const { profile } = useUser();
   // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
   const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
     {} as Record<WorkOrdersFilterKey, unknown>
   );
+  const [assignmentScope, setAssignmentScope] =
+    useState<AssignmentScope>('all');
+  const [linkedAssigneeId, setLinkedAssigneeId] = useState<number | null>(null);
+  const [loadingLinkedAssignee, setLoadingLinkedAssignee] = useState(false);
 
   // Vista actual
   const [view, setView] = useState<ViewMode>('board');
@@ -37,18 +45,98 @@ export default function WorkOrdersPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
+  const [nestedModalLocked, setNestedModalLocked] = useState(false);
   const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
     null
   );
 
+  useEffect(() => {
+    const userId = profile?.id?.trim();
+    if (!userId) {
+      setLinkedAssigneeId(null);
+      setLoadingLinkedAssignee(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingLinkedAssignee(true);
+
+    void (async () => {
+      try {
+        const assignee = await getAssigneeByUserId(userId);
+        if (!cancelled) {
+          setLinkedAssigneeId(assignee?.id ?? null);
+        }
+      } catch {
+        if (!cancelled) {
+          setLinkedAssigneeId(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingLinkedAssignee(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [profile?.id]);
+
+  const effectiveAssigneeFilter = useMemo(() => {
+    if (assignmentScope !== 'mine') return undefined;
+    return linkedAssigneeId ?? -1;
+  }, [assignmentScope, linkedAssigneeId]);
+
   // ✅ mergedFilters viene SOLO de FilterBar
   const mergedFilters = useMemo<FilterState<WorkOrdersFilterKey>>(
-    () => filters as FilterState<WorkOrdersFilterKey>,
-    [filters]
+    () =>
+      ({
+        ...filters,
+        ...(typeof effectiveAssigneeFilter === 'number'
+          ? { assignee_id: effectiveAssigneeFilter }
+          : {}),
+      }) as FilterState<WorkOrdersFilterKey>,
+    [effectiveAssigneeFilter, filters]
   );
 
   const viewSwitcher = (
     <div className="wo-module-actions flex flex-wrap items-center gap-2">
+      <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setAssignmentScope('all')}
+          className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer ${
+            assignmentScope === 'all'
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+          }`}
+          title="Ver todas las órdenes"
+        >
+          Todas
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!linkedAssigneeId) return;
+            setAssignmentScope('mine');
+          }}
+          disabled={!linkedAssigneeId || loadingLinkedAssignee}
+          className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+            assignmentScope === 'mine'
+              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+          } disabled:cursor-not-allowed disabled:opacity-50`}
+          title={
+            linkedAssigneeId
+              ? 'Ver solo las órdenes asignadas a mí'
+              : 'Este usuario aún no está vinculado a un técnico'
+          }
+        >
+          Asignadas a mí
+        </button>
+      </div>
+
       <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
         <button
           type="button"
@@ -235,6 +323,11 @@ export default function WorkOrdersPage() {
               );
             }}
             moduleActions={viewSwitcher}
+            exportMerge={
+              typeof effectiveAssigneeFilter === 'number'
+                ? { assignee_id: effectiveAssigneeFilter }
+                : undefined
+            }
           />
         </motion.div>
 
@@ -282,8 +375,9 @@ export default function WorkOrdersPage() {
           onClose={() => {
             setModalOpen(false);
             setSelectedTicket(null);
+            setNestedModalLocked(false);
           }}
-          isLocked={showFullImage}
+          isLocked={showFullImage || nestedModalLocked}
         >
           {selectedTicket && (
             <EditTicketModal
@@ -296,6 +390,7 @@ export default function WorkOrdersPage() {
               onSave={handleSave}
               showFullImage={showFullImage}
               setShowFullImage={setShowFullImage}
+              onModalLockChange={setNestedModalLocked}
             />
           )}
         </Modal>

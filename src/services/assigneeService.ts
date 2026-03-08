@@ -33,6 +33,22 @@ export async function getActiveAssignees(): Promise<Assignee[]> {
   return (data ?? []) as Assignee[];
 }
 
+export async function getAssigneeByUserId(
+  userId: string
+): Promise<Assignee | null> {
+  const normalized = userId.trim();
+  if (!normalized) return null;
+
+  const { data, error } = await supabase
+    .from('assignees')
+    .select('id, name, last_name, section, is_active, user_id, email, phone')
+    .eq('user_id', normalized)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return (data as Assignee | null) ?? null;
+}
+
 export function groupBySection(list: Assignee[]): Record<AssigneeSection, Assignee[]> {
   const sections: AssigneeSection[] = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
   const grouped = Object.fromEntries(sections.map(s => [s, [] as Assignee[]])) as Record<AssigneeSection, Assignee[]>;

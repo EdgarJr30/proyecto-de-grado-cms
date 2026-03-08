@@ -6,7 +6,7 @@ import EditTicketModal from './EditWorkOrdersModal';
 import {
   updateTicket,
   moveWorkOrderStatus,
-  getTicketCountsRPC,
+  getWorkOrderCountsByFilters,
   getTicketsByWorkOrdersFiltersPaginated,
   getArchivedWorkOrdersByFiltersPaginated,
 } from '../../../services/ticketService';
@@ -191,6 +191,7 @@ export default function WorkOrdersBoard({
   const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
+  const [nestedModalLocked, setNestedModalLocked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
     Record<number, SpecialIncident>
@@ -221,28 +222,9 @@ export default function WorkOrdersBoard({
   const refreshBoardTimeout = useRef<number | null>(null);
   const suppressRealtimeUntilRef = useRef<Record<number, number>>({});
 
-  const countsFilters = useMemo(
-    () => ({
-      term:
-        typeof (filters as Record<string, unknown> | undefined)?.q === 'string'
-          ? ((filters as Record<string, unknown>).q as string).trim() ||
-            undefined
-          : undefined,
-      location_id:
-        typeof (filters as Record<string, unknown> | undefined)?.location_id ===
-        'string'
-          ? ((filters as Record<string, unknown>).location_id as string)
-          : undefined,
-    }),
-    [filters]
-  );
-
-  const countsFiltersRef = useRef(countsFilters);
+  const countsFiltersRef = useRef(filters);
   const filtersKey = useMemo(() => JSON.stringify(filters ?? {}), [filters]);
-  const countsFiltersKey = useMemo(
-    () => JSON.stringify(countsFilters),
-    [countsFilters]
-  );
+  const countsFiltersKey = filtersKey;
 
   const ticketById = useMemo(() => {
     const map = new Map<number, WorkOrder>();
@@ -331,8 +313,8 @@ export default function WorkOrdersBoard({
   }, [filters]);
 
   useEffect(() => {
-    countsFiltersRef.current = countsFilters;
-  }, [countsFilters]);
+    countsFiltersRef.current = filters;
+  }, [filters]);
 
   useEffect(() => {
     persistManualOrder(manualOrderByStatus);
@@ -410,7 +392,9 @@ export default function WorkOrdersBoard({
     }
 
     refreshCountsTimeout.current = window.setTimeout(async () => {
-      const c = await getTicketCountsRPC(countsFiltersRef.current);
+      const c = await getWorkOrderCountsByFilters(
+        (countsFiltersRef.current ?? {}) as FilterState<WorkOrdersFilterKey>
+      );
       setCounts(c);
       refreshCountsTimeout.current = null;
     }, 220);
@@ -430,7 +414,9 @@ export default function WorkOrdersBoard({
   useEffect(() => {
     let alive = true;
     (async () => {
-      const c = await getTicketCountsRPC(countsFilters);
+      const c = await getWorkOrderCountsByFilters(
+        (filters ?? {}) as FilterState<WorkOrdersFilterKey>
+      );
       if (alive) {
         setCounts(c);
       }
@@ -439,7 +425,7 @@ export default function WorkOrdersBoard({
     return () => {
       alive = false;
     };
-  }, [countsFiltersKey, countsFilters]);
+  }, [countsFiltersKey, filters]);
 
   useEffect(() => {
     void loadBoardTickets();
@@ -541,6 +527,7 @@ export default function WorkOrdersBoard({
   const closeModal = () => {
     setSelectedTicket(null);
     setModalOpen(false);
+    setNestedModalLocked(false);
   };
 
   const patchTicketInBoard = useCallback((ticketId: number, patch: Partial<WorkOrder>) => {
@@ -809,7 +796,11 @@ export default function WorkOrdersBoard({
         />
       ))}
 
-      <Modal isOpen={modalOpen} onClose={closeModal} isLocked={showFullImage}>
+      <Modal
+        isOpen={modalOpen}
+        onClose={closeModal}
+        isLocked={showFullImage || nestedModalLocked}
+      >
         {selectedTicket && (
           <EditTicketModal
             isOpen={modalOpen}
@@ -818,6 +809,7 @@ export default function WorkOrdersBoard({
             onSave={handleSave}
             showFullImage={showFullImage}
             setShowFullImage={setShowFullImage}
+            onModalLockChange={setNestedModalLocked}
             forceReadOnly={Boolean(selectedTicket?.is_archived)}
             getSpecialIncidentAdornment={(t) => {
               const siId = (

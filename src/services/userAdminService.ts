@@ -16,6 +16,14 @@ export type DbUser = {
   password_reset_by?: string | null;
 };
 
+export type UserLinkOption = {
+  id: string;
+  email: string | null;
+  name: string | null;
+  last_name: string | null;
+  is_active: boolean;
+};
+
 type Paginated = {
   data: DbUser[];
   count: number;
@@ -221,6 +229,18 @@ export async function deleteUser(userId: string) {
   const { error } = await supabase.from('users').delete().eq('id', userId);
   if (error) throw error;
   invalidateData('users');
+}
+
+export async function getUsersForAssigneeLinking(): Promise<UserLinkOption[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id,email,name,last_name,is_active')
+    .order('name', { ascending: true })
+    .order('last_name', { ascending: true })
+    .order('email', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as UserLinkOption[];
 }
 
 /* =========================================

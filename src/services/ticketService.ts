@@ -62,6 +62,93 @@ function parseLocationFilter(value: unknown): number | null {
   return null;
 }
 
+function parseAssigneeFilter(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (/^-?\d+$/.test(trimmed)) return Number(trimmed);
+  }
+  return null;
+}
+
+function buildWorkOrdersQuery<TKeys extends string>(
+  values: FilterState<TKeys>,
+  options: {
+    archived: boolean;
+    status?: Status;
+    select: string;
+    head?: boolean;
+  }
+) {
+  let q = supabase
+    .from('v_tickets_compat')
+    .select(options.select, {
+      count: 'exact',
+      head: options.head ?? false,
+    })
+    .eq('is_accepted', true)
+    .eq('is_archived', options.archived);
+
+  if (options.status) {
+    q = q.eq('status', options.status);
+  }
+
+  const termRaw = (values as Record<string, unknown>)['q'];
+  const term = typeof termRaw === 'string' ? termRaw.trim() : '';
+  if (term.length >= 2) {
+    const ors = [
+      `title.ilike.%${term}%`,
+      `requester.ilike.%${term}%`,
+      `created_by_name.ilike.%${term}%`,
+    ];
+    const n = Number(term);
+    if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
+    q = q.or(ors.join(','));
+  }
+
+  const locationRaw = (values as Record<string, unknown>)['location_id'];
+  const locationFilter = parseLocationFilter(locationRaw);
+  if (locationFilter != null) q = q.eq('location_id', locationFilter);
+
+  const assigneeId = parseAssigneeFilter(
+    (values as Record<string, unknown>)['assignee_id']
+  );
+  if (assigneeId != null) {
+    q = q.filter(
+      'id',
+      'in',
+      `(
+      select work_order_id from v_work_order_assignees_current
+      where assignee_id = ${assigneeId}
+    )`
+    );
+  }
+
+  const createdRaw = (values as Record<string, unknown>)['created_at'];
+  if (createdRaw && typeof createdRaw === 'object') {
+    const { from: dFrom, to: dTo } = createdRaw as {
+      from?: string;
+      to?: string;
+    };
+    if (dFrom) q = q.gte('created_at', `${dFrom} 00:00:00`);
+    if (dTo) q = q.lte('created_at', `${dTo} 23:59:59`);
+  }
+
+  if ((values as Record<string, unknown>)['has_image'] === true) {
+    q = q.neq('image', '');
+  }
+
+  const prw = (values as Record<string, unknown>)['priority'];
+  const priorities = Array.isArray(prw) ? prw.map(String) : [];
+  if (priorities.length) q = q.in('priority', priorities);
+
+  const stw = (values as Record<string, unknown>)['status'];
+  const statuses = Array.isArray(stw) ? stw.map(String) : [];
+  if (statuses.length) q = q.in('status', statuses);
+
+  return q;
+}
+
 function invalidateTicketsData() {
   invalidateData('tickets');
 }
@@ -444,6 +531,37 @@ export async function getTicketCountsRPC(filters?: {
   return out;
 }
 
+export async function getWorkOrderCountsByFilters<TKeys extends string>(
+  values: FilterState<TKeys>
+): Promise<TicketCounts> {
+  const statuses: Status[] = ['Pendiente', 'En Ejecución', 'Finalizadas'];
+  const counts = await Promise.all(
+    statuses.map(async (status) => {
+      const query = buildWorkOrdersQuery(values, {
+        archived: false,
+        status,
+        select: 'id',
+        head: true,
+      });
+      const { count, error } = await query;
+      if (error) throw new Error(error.message);
+      return [status, count ?? 0] as const;
+    })
+  );
+
+  return counts.reduce<TicketCounts>(
+    (acc, [status, total]) => {
+      acc[status] = total;
+      return acc;
+    },
+    {
+      Pendiente: 0,
+      'En Ejecución': 0,
+      Finalizadas: 0,
+    }
+  );
+}
+
 /**
  * Filtra directamente en Supabase (server-side) con paginación y count.
  * SIN serverFiltering.ts y SIN WorkRequestsServerSchema.ts
@@ -537,67 +655,10 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  // 👇 cambiamos la fuente a la vista que trae los extras:
-  let q = supabase
-    .from('v_tickets_compat')
-    .select('*', { count: 'exact' })
-    .eq('is_accepted', true)
-    .eq('is_archived', false);
-
-  const termRaw = (values as Record<string, unknown>)['q'];
-  const term = typeof termRaw === 'string' ? termRaw.trim() : '';
-  if (term.length >= 2) {
-    const ors = [
-      `title.ilike.%${term}%`,
-      `requester.ilike.%${term}%`,
-      `created_by_name.ilike.%${term}%`,
-    ];
-    const n = Number(term);
-    if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
-    q = q.or(ors.join(','));
-  }
-
-  const locationRaw = (values as Record<string, unknown>)['location_id'];
-  const locationFilter = parseLocationFilter(locationRaw);
-  if (locationFilter != null) q = q.eq('location_id', locationFilter);
-
-  const assigneeIdRaw = (values as Record<string, unknown>)['assignee_id'];
-  if (
-    assigneeIdRaw !== undefined &&
-    assigneeIdRaw !== null &&
-    assigneeIdRaw !== ''
-  ) {
-    q = q.filter(
-      'id',
-      'in',
-      `(
-      select work_order_id from v_work_order_assignees_current
-      where assignee_id = ${Number(assigneeIdRaw)}
-    )`
-    );
-  }
-
-  const createdRaw = (values as Record<string, unknown>)['created_at'];
-  if (createdRaw && typeof createdRaw === 'object') {
-    const { from: dFrom, to: dTo } = createdRaw as {
-      from?: string;
-      to?: string;
-    };
-    if (dFrom) q = q.gte('created_at', `${dFrom} 00:00:00`);
-    if (dTo) q = q.lte('created_at', `${dTo} 23:59:59`);
-  }
-
-  if ((values as Record<string, unknown>)['has_image'] === true) {
-    q = q.neq('image', '');
-  }
-
-  const prw = (values as Record<string, unknown>)['priority'];
-  const priorities = Array.isArray(prw) ? prw.map(String) : [];
-  if (priorities.length) q = q.in('priority', priorities);
-
-  const stw = (values as Record<string, unknown>)['status'];
-  const statuses = Array.isArray(stw) ? stw.map(String) : [];
-  if (statuses.length) q = q.in('status', statuses);
+  const q = buildWorkOrdersQuery(values, {
+    archived: false,
+    select: '*',
+  });
 
   const { data, error, count } = await q
     .order('id', { ascending: false })
@@ -612,7 +673,9 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
   }
   return {
     data: normalizeRequesterInRows(
-      (data ?? []) as Array<WorkOrder & { created_by_name?: string | null }>
+      (data ?? []) as unknown as Array<
+        WorkOrder & { created_by_name?: string | null }
+      >
     ) as WorkOrder[],
     count: count ?? 0,
   };
@@ -629,66 +692,10 @@ export async function getArchivedWorkOrdersByFiltersPaginated<
   const from = page * pageSize;
   const to = from + pageSize - 1;
 
-  let q = supabase
-    .from('v_tickets_compat')
-    .select('*', { count: 'exact' })
-    .eq('is_accepted', true)
-    .eq('is_archived', true);
-
-  const termRaw = (values as Record<string, unknown>)['q'];
-  const term = typeof termRaw === 'string' ? termRaw.trim() : '';
-  if (term.length >= 2) {
-    const ors = [
-      `title.ilike.%${term}%`,
-      `requester.ilike.%${term}%`,
-      `created_by_name.ilike.%${term}%`,
-    ];
-    const n = Number(term);
-    if (!Number.isNaN(n)) ors.push(`id.eq.${n}`);
-    q = q.or(ors.join(','));
-  }
-
-  const locationRaw = (values as Record<string, unknown>)['location_id'];
-  const locationFilter = parseLocationFilter(locationRaw);
-  if (locationFilter != null) q = q.eq('location_id', locationFilter);
-
-  const assigneeIdRaw = (values as Record<string, unknown>)['assignee_id'];
-  if (
-    assigneeIdRaw !== undefined &&
-    assigneeIdRaw !== null &&
-    assigneeIdRaw !== ''
-  ) {
-    q = q.filter(
-      'id',
-      'in',
-      `(
-      select work_order_id from v_work_order_assignees_current
-      where assignee_id = ${Number(assigneeIdRaw)}
-    )`
-    );
-  }
-
-  const createdRaw = (values as Record<string, unknown>)['created_at'];
-  if (createdRaw && typeof createdRaw === 'object') {
-    const { from: dFrom, to: dTo } = createdRaw as {
-      from?: string;
-      to?: string;
-    };
-    if (dFrom) q = q.gte('created_at', `${dFrom} 00:00:00`);
-    if (dTo) q = q.lte('created_at', `${dTo} 23:59:59`);
-  }
-
-  if ((values as Record<string, unknown>)['has_image'] === true) {
-    q = q.neq('image', '');
-  }
-
-  const prw = (values as Record<string, unknown>)['priority'];
-  const priorities = Array.isArray(prw) ? prw.map(String) : [];
-  if (priorities.length) q = q.in('priority', priorities);
-
-  const stw = (values as Record<string, unknown>)['status'];
-  const statuses = Array.isArray(stw) ? stw.map(String) : [];
-  if (statuses.length) q = q.in('status', statuses);
+  const q = buildWorkOrdersQuery(values, {
+    archived: true,
+    select: '*',
+  });
 
   const { data, error, count } = await q
     .order('id', { ascending: false })
@@ -703,7 +710,9 @@ export async function getArchivedWorkOrdersByFiltersPaginated<
   }
   return {
     data: normalizeRequesterInRows(
-      (data ?? []) as Array<WorkOrder & { created_by_name?: string | null }>
+      (data ?? []) as unknown as Array<
+        WorkOrder & { created_by_name?: string | null }
+      >
     ) as WorkOrder[],
     count: count ?? 0,
   };
