@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   KeyRound,
   Loader2,
+  MessageSquare,
   Save,
   Ticket,
   UserRound,
@@ -29,6 +31,10 @@ import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
 import { onDataInvalidated } from '../lib/dataInvalidation';
 import { MotionSpin } from '../components/ui/motionPrimitives';
+import {
+  getUnreadTicketCommentNotificationCounts,
+  subscribeToMyNotificationDeliveries,
+} from '../services/notificationCenterService';
 import '../styles/peopleAsana.css';
 
 const PAGE_SIZE = 8;
@@ -81,6 +87,7 @@ function TabButton({
 
 export default function MyTicketsPage() {
   const prefersReducedMotion = useReducedMotion();
+  const navigate = useNavigate();
   const { getLocationLabel } = useLocationCatalog();
   const { profile, update, refresh } = useUser();
   const { roles } = usePermissions();
@@ -90,6 +97,9 @@ export default function MyTicketsPage() {
   // Estado para tickets
   const [userId, setUserId] = useState<string | null>(null);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [pendingCommentCounts, setPendingCommentCounts] = useState<Record<number, number>>(
+    {}
+  );
   const [ticketsLoading, setTicketsLoading] = useState(true);
   const [filters, setFilters] = useState<Record<MyTicketsFilterKey, unknown>>(
     {} as Record<MyTicketsFilterKey, unknown>
@@ -201,12 +211,39 @@ export default function MyTicketsPage() {
     void loadTickets();
   }, [loadTickets]);
 
+  const loadPendingCommentCounts = useCallback(async () => {
+    if (!userId) {
+      setPendingCommentCounts({});
+      return;
+    }
+
+    try {
+      const counts = await getUnreadTicketCommentNotificationCounts();
+      setPendingCommentCounts(counts);
+    } catch (error) {
+      console.error(error);
+      setPendingCommentCounts({});
+    }
+  }, [userId]);
+
   useEffect(() => {
     return onDataInvalidated('tickets', () => {
       if (!userId) return;
       void loadTickets();
+      void loadPendingCommentCounts();
     });
-  }, [loadTickets, userId]);
+  }, [loadPendingCommentCounts, loadTickets, userId]);
+
+  useEffect(() => {
+    void loadPendingCommentCounts();
+  }, [loadPendingCommentCounts]);
+
+  useEffect(() => {
+    if (!userId) return;
+    return subscribeToMyNotificationDeliveries(userId, () => {
+      void loadPendingCommentCounts();
+    });
+  }, [loadPendingCommentCounts, userId]);
 
   // Rehidrata form de perfil cuando cambian los datos
   useEffect(() => {
@@ -285,6 +322,26 @@ export default function MyTicketsPage() {
     const fromRow = ticket.location_name?.trim();
     if (fromRow) return fromRow;
     return getLocationLabel(ticket.location_id, 'Sin ubicación');
+  };
+
+  const renderPendingCommentsBadge = (ticketId: number | string) => {
+    const normalizedTicketId =
+      typeof ticketId === 'number' ? ticketId : Number(ticketId);
+    if (!Number.isInteger(normalizedTicketId) || normalizedTicketId <= 0) {
+      return null;
+    }
+
+    const pendingCount = pendingCommentCounts[normalizedTicketId] ?? 0;
+    if (pendingCount <= 0) return null;
+
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800">
+        <MessageSquare className="h-3.5 w-3.5" />
+        {pendingCount === 1
+          ? '1 mensaje pendiente'
+          : `${pendingCount} mensajes pendientes`}
+      </span>
+    );
   };
 
   const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -452,6 +509,10 @@ export default function MyTicketsPage() {
                   Mis tickets - Página {safePage + 1} de {totalPages} -{' '}
                   {filteredTickets.length} total
                 </p>
+                <div className="hidden items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 md:inline-flex">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Clic en un ticket para abrir su chat
+                </div>
               </div>
 
               {ticketsLoading ? (
@@ -470,7 +531,7 @@ export default function MyTicketsPage() {
                       return (
                         <motion.article
                           key={ticket.id}
-                          className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
+                          className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-indigo-300 hover:shadow-md"
                           initial={
                             prefersReducedMotion
                               ? false
@@ -490,11 +551,32 @@ export default function MyTicketsPage() {
                                   delay: 0.08 + index * 0.03,
                                 }
                           }
+                          role="link"
+                          tabIndex={0}
+                          onClick={() =>
+                            navigate(`/tickets/${ticket.id}`, {
+                              state: { backTo: '/mi-perfil', backLabel: 'Mi perfil' },
+                            })
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              navigate(`/tickets/${ticket.id}`, {
+                                state: {
+                                  backTo: '/mi-perfil',
+                                  backLabel: 'Mi perfil',
+                                },
+                              });
+                            }
+                          }}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-                              {ticket.title}
-                            </h3>
+                            <div className="space-y-2">
+                              <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
+                                {ticket.title}
+                              </h3>
+                              {renderPendingCommentsBadge(ticket.id)}
+                            </div>
                             <div className="flex items-center gap-1">
                               <span
                                 className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${priorityChipClass(
@@ -570,7 +652,7 @@ export default function MyTicketsPage() {
                             return (
                               <motion.tr
                                 key={ticket.id}
-                                className="people-table-row hover:bg-indigo-50/40 transition"
+                                className="people-table-row cursor-pointer hover:bg-indigo-50/40 transition"
                                 initial={
                                   prefersReducedMotion
                                     ? false
@@ -588,16 +670,34 @@ export default function MyTicketsPage() {
                                         duration: 0.3,
                                         ease: [0.2, 0.8, 0.2, 1],
                                         delay: 0.07 + index * 0.024,
-                                      }
+                                    }
+                                }
+                                onClick={() =>
+                                  navigate(`/tickets/${ticket.id}`, {
+                                    state: {
+                                      backTo: '/mi-perfil',
+                                      backLabel: 'Mi perfil',
+                                    },
+                                  })
                                 }
                               >
                                 <td className="px-4 py-3 border-b border-gray-100 text-sm font-medium text-gray-900 whitespace-nowrap">
                                   #{ticket.id}
                                 </td>
                                 <td className="px-4 py-3 border-b border-gray-100 min-w-[260px]">
-                                  <div className="text-sm font-semibold text-gray-900 line-clamp-1">
-                                    {ticket.title}
-                                  </div>
+                                  <Link
+                                    to={`/tickets/${ticket.id}`}
+                                    state={{
+                                      backTo: '/mi-perfil',
+                                      backLabel: 'Mi perfil',
+                                    }}
+                                    className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 line-clamp-1 transition hover:text-indigo-700 focus:outline-none focus:text-indigo-700"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <span className="line-clamp-1">{ticket.title}</span>
+                                    <MessageSquare className="h-4 w-4 shrink-0 text-indigo-500" />
+                                  </Link>
+                                  <div className="mt-1">{renderPendingCommentsBadge(ticket.id)}</div>
                                   <div className="text-xs text-gray-500 line-clamp-1">
                                     {ticket.description || 'Sin descripción'}
                                   </div>

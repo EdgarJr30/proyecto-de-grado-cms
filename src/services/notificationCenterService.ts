@@ -425,6 +425,95 @@ export async function markNotificationsSeen(deliveryIds: string[]): Promise<void
   }
 }
 
+export async function getUnreadTicketCommentNotificationCounts(): Promise<
+  Record<number, number>
+> {
+  const userId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from('notification_deliveries')
+    .select(
+      `
+      id,
+      notification_events!inner(
+        event_type,
+        entity_type,
+        entity_id
+      )
+    `
+    )
+    .eq('recipient_user_id', userId)
+    .is('read_at', null)
+    .eq('notification_events.event_type', 'ticket.comment_added')
+    .eq('notification_events.entity_type', 'ticket');
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(error, 'No se pudieron cargar mensajes pendientes por ticket.')
+    );
+  }
+
+  const counts: Record<number, number> = {};
+  for (const row of (data ?? []) as DeliveryRow[]) {
+    const event = resolveEventRow(row);
+    const ticketId = Number(event?.entity_id ?? '');
+    if (!Number.isInteger(ticketId) || ticketId <= 0) continue;
+    counts[ticketId] = (counts[ticketId] ?? 0) + 1;
+  }
+
+  return counts;
+}
+
+export async function markTicketCommentNotificationsRead(
+  ticketId: number
+): Promise<void> {
+  const userId = await getCurrentUserId();
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('notification_deliveries')
+    .select(
+      `
+      id,
+      notification_events!inner(
+        event_type,
+        entity_type,
+        entity_id
+      )
+    `
+    )
+    .eq('recipient_user_id', userId)
+    .is('read_at', null)
+    .eq('notification_events.event_type', 'ticket.comment_added')
+    .eq('notification_events.entity_type', 'ticket')
+    .eq('notification_events.entity_id', String(ticketId));
+
+  if (error) {
+    throw new Error(
+      getErrorMessage(error, 'No se pudieron localizar notificaciones del ticket.')
+    );
+  }
+
+  const deliveryIds = ((data ?? []) as DeliveryRow[])
+    .map((row) => row.id)
+    .filter((id) => typeof id === 'string' && id.length > 0);
+
+  if (deliveryIds.length === 0) return;
+
+  const { error: updateError } = await supabase
+    .from('notification_deliveries')
+    .update({ read_at: now, seen_at: now })
+    .eq('recipient_user_id', userId)
+    .in('id', deliveryIds)
+    .is('read_at', null);
+
+  if (updateError) {
+    throw new Error(
+      getErrorMessage(updateError, 'No se pudieron marcar como leídos los mensajes del ticket.')
+    );
+  }
+}
+
 export async function getMyNotificationPreferences(): Promise<NotificationPreferences> {
   const userId = await getCurrentUserId();
 
