@@ -529,7 +529,8 @@ export default function AssetFormFields<T extends AssetFormShape>({
         </select>
 
         <div className="mt-1 text-xs text-gray-500">
-          Gestiona las categorías en Configuración → General.
+          Gestiona las categorías desde el botón Categorías de activos en
+          Inventario → Activos.
         </div>
       </div>
 

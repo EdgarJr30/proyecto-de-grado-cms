@@ -15,6 +15,7 @@ import {
 } from '../../../../services/assetsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetCreateForm from './AssetCreateForm';
+import AssetCategoriesManager from './AssetCategoriesManager';
 import AssetEditForm from './AssetEditForm';
 
 function cx(...classes: Array<string | false | null | undefined | 0>) {
@@ -479,6 +480,7 @@ export default function AssetsBoard() {
               >
                 Nuevo activo
               </button>
+              <AssetCategoriesManager />
               <button
                 type="button"
                 disabled={!selectedAsset}

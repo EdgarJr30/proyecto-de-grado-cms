@@ -1,5 +1,4 @@
 import LocationsSettings from './LocationsSettings';
-import AssetCategoriesSettings from './AssetCategoriesSettings';
 import { useCan } from '../../../../rbac/PermissionsContext';
 
 export default function GeneralSettings() {
@@ -8,18 +7,13 @@ export default function GeneralSettings() {
   const canLocationsDisable = useCan('locations:disable');
   const canLocationsDelete = useCan('locations:delete');
 
-  const canAssetsRead = useCan('assets:read');
-  const canAssetsFull = useCan('assets:full_access');
-
-  const canManageCategories = canAssetsRead || canAssetsFull;
-
   const canManageLocations =
     canLocationsFull ||
     canLocationsDisable ||
     canLocationsDelete ||
     canLocationsRead;
 
-  const canSeeAnything = canManageLocations || canManageCategories;
+  const canSeeAnything = canManageLocations;
 
   if (!canSeeAnything) {
     return (
@@ -32,7 +26,6 @@ export default function GeneralSettings() {
   return (
     <div className="space-y-6">
       {canManageLocations && <LocationsSettings />}
-      {canManageCategories && <AssetCategoriesSettings />}
     </div>
   );
 }

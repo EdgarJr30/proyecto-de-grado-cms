@@ -211,6 +211,7 @@ FOR SELECT
 TO authenticated
 USING (
   public.me_has_permission('assets:full_access')
+  OR public.me_has_permission('inventory:full_access')
 );
 
 -- Insert (solo admin/gestor)
@@ -219,7 +220,10 @@ ON public.asset_categories
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  public.me_has_permission('assets:full_access')
+  (
+    public.me_has_permission('assets:full_access')
+    OR public.me_has_permission('inventory:full_access')
+  )
   AND (created_by IS NULL OR created_by = auth.uid())
 );
 
@@ -230,9 +234,11 @@ FOR UPDATE
 TO authenticated
 USING (
   public.me_has_permission('assets:full_access')
+  OR public.me_has_permission('inventory:full_access')
 )
 WITH CHECK (
   public.me_has_permission('assets:full_access')
+  OR public.me_has_permission('inventory:full_access')
 );
 
 -- Delete (solo admin/gestor)
@@ -242,6 +248,7 @@ FOR DELETE
 TO authenticated
 USING (
   public.me_has_permission('assets:full_access')
+  OR public.me_has_permission('inventory:full_access')
 );
 
 -- ================================
