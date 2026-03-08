@@ -5,6 +5,7 @@ import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
 import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFiltersBar';
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/workOrder/EditWorkOrdersModal';
+import WorkOrdersSettingsModal from '../components/dashboard/workOrder/WorkOrdersSettingsModal';
 import { updateTicket } from '../services/ticketService';
 import { showToastError } from '../notifications/toast';
 import type { FilterState } from '../types/filters';
@@ -12,6 +13,7 @@ import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters'
 import type { WorkOrder } from '../types/Ticket';
 import { toTicketUpdate } from '../utils/toTicketUpdate';
 import { motion, useReducedMotion } from 'framer-motion';
+import { useCan } from '../rbac/PermissionsContext';
 import '../styles/workOrdersAsana.css';
 
 type ViewMode = 'board' | 'list';
@@ -19,6 +21,7 @@ type GroupMode = 'manual' | 'dateAsc' | 'dateDesc';
 
 export default function WorkOrdersPage() {
   const prefersReducedMotion = useReducedMotion();
+  const canManageWorkOrderSettings = useCan('work_orders:full_access');
   // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
   const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
     {} as Record<WorkOrdersFilterKey, unknown>
@@ -32,6 +35,7 @@ export default function WorkOrdersPage() {
   // Modal para LISTA (WorkOrders ya maneja su propio modal interno)
   const [selectedTicket, setSelectedTicket] = useState<WorkOrder | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [showFullImage, setShowFullImage] = useState(false);
   const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
     null
@@ -130,6 +134,31 @@ export default function WorkOrdersPage() {
         </button>
       </div>
 
+      {canManageWorkOrderSettings && (
+        <button
+          type="button"
+          onClick={() => setSettingsModalOpen(true)}
+          className="wo-view-btn inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 cursor-pointer"
+          title="Configurar limite de tecnicos por orden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Zm7.4-3.5a7.4 7.4 0 0 0-.08-1l2.02-1.58-2-3.46-2.45.72a7.87 7.87 0 0 0-1.73-1L14.8 2h-4l-.36 2.68c-.62.24-1.2.58-1.73 1l-2.45-.72-2 3.46L6.28 11c-.05.33-.08.66-.08 1s.03.67.08 1l-2.02 1.58 2 3.46 2.45-.72c.53.42 1.11.76 1.73 1L10.8 22h4l.36-2.68c.62-.24 1.2-.58 1.73-1l2.45.72 2-3.46L19.32 13c.05-.33.08-.66.08-1Z"
+            />
+          </svg>
+          Configurar tecnicos
+        </button>
+      )}
+
       {view === 'board' && (
         <button
           type="button"
@@ -208,6 +237,11 @@ export default function WorkOrdersPage() {
             moduleActions={viewSwitcher}
           />
         </motion.div>
+
+        <WorkOrdersSettingsModal
+          open={settingsModalOpen}
+          onClose={() => setSettingsModalOpen(false)}
+        />
 
         <motion.section
           className="wo-content flex-1 overflow-x-auto px-4 md:px-6 lg:px-8 pt-3 pb-6"

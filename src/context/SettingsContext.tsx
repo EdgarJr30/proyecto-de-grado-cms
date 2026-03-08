@@ -3,13 +3,11 @@ import {
   getMaxSecondaryAssignees,
   setMaxSecondaryAssignees,
 } from '../services/settingsService';
-import { useCan } from '../rbac/PermissionsContext';
 
 type SettingsCtx = {
   maxSecondary: number;
   refresh: () => Promise<void>;
   update: (n: number) => Promise<void>;
-  canManage: boolean;
 };
 
 const Ctx = createContext<SettingsCtx | null>(null);
@@ -19,7 +17,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const raw = localStorage.getItem('mlm:maxSecondary');
     return raw ? Number(raw) : 2;
   });
-  const canManage = useCan('rbac:manage_permissions'); // o 'settings:manage'
 
   const refresh = async () => {
     const n = await getMaxSecondaryAssignees();
@@ -37,7 +34,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <Ctx.Provider value={{ maxSecondary, refresh, update, canManage }}>
+    <Ctx.Provider value={{ maxSecondary, refresh, update }}>
       {children}
     </Ctx.Provider>
   );

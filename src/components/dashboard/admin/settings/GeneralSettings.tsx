@@ -1,17 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSettings } from '../../../../context/SettingsContext';
-import {
-  showToastSuccess,
-  showToastError,
-} from '../../../../notifications/toast';
 import LocationsSettings from './LocationsSettings';
 import AssetCategoriesSettings from './AssetCategoriesSettings';
 import { useCan } from '../../../../rbac/PermissionsContext';
 
 export default function GeneralSettings() {
-  const { maxSecondary, update, canManage } = useSettings();
-
-  // Locations perms
   const canLocationsRead = useCan('locations:read');
   const canLocationsFull = useCan('locations:full_access');
   const canLocationsDisable = useCan('locations:disable');
@@ -28,30 +19,8 @@ export default function GeneralSettings() {
     canLocationsDelete ||
     canLocationsRead;
 
-  // ✅ “tengo al menos un módulo disponible en General”
-  const canSeeAnything = canManage || canManageLocations;
+  const canSeeAnything = canManageLocations || canManageCategories;
 
-  const [value, setValue] = useState<number>(maxSecondary);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => setValue(maxSecondary), [maxSecondary]);
-
-  const disabledOT = useMemo(() => saving || !canManage, [saving, canManage]);
-
-  const onSave = async () => {
-    try {
-      setSaving(true);
-      await update(value);
-      showToastSuccess('Parámetro actualizado.');
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      showToastError(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // ✅ Si no tiene acceso a ningún módulo dentro de General
   if (!canSeeAnything) {
     return (
       <div className="p-4 md:p-6 rounded-lg border bg-white shadow-sm">
@@ -62,60 +31,6 @@ export default function GeneralSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Órdenes de Trabajo */}
-      {canManage && (
-        <div className="p-4 md:p-6 rounded-2xl border bg-white shadow-sm space-y-5">
-          <div>
-            <h2 className="text-xl font-semibold">Órdenes de Trabajo</h2>
-            <p className="text-sm text-gray-500">
-              Ajusta reglas operativas de asignación y límites.
-            </p>
-          </div>
-
-          <div className="grid gap-2">
-            <label className="block text-sm font-medium">
-              Máximo de técnicos secundarios por OT
-            </label>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <input
-                type="number"
-                min={0}
-                value={value}
-                onChange={(e) => setValue(Number(e.target.value))}
-                disabled={disabledOT}
-                className="border rounded-lg px-3 py-2 w-40 disabled:bg-gray-100"
-              />
-              <span className="text-sm text-gray-500">
-                Total permitido por OT = 1 principal + este valor.
-              </span>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <button
-              onClick={() => setValue(maxSecondary)}
-              disabled={disabledOT}
-              className={
-                'px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 cursor-pointer ' +
-                (disabledOT ? 'opacity-60 cursor-not-allowed' : '')
-              }
-            >
-              Restablecer
-            </button>
-            <button
-              onClick={onSave}
-              disabled={disabledOT}
-              className={
-                'bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 cursor-pointer ' +
-                (disabledOT ? 'opacity-60 cursor-not-allowed' : '')
-              }
-            >
-              {saving ? 'Guardando…' : 'Guardar'}
-            </button>
-          </div>
-        </div>
-      )}
-
       {canManageLocations && <LocationsSettings />}
       {canManageCategories && <AssetCategoriesSettings />}
     </div>
