@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Clock3, MessageSquare } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Ticket } from '../../../types/Ticket';
 import type { SpecialIncident } from '../../../types/SpecialIncident';
 import { formatDateInTimezone } from '../../../utils/formatDate';
@@ -23,11 +22,7 @@ import {
   markTicketCommentNotificationsRead,
   subscribeToMyNotificationDeliveries,
 } from '../../../services/notificationCenterService';
-import {
-  addTicketComment,
-  listTicketComments,
-  type TicketComment,
-} from '../../../services/ticketCommentsService';
+import TicketChatPanel from '../../tickets/TicketChatPanel';
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -99,10 +94,6 @@ export default function WorkRequestsDetailModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<DetailTab>('details');
-  const [comments, setComments] = useState<TicketComment[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [postingComment, setPostingComment] = useState(false);
-  const [commentDraft, setCommentDraft] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [pendingCommentCount, setPendingCommentCount] = useState(0);
   const [specialIncidentsById, setSpecialIncidentsById] = useState<
@@ -158,16 +149,6 @@ export default function WorkRequestsDetailModal({
 
   const acceptDisabled = !canFullWR || !assigneeValue || submitting;
 
-  const loadComments = useCallback(async () => {
-    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
-      setComments([]);
-      return;
-    }
-
-    const rows = await listTicketComments(numericTicketId);
-    setComments(rows);
-  }, [numericTicketId]);
-
   const loadPendingCommentCount = useCallback(async () => {
     if (!currentUserId || !Number.isInteger(numericTicketId) || numericTicketId <= 0) {
       setPendingCommentCount(0);
@@ -214,8 +195,6 @@ export default function WorkRequestsDetailModal({
 
   useEffect(() => {
     setActiveTab('details');
-    setCommentDraft('');
-    setComments([]);
     setPendingCommentCount(0);
   }, [ticket.id]);
 
@@ -237,53 +216,6 @@ export default function WorkRequestsDetailModal({
 
   useEffect(() => {
     if (activeTab !== 'comments') return;
-
-    let alive = true;
-    setCommentsLoading(true);
-    void loadComments()
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'No se pudieron cargar comentarios.';
-        showToastError(message);
-      })
-      .finally(() => {
-        if (alive) setCommentsLoading(false);
-      });
-
-    return () => {
-      alive = false;
-    };
-  }, [activeTab, loadComments]);
-
-  useEffect(() => {
-    if (activeTab !== 'comments') return;
-    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
-
-    const channel = supabase
-      .channel(`work-request-comments:${numericTicketId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'ticket_comments',
-          filter: `ticket_id=eq.${numericTicketId}`,
-        },
-        () => {
-          void loadComments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [activeTab, loadComments, numericTicketId]);
-
-  useEffect(() => {
-    if (activeTab !== 'comments') return;
     if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
     if (pendingCommentCount <= 0) return;
 
@@ -294,27 +226,6 @@ export default function WorkRequestsDetailModal({
         void loadPendingCommentCount();
       });
   }, [activeTab, loadPendingCommentCount, numericTicketId, pendingCommentCount]);
-
-  async function handleCommentSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
-
-    setPostingComment(true);
-    try {
-      await addTicketComment(numericTicketId, commentDraft);
-      setCommentDraft('');
-      await loadComments();
-      showToastSuccess('Comentario agregado.');
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'No se pudo registrar el comentario.';
-      showToastError(message);
-    } finally {
-      setPostingComment(false);
-    }
-  }
 
   return (
     <AnimatedDialog
@@ -399,7 +310,7 @@ export default function WorkRequestsDetailModal({
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             )}
           >
-            <span>Comentarios ({comments.length})</span>
+            <span>Comentarios</span>
             {pendingCommentCount > 0 ? (
               <span
                 className="inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-white"
@@ -544,78 +455,11 @@ export default function WorkRequestsDetailModal({
 
       {activeTab === 'comments' ? (
         <section className="space-y-4 px-6 py-6">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-indigo-600" />
-            <h4 className="text-lg font-semibold">
-              Chat interno ({comments.length})
-            </h4>
-          </div>
-
-          <form onSubmit={handleCommentSubmit} className="space-y-2">
-            <textarea
-              value={commentDraft}
-              onChange={(event) => setCommentDraft(event.target.value)}
-              rows={3}
-              placeholder="Escribe una respuesta para este ticket..."
-              disabled={postingComment}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            />
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                disabled={postingComment || commentDraft.trim().length === 0}
-                className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {postingComment ? 'Guardando...' : 'Enviar comentario'}
-              </button>
-            </div>
-          </form>
-
-          <div className="max-h-[380px] space-y-3 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3">
-            {commentsLoading ? (
-              <p className="text-sm text-gray-500">Cargando comentarios...</p>
-            ) : comments.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                No hay comentarios registrados todavía.
-              </p>
-            ) : (
-              comments.map((comment) => {
-                const isCurrentUser = currentUserId === comment.author_user_id;
-                return (
-                  <article
-                    key={comment.id}
-                    className={cx(
-                      'max-w-[88%] rounded-xl border px-3 py-2',
-                      isCurrentUser
-                        ? 'ml-auto border-indigo-600 bg-indigo-600 text-white'
-                        : 'border-gray-200 bg-white text-gray-900'
-                    )}
-                  >
-                    <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <p
-                        className={cx(
-                          'font-semibold uppercase',
-                          isCurrentUser ? 'text-indigo-100' : 'text-gray-600'
-                        )}
-                      >
-                        {comment.author_name || 'Usuario'}
-                      </p>
-                      <p
-                        className={cx(
-                          'inline-flex items-center gap-1',
-                          isCurrentUser ? 'text-indigo-100' : 'text-gray-500'
-                        )}
-                      >
-                        <Clock3 className="h-3 w-3" />
-                        {formatDateInTimezone(comment.created_at)}
-                      </p>
-                    </div>
-                    <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
-                  </article>
-                );
-              })
-            )}
-          </div>
+          <TicketChatPanel
+            ticketId={numericTicketId}
+            title="Chat interno"
+            composerPlaceholder="Escribe una respuesta para este ticket..."
+          />
         </section>
       ) : null}
 

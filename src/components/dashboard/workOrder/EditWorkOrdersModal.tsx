@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, type JSX } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { MessageSquare } from 'lucide-react';
 import type { WorkOrder } from '../../../types/Ticket';
 import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
@@ -27,6 +28,8 @@ import TicketPartsPanel from '../../../pages/inventory/parts/TicketPartsPanel';
 import TicketAssetsPanel from '../../../pages/inventory/assets/TicketAssetsPanel';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { normalizeLocationId } from '../../../utils/locationId';
+import AnimatedDialog from '../../ui/AnimatedDialog';
+import TicketChatPanel from '../../tickets/TicketChatPanel';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -37,6 +40,7 @@ interface EditWorkOrdersModalProps {
   setShowFullImage: React.Dispatch<React.SetStateAction<boolean>>;
   getSpecialIncidentAdornment?: (t: WorkOrder) => JSX.Element | null;
   forceReadOnly?: boolean;
+  onModalLockChange?: (locked: boolean) => void;
 }
 
 export default function EditWorkOrdersModal({
@@ -46,9 +50,11 @@ export default function EditWorkOrdersModal({
   setShowFullImage,
   getSpecialIncidentAdornment,
   forceReadOnly = false,
+  onModalLockChange,
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
+  const [chatModalOpen, setChatModalOpen] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -128,11 +134,17 @@ export default function EditWorkOrdersModal({
   // Sincroniza refs cuando cambie el ticket
   useEffect(() => {
     setEdited(ticket);
+    setChatModalOpen(false);
     setPrimaryId(ticket.primary_assignee_id ?? ticket.assignee_id ?? '');
     const initial = uniqSorted(ticket.secondary_assignee_ids ?? []);
     setSecondaryIds(initial);
     initialSecondaryRef.current = initial; // 👈 importante
   }, [ticket]);
+
+  useEffect(() => {
+    onModalLockChange?.(chatModalOpen);
+    return () => onModalLockChange?.(false);
+  }, [chatModalOpen, onModalLockChange]);
 
   // Si el principal es uno de los secundarios, lo quitamos de secundarios
   useEffect(() => {
@@ -699,6 +711,29 @@ export default function EditWorkOrdersModal({
         />
       </div>
 
+      {edited.is_accepted && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Continuidad del chat
+              </h3>
+              <p className="text-sm text-slate-600">
+                Esta orden usa el mismo chat interno del ticket para mantener la conversación entre solicitud, perfil y OT.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChatModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 cursor-pointer"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Abrir chat interno
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Lightbox imágenes */}
       <AnimatePresence>
         {fullImageIdx !== null &&
@@ -782,6 +817,46 @@ export default function EditWorkOrdersModal({
           })()}
       </AnimatePresence>
 
+      <AnimatedDialog
+        open={chatModalOpen}
+        onClose={() => setChatModalOpen(false)}
+        zIndexClassName="z-[160]"
+        overlayClassName="bg-slate-950/45 backdrop-blur-sm"
+        panelClassName="w-full max-w-3xl rounded-2xl bg-white shadow-2xl"
+        containerClassName="fixed inset-0 flex items-center justify-center p-4"
+        lockScroll
+      >
+        <div className="border-b border-slate-200 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Chat interno de la OT #{edited.id}
+              </h3>
+              <p className="text-sm text-slate-600">
+                Conversación compartida con la solicitud original y el perfil del usuario.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChatModalOpen(false)}
+              className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 cursor-pointer"
+              aria-label="Cerrar chat"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-5">
+          <TicketChatPanel
+            ticketId={Number(edited.id)}
+            title="Chat interno"
+            composerPlaceholder="Escribe un mensaje para continuar la conversación de esta orden..."
+            maxHeightClassName="max-h-[50vh]"
+          />
+        </div>
+      </AnimatedDialog>
+
       {/* Footer acciones */}
       <div className="flex justify-end gap-2 mt-6">
         <button
@@ -801,6 +876,17 @@ export default function EditWorkOrdersModal({
             title="Aceptar y asignar responsable principal"
           >
             Aceptar y asignar
+          </button>
+        )}
+
+        {edited.is_accepted && (
+          <button
+            type="button"
+            onClick={() => setChatModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 cursor-pointer"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat interno
           </button>
         )}
 
