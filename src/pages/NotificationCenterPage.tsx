@@ -464,6 +464,14 @@ export default function NotificationCenterPage() {
     setShowPushOnboarding(true);
   }, []);
 
+  const handleTogglePushOnboarding = useCallback(() => {
+    if (showPushOnboarding) {
+      handleDismissPushOnboarding();
+      return;
+    }
+    handleOpenPushOnboarding();
+  }, [handleDismissPushOnboarding, handleOpenPushOnboarding, showPushOnboarding]);
+
   const handleSendSelfTest = useCallback(async () => {
     setSelfTestBusy(true);
     try {
@@ -807,10 +815,11 @@ export default function NotificationCenterPage() {
                           </p>
                           <button
                             type="button"
-                            onClick={handleOpenPushOnboarding}
+                            onClick={handleTogglePushOnboarding}
+                            aria-expanded={showPushOnboarding}
                             className="text-xs font-semibold text-indigo-700 transition hover:text-indigo-600 dark:text-indigo-300 dark:hover:text-indigo-200"
                           >
-                            {showPushOnboarding ? 'Visible' : 'Abrir'}
+                            {showPushOnboarding ? 'Cerrar' : 'Abrir'}
                           </button>
                         </div>
 
