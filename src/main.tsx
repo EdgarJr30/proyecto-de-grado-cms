@@ -94,7 +94,7 @@ function setupGlobalInstallPromptCapture() {
 }
 
 function stringifyErrorReason(reason: unknown): string {
-  if (reason instanceof Error) return reason.message;
+  if (reason instanceof Error) return reason.message || reason.name || 'Error';
   if (typeof reason === 'string') return reason;
   if (reason && typeof reason === 'object' && 'message' in reason) {
     const message = (reason as { message?: unknown }).message;
@@ -105,6 +105,39 @@ function stringifyErrorReason(reason: unknown): string {
   } catch {
     return String(reason);
   }
+}
+
+function getUnhandledReasonMetadata(reason: unknown): Record<string, unknown> {
+  if (reason instanceof Error) {
+    return {
+      reason_type: reason.name || 'Error',
+      reason_message: reason.message || null,
+      reason_stack: reason.stack || null,
+    };
+  }
+
+  if (!reason || typeof reason !== 'object') {
+    return {
+      reason_type: typeof reason,
+      reason_value: reason == null ? null : String(reason),
+    };
+  }
+
+  const entries = Object.getOwnPropertyNames(reason)
+    .slice(0, 20)
+    .map((key) => {
+      const value = (reason as Record<string, unknown>)[key];
+      if (typeof value === 'function') return [key, '[function]'] as const;
+      if (value instanceof Error) {
+        return [key, { name: value.name, message: value.message }] as const;
+      }
+      return [key, value] as const;
+    });
+
+  return {
+    reason_type: (reason as { constructor?: { name?: string } }).constructor?.name ?? 'object',
+    reason_props: Object.fromEntries(entries),
+  };
 }
 
 function setupGlobalClientErrorCapture() {
@@ -126,10 +159,12 @@ function setupGlobalClientErrorCapture() {
 
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
+    const message = stringifyErrorReason(reason);
     recordClientError({
       source: 'unhandledrejection',
-      message: stringifyErrorReason(reason) || 'Promesa rechazada sin manejar.',
+      message: message || 'Promesa rechazada sin manejar sin motivo serializable.',
       stack: reason instanceof Error ? reason.stack : undefined,
+      metadata: getUnhandledReasonMetadata(reason),
     });
   });
 }
