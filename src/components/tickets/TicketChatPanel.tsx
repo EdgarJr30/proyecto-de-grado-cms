@@ -136,15 +136,15 @@ export default function TicketChatPanel({
   }
 
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2">
-        <MessageSquare className="h-4 w-4 text-indigo-600" />
-        <h4 className="text-lg font-semibold">
+    <section className="min-w-0 space-y-4 overflow-x-hidden">
+      <div className="flex min-w-0 items-center gap-2">
+        <MessageSquare className="h-4 w-4 shrink-0 text-indigo-600" />
+        <h4 className="min-w-0 truncate text-lg font-semibold">
           {title} ({comments.length})
         </h4>
       </div>
 
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <textarea
           value={commentDraft}
           onChange={(event) => setCommentDraft(event.target.value)}
@@ -157,7 +157,7 @@ export default function TicketChatPanel({
           rows={3}
           placeholder={composerPlaceholder}
           disabled={postingComment}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          className="block w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
         />
         <div className="flex justify-end">
           <button
@@ -176,13 +176,17 @@ export default function TicketChatPanel({
       <div
         className={cx(
           maxHeightClassName,
-          'space-y-3 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-3'
+          'min-w-0 space-y-3 overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200 bg-gray-50 p-3 dark:border-slate-700 dark:bg-slate-950/60'
         )}
       >
         {commentsLoading ? (
-          <p className="text-sm text-gray-500">Cargando comentarios...</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            Cargando comentarios...
+          </p>
         ) : comments.length === 0 ? (
-          <p className="text-sm text-gray-500">{emptyMessage}</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400">
+            {emptyMessage}
+          </p>
         ) : (
           comments.map((comment) => {
             const isCurrentUser = currentUserId === comment.author_user_id;
@@ -190,32 +194,36 @@ export default function TicketChatPanel({
               <article
                 key={comment.id}
                 className={cx(
-                  'max-w-[88%] rounded-xl border px-3 py-2',
+                  'min-w-0 max-w-full rounded-xl border px-3 py-2 sm:max-w-[88%]',
                   isCurrentUser
                     ? 'ml-auto border-indigo-600 bg-indigo-600 text-white'
-                    : 'border-gray-200 bg-white text-gray-900'
+                    : 'border-gray-200 bg-white text-gray-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
                 )}
               >
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2 text-xs">
                   <p
                     className={cx(
-                      'font-semibold uppercase',
-                      isCurrentUser ? 'text-indigo-100' : 'text-gray-600'
+                      'min-w-0 break-words font-semibold uppercase',
+                      isCurrentUser
+                        ? 'text-indigo-100'
+                        : 'text-gray-600 dark:text-slate-300'
                     )}
                   >
                     {comment.author_name || 'Usuario'}
                   </p>
                   <p
                     className={cx(
-                      'inline-flex items-center gap-1',
-                      isCurrentUser ? 'text-indigo-100' : 'text-gray-500'
+                      'inline-flex shrink-0 items-center gap-1 whitespace-nowrap',
+                      isCurrentUser
+                        ? 'text-indigo-100'
+                        : 'text-gray-500 dark:text-slate-400'
                     )}
                   >
                     <Clock3 className="h-3 w-3" />
                     {formatDateInTimezone(comment.created_at)}
                   </p>
                 </div>
-                <p className="whitespace-pre-wrap text-sm">{comment.body}</p>
+                <p className="wrap-anywhere text-sm">{comment.body}</p>
               </article>
             );
           })

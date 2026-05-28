@@ -134,10 +134,11 @@ export default function TicketDetailsPage() {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-4rem)] bg-slate-50 px-4 py-6 md:px-6 lg:px-8 dark:bg-slate-950">
-      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-5xl flex-col justify-center gap-4">
+    <main className="flex h-[100dvh] min-w-0 flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <section className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-12 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+          <div className="flex min-w-0 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-12 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
             Cargando ticket...
           </div>
@@ -147,9 +148,9 @@ export default function TicketDetailsPage() {
           </div>
         ) : (
           <>
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex flex-wrap items-center gap-2">
+            <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                     Ticket #{ticket.id}
                   </span>
@@ -164,17 +165,17 @@ export default function TicketDetailsPage() {
                       state: { openTicketId: ticket.id },
                     })
                   }
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                  className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 sm:w-auto dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4 shrink-0" />
                   Ir al ticket
                 </button>
               </div>
 
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h2 className="wrap-anywhere text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {ticket.title}
               </h2>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">
+              <p className="wrap-anywhere mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {ticket.description}
               </p>
 
@@ -183,7 +184,7 @@ export default function TicketDetailsPage() {
                   <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
                     Solicitante
                   </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="wrap-anywhere font-medium text-slate-900 dark:text-slate-100">
                     {ticket.requester || 'N/A'}
                   </p>
                 </div>
@@ -215,7 +216,7 @@ export default function TicketDetailsPage() {
                   <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
                     Ubicación
                   </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="wrap-anywhere font-medium text-slate-900 dark:text-slate-100">
                     {ticket.location_name || 'N/A'}
                   </p>
                 </div>
@@ -223,7 +224,7 @@ export default function TicketDetailsPage() {
                   <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
                     Última actualización
                   </p>
-                  <p className="font-medium text-slate-900 dark:text-slate-100">
+                  <p className="wrap-anywhere font-medium text-slate-900 dark:text-slate-100">
                     {formatDateTime(
                       (
                         ticket as WorkOrder & {
@@ -242,10 +243,10 @@ export default function TicketDetailsPage() {
               onChanged={loadTicket}
             />
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <div className="mb-3 flex items-center gap-2">
-                <MessageSquare className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="mb-3 flex min-w-0 items-center gap-2">
+                <MessageSquare className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-300" />
+                <h3 className="min-w-0 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                   Comentarios ({comments.length})
                 </h3>
               </div>
@@ -257,7 +258,7 @@ export default function TicketDetailsPage() {
                   placeholder="Escribe un comentario para este ticket..."
                   rows={3}
                   disabled={posting}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+                  className="block w-full min-w-0 resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
                 />
                 <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <button
@@ -283,21 +284,21 @@ export default function TicketDetailsPage() {
                   No hay comentarios registrados todavía.
                 </p>
               ) : (
-                <ul className="space-y-2">
+                <ul className="min-w-0 space-y-2 overflow-x-hidden">
                   {comments.map((comment) => (
                     <li
                       key={comment.id}
-                      className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60"
+                      className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/60"
                     >
-                      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
+                      <div className="mb-1 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                        <p className="min-w-0 break-words text-xs font-semibold uppercase text-slate-600 dark:text-slate-300">
                           {comment.author_name || 'Usuario'}
                         </p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                        <p className="shrink-0 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
                           {formatDateTime(comment.created_at)}
                         </p>
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
+                      <p className="wrap-anywhere text-sm text-slate-700 dark:text-slate-200">
                         {comment.body}
                       </p>
                     </li>
@@ -307,7 +308,8 @@ export default function TicketDetailsPage() {
             </section>
           </>
         )}
-      </div>
-    </div>
+        </div>
+      </section>
+    </main>
   );
 }
