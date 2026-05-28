@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef, type JSX } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { MessageSquare } from 'lucide-react';
+import {
+  AlertTriangle,
+  Archive,
+  Boxes,
+  CalendarDays,
+  CheckCircle2,
+  ClipboardList,
+  ImageIcon,
+  Info,
+  MapPin,
+  MessageSquare,
+  Package,
+  Save,
+  ShieldCheck,
+  UserRound,
+  Wrench,
+} from 'lucide-react';
 import type { WorkOrder } from '../../../types/Ticket';
 import { toTicketUpdate } from '../../../utils/toTicketUpdate';
 import { useAssignees } from '../../../context/AssigneeContext';
@@ -135,8 +151,6 @@ export default function EditWorkOrdersModal({
   ]);
   const canUseTicketPartsPanel = canInventoryRead && canInventoryOperate;
   const canAssetsUpdate = useCan(['assets:update', 'assets:full_access']);
-  const addDisabledCls = (base = '') =>
-    base + (isReadOnly ? ' opacity-50 cursor-not-allowed bg-gray-100' : '');
   const selectedLocationId = normalizeLocationId(edited.location_id);
   const selectedLocationName = (() => {
     const fromTicket = (edited as WorkOrder & { location_name?: string | null })
@@ -476,37 +490,137 @@ export default function EditWorkOrdersModal({
   // Si ya existe fecha, NO aplicamos min para evitar el tooltip del navegador.
   // Si NO existe, obligamos a que sea >= hoy.
   const minForDeadline = hasExistingDeadline ? undefined : todayISO;
+  const statusTone =
+    edited.status === 'Finalizadas'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+      : edited.status === 'En Validación'
+        ? 'border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-500/30 dark:bg-teal-500/10 dark:text-teal-200'
+        : edited.status === 'En Ejecución'
+          ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-200'
+          : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200';
+  const sectionCard =
+    'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 sm:p-5';
+  const sectionHeader =
+    'mb-4 flex items-start gap-3 border-b border-slate-100 pb-3 dark:border-slate-800';
+  const sectionIcon =
+    'mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
+  const labelClass =
+    'block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
+  const readOnlyControlClass =
+    'mt-1 block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-800 shadow-inner outline-none dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100';
+  const editableControlClass =
+    'mt-1 block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 dark:border-slate-600 dark:bg-slate-950/50 dark:text-slate-100 dark:focus:ring-indigo-500/25 dark:disabled:bg-slate-800/70';
+  const disabledSoftClass = isReadOnly ? ' opacity-60 cursor-not-allowed' : '';
 
   return (
-    <form onSubmit={handleSave} className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna 1 */}
-        <div className="flex flex-col gap-4">
+    <form onSubmit={handleSave} className="space-y-5 text-slate-900 dark:text-slate-100">
+      <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-5 pr-16 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 sm:pr-20">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                <ClipboardList className="h-3.5 w-3.5" />
+                OT #{edited.id}
+              </span>
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone}`}>
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {edited.status}
+              </span>
+              {edited.is_urgent && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Urgente
+                </span>
+              )}
+              {isReadOnly && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Solo lectura
+                </span>
+              )}
+            </div>
+            <h2 className="wrap-anywhere text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
+              {edited.title || 'Orden de trabajo'}
+            </h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+              Revisa la solicitud, asigna responsables, planifica la atención y conserva la trazabilidad operativa de esta orden.
+            </p>
+          </div>
+
+          <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3 text-sm shadow-sm dark:border-slate-700 dark:bg-slate-950/50 sm:min-w-[17rem]">
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <UserRound className="h-4 w-4 text-indigo-500 dark:text-indigo-300" />
+                Responsable
+              </span>
+              <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-slate-100">
+                {typeof primaryId === 'number'
+                  ? (() => {
+                      for (const g of SECTIONS_ORDER) {
+                        const hit = (bySectionActive[g] ?? []).find((a) => a?.id === primaryId);
+                        if (hit) return formatAssigneeFullName(hit);
+                      }
+                      return `#${primaryId}`;
+                    })()
+                  : 'Sin asignar'}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-slate-500 dark:text-slate-400">
+                <MapPin className="h-4 w-4 text-emerald-500 dark:text-emerald-300" />
+                Ubicación
+              </span>
+              <span className="min-w-0 truncate font-semibold text-slate-900 dark:text-slate-100">
+                {selectedLocationName}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
+        <div className="space-y-5">
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <span className={sectionIcon}>
+                <ClipboardList className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                  Datos de la solicitud
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Información original registrada por el solicitante.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium">ID</label>
+            <label className={labelClass}>ID</label>
             <input
               name="id"
               value={edited.id}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className={readOnlyControlClass}
             />
             <div className="mt-1">{getSpecialIncidentAdornment?.(edited)}</div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Título</label>
+            <label className={labelClass}>Título</label>
             <textarea
               name="title"
               ref={titleRef}
               value={edited.title}
               readOnly
               rows={1}
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800 wrap-anywhere resize-y min-h-[44px] max-h-[200px]"
+              className={`${readOnlyControlClass} wrap-anywhere min-h-[46px] max-h-[200px] resize-y`}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium">
+            <label className={labelClass}>
               Fecha del Incidente
             </label>
             <input
@@ -514,22 +628,32 @@ export default function EditWorkOrdersModal({
               name="incident_date"
               value={edited.incident_date}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className={readOnlyControlClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Descripción</label>
+            <label className={labelClass}>Solicitante</label>
+            <input
+              name="requester"
+              value={edited.requester || ''}
+              readOnly
+              className={readOnlyControlClass}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Descripción</label>
             <textarea
               name="description"
               value={edited.description}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800 min-h-[100px] max-h-[150px] resize-y"
+              className={`${readOnlyControlClass} wrap-anywhere min-h-[112px] max-h-[180px] resize-y`}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">Comentarios</label>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Comentarios</label>
             <textarea
               name="comments"
               maxLength={MAX_COMMENTS_LENGTH}
@@ -538,52 +662,58 @@ export default function EditWorkOrdersModal({
               placeholder="Agrega un comentario..."
               rows={3}
               disabled={isReadOnly}
-              className={addDisabledCls(
-                'mt-1 p-2 w-full border rounded min-h-[100px] max-h-[150px] resize-y'
-              )}
+              className={`${editableControlClass} min-h-[104px] max-h-[180px] resize-y${disabledSoftClass}`}
             />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Nota interna para seguimiento de la orden.
+            </p>
           </div>
-        </div>
+            </div>
+          </section>
 
-        {/* Columna 2 */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-medium">Solicitante</label>
-            <input
-              name="requester"
-              value={edited.requester || ''}
-              readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
-            />
-          </div>
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <span className={sectionIcon}>
+                <UserRound className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                  Contacto y ubicación
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Datos para contactar al solicitante y localizar el trabajo.
+                </p>
+              </div>
+            </div>
 
+            <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium">Email</label>
+            <label className={labelClass}>Email</label>
             <input
               name="email"
               value={edited.email || ''}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className={readOnlyControlClass}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Teléfono</label>
+            <label className={labelClass}>Teléfono</label>
             <input
               name="telephone"
               value={edited.phone || ''}
               readOnly
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className={readOnlyControlClass}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium">Ubicación</label>
+          <div className="sm:col-span-2">
+            <label className={labelClass}>Ubicación</label>
             <select
               name="location_id"
               value={selectedLocationId != null ? String(selectedLocationId) : ''}
               disabled
-              className="mt-1 p-2 w-full border rounded bg-gray-100 text-gray-800"
+              className={readOnlyControlClass}
             >
               <option value="" disabled>
                 Selecciona una ubicación
@@ -598,28 +728,43 @@ export default function EditWorkOrdersModal({
               ))}
             </select>
           </div>
+            </div>
+          </section>
         </div>
 
-        {/* Columna 3 */}
-        <div className="flex flex-col gap-4">
+        <div className="space-y-5">
+          <section className={sectionCard}>
+            <div className={sectionHeader}>
+              <span className={sectionIcon}>
+                <Wrench className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                  Asignación y planificación
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Define quién ejecuta, prioridad y fechas de entrega.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
           {/* === NUEVO: Responsable principal === */}
           <div>
-            <label className="block text-sm font-medium">
+            <label className={labelClass}>
               Responsable principal
             </label>
             <select
               name="primary_assignee_id"
               value={primaryId === '' ? '' : Number(primaryId)}
               onChange={(e) => setPrimaryId(Number(e.target.value) || '')}
-              className={addDisabledCls(
-                'mt-1 p-2 w-full border rounded cursor-pointer'
-              )}
+              className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
               disabled={loadingAssignees || isReadOnly}
             >
               <option value="">Selecciona responsable…</option>
               {renderAssigneeOptions()}
             </select>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Solo técnicos con usuario en la plataforma
               {!edited.is_accepted ? ' · obligatorio para aceptar la orden.' : '.'}
             </p>
@@ -627,13 +772,13 @@ export default function EditWorkOrdersModal({
 
           {/* === NUEVO: Técnicos secundarios (chips) === */}
           <div>
-            <label className="block text-sm font-medium">
+            <label className={labelClass}>
               Técnicos secundarios{' '}
-              <span className="text-gray-500 text-xs">
+              <span className="text-slate-400">
                 (máx. {maxSecondary})
               </span>
             </label>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="mt-1 flex items-center gap-3">
               <select
                 onChange={(e) => {
                   const val = Number(e.target.value);
@@ -645,7 +790,7 @@ export default function EditWorkOrdersModal({
                   isReadOnly ||
                   secondaryIds.length >= maxSecondary
                 }
-                className={addDisabledCls('p-2 border rounded w-full')}
+                className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
                 value=""
               >
                 <option value="">Añadir técnico…</option>
@@ -670,7 +815,7 @@ export default function EditWorkOrdersModal({
               </select>
             </div>
 
-            <div className="flex gap-2 flex-wrap mt-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               {secondaryIds.map((id) => {
                 // Busca nombre
                 let label = `#${id}`;
@@ -687,13 +832,13 @@ export default function EditWorkOrdersModal({
                 return (
                   <span
                     key={id}
-                    className="px-2 py-1 rounded-full bg-slate-200 text-slate-800 text-sm inline-flex items-center gap-2"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     {label}
                     {!isReadOnly && (
                       <button
                         type="button"
-                        className="hover:text-red-600"
+                        className="hover:text-rose-600"
                         onClick={() => removeSecondary(id)}
                         title="Quitar"
                       >
@@ -704,7 +849,7 @@ export default function EditWorkOrdersModal({
                 );
               })}
               {secondaryIds.length === 0 && (
-                <span className="text-xs text-gray-500">
+                <span className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
                   Sin técnicos secundarios.
                 </span>
               )}
@@ -713,14 +858,12 @@ export default function EditWorkOrdersModal({
 
           {/* Prioridad */}
           <div>
-            <label className="block text-sm font-medium">Prioridad</label>
+            <label className={labelClass}>Prioridad</label>
             <select
               name="priority"
               value={edited.priority}
               onChange={handleChange}
-              className={addDisabledCls(
-                'mt-1 p-2 w-full border rounded cursor-pointer'
-              )}
+              className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
               disabled={isReadOnly}
             >
               <option value="baja">🔻 Baja</option>
@@ -731,14 +874,12 @@ export default function EditWorkOrdersModal({
 
           {/* Estatus */}
           <div>
-            <label className="block text-sm font-medium">Estatus</label>
+            <label className={labelClass}>Estatus</label>
             <select
               name="status"
               value={edited.status}
               onChange={handleChange}
-              className={addDisabledCls(
-                'mt-1 p-2 w-full border rounded cursor-pointer'
-              )}
+              className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
               disabled={isReadOnly}
             >
               {STATUSES.map((status) => (
@@ -751,7 +892,8 @@ export default function EditWorkOrdersModal({
 
           {/* Fecha estimada de entrega */}
           <div>
-            <label className="block text-sm font-medium">
+            <label className={`${labelClass} inline-flex items-center gap-1.5`}>
+              <CalendarDays className="h-3.5 w-3.5" />
               Fecha estimada de entrega
             </label>
             <input
@@ -761,11 +903,11 @@ export default function EditWorkOrdersModal({
               onChange={handleChange}
               min={minForDeadline}
               disabled={isReadOnly}
-              className={addDisabledCls(
-                'mt-1 p-2 w-full border rounded text-gray-800'
-              )}
+              className={`${editableControlClass}${disabledSoftClass}`}
             />
           </div>
+            </div>
+          </section>
 
           {/* Imágenes */}
           {ticket.image &&
@@ -773,23 +915,52 @@ export default function EditWorkOrdersModal({
               const imagePaths = getTicketImagePaths(ticket.image ?? '[]');
               if (imagePaths.length === 0) return null;
               return (
-                <div className="flex gap-2 flex-wrap my-2">
-                  {imagePaths.map((path, idx) => (
-                    <img
-                      key={idx}
-                      src={getPublicImageUrl(path)}
-                      alt={`Adjunto ${idx + 1}`}
-                      className="w-20 h-20 object-contain rounded cursor-pointer border bg-gray-100 hover:scale-105 transition"
-                      onClick={() => setFullImageIdx(idx)}
-                    />
-                  ))}
-                </div>
+                <section className={sectionCard}>
+                  <div className={sectionHeader}>
+                    <span className={sectionIcon}>
+                      <ImageIcon className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                        Adjuntos
+                      </h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        Evidencia inicial registrada en el ticket.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {imagePaths.map((path, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        className="group overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-1 transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-950"
+                        onClick={() => setFullImageIdx(idx)}
+                      >
+                        <img
+                          src={getPublicImageUrl(path)}
+                          alt={`Adjunto ${idx + 1}`}
+                          className="h-24 w-24 rounded-lg object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </section>
               );
             })()}
 
           {/* Urgente */}
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-2">
+          <section className={sectionCard}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                  Señalización operativa
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Marca la orden como urgente cuando requiere atención prioritaria.
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
               <input
                 type="checkbox"
                 name="is_urgent"
@@ -797,24 +968,36 @@ export default function EditWorkOrdersModal({
                 onChange={handleChange}
                 disabled={isReadOnly}
                 className={
-                  'h-4 w-4 text-red-600 border-gray-300 rounded cursor-pointer' +
+                  'h-4 w-4 rounded border-rose-300 text-rose-600 cursor-pointer' +
                   (isReadOnly ? ' opacity-50 cursor-not-allowed' : '')
                 }
               />
-              <label className="text-sm font-medium text-red-700">
-                🚨 Urgente
+                <span className="inline-flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Urgente
+                </span>
               </label>
             </div>
-          </div>
+          </section>
         </div>
       </div>
 
       {/* ✅ Validación de cierre (aprobación) */}
       {edited.is_accepted && (rejectedNote || inValidation || isRequester) && (
-        <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-4 sm:p-5 dark:border-teal-400/40 dark:bg-teal-500/10">
-          <h3 className="mb-2 text-base font-semibold text-teal-900 dark:text-teal-200">
-            Validación de cierre
-          </h3>
+        <section className="rounded-2xl border border-teal-200 bg-teal-50/80 p-4 shadow-sm dark:border-teal-400/40 dark:bg-teal-500/10 sm:p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="text-base font-semibold text-teal-950 dark:text-teal-100">
+                Validación de cierre
+              </h3>
+              <p className="text-sm text-teal-800/80 dark:text-teal-200/80">
+                Controla la evidencia requerida para cerrar la orden sin perder trazabilidad.
+              </p>
+            </div>
+          </div>
 
           {/* Comentario de rechazo (vuelve al técnico) */}
           {rejectedNote && !inValidation && (
@@ -878,7 +1061,7 @@ export default function EditWorkOrdersModal({
                       type="button"
                       onClick={() => void handleDecision(true)}
                       disabled={deciding}
-                      className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
                     >
                       Validar y finalizar
                     </button>
@@ -891,7 +1074,7 @@ export default function EditWorkOrdersModal({
                           ? 'Escribe un comentario para poder rechazar'
                           : undefined
                       }
-                      className="rounded border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/60 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                      className="rounded-xl border border-rose-300 bg-white px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/60 dark:bg-slate-950/40 dark:text-rose-300 dark:hover:bg-rose-500/10"
                     >
                       Rechazar
                     </button>
@@ -919,32 +1102,44 @@ export default function EditWorkOrdersModal({
                 <button
                   type="button"
                   onClick={() => setEvidenceOpen(true)}
-                  className="rounded bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400"
+                  className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400"
                 >
                   Finalizar (requiere validación)
                 </button>
               </div>
             )
           )}
-        </div>
+        </section>
       )}
 
       {/* ✅ Repuestos (solo si is_accepted=true) */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-slate-900">
-            Repuestos y reservas
-          </h3>
-          {!edited.is_accepted && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-              Disponible al aceptar (OT)
-            </span>
-          )}
-          {inValidation && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-              🔒 Bloqueado durante la validación
-            </span>
-          )}
+      <section className={sectionCard}>
+        <div className={sectionHeader}>
+          <span className={sectionIcon}>
+            <Package className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                Repuestos y reservas
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {!edited.is_accepted && (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    Disponible al aceptar (OT)
+                  </span>
+                )}
+                {inValidation && (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                    Bloqueado durante la validación
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Reserva materiales necesarios para ejecutar la orden y consulta su disponibilidad.
+            </p>
+          </div>
         </div>
 
         <div
@@ -976,24 +1171,36 @@ export default function EditWorkOrdersModal({
           />
         )}
         </div>
-      </div>
+      </section>
 
       {/* ✅ Activos fijos vinculados al ticket */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold text-slate-900">
-            Activos fijos del ticket
-          </h3>
-          {!edited.is_accepted && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-              Disponible al aceptar (OT)
-            </span>
-          )}
-          {inValidation && (
-            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
-              🔒 Bloqueado durante la validación
-            </span>
-          )}
+      <section className={sectionCard}>
+        <div className={sectionHeader}>
+          <span className={sectionIcon}>
+            <Boxes className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+                Activos fijos del ticket
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {!edited.is_accepted && (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    Disponible al aceptar (OT)
+                  </span>
+                )}
+                {inValidation && (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800 dark:bg-amber-500/15 dark:text-amber-200">
+                    Bloqueado durante la validación
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Vincula equipos afectados para conservar historial de mantenimiento por activo.
+            </p>
+          </div>
         </div>
 
         <TicketAssetsPanel
@@ -1004,29 +1211,34 @@ export default function EditWorkOrdersModal({
           requester={edited.requester}
           canManageLinks={canAssetsUpdate && !inValidation}
         />
-      </div>
+      </section>
 
       {edited.is_accepted && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+        <section className={sectionCard}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-900">
+            <div className="flex items-start gap-3">
+              <span className={sectionIcon}>
+                <MessageSquare className="h-5 w-5" />
+              </span>
+              <div>
+              <h3 className="text-base font-semibold text-slate-950 dark:text-white">
                 Continuidad del chat
               </h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Esta orden usa el mismo chat interno del ticket para mantener la conversación entre solicitud, perfil y OT.
               </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setChatModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 cursor-pointer"
             >
               <MessageSquare className="h-4 w-4" />
               Abrir chat interno
             </button>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Lightbox imágenes */}
@@ -1217,11 +1429,19 @@ export default function EditWorkOrdersModal({
       </AnimatedDialog>
 
       {/* Footer acciones */}
-      <div className="flex justify-end gap-2 mt-6">
+      <div className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-6 border-t border-slate-200 bg-white/95 px-6 py-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Los cambios se aplican a la orden actual y se reflejan en tablero, lista, inventario y activos vinculados.
+            </span>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
-          className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 cursor-pointer"
+          className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer dark:border-slate-600 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           Cancelar
         </button>
@@ -1231,9 +1451,10 @@ export default function EditWorkOrdersModal({
           <button
             type="button"
             onClick={handleAcceptWithPrimary}
-            className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 cursor-pointer"
             title="Aceptar y asignar responsable principal"
           >
+            <CheckCircle2 className="h-4 w-4" />
             Aceptar y asignar
           </button>
         )}
@@ -1242,7 +1463,7 @@ export default function EditWorkOrdersModal({
           <button
             type="button"
             onClick={() => setChatModalOpen(true)}
-            className="inline-flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 cursor-pointer"
           >
             <MessageSquare className="h-4 w-4" />
             Chat interno
@@ -1269,9 +1490,10 @@ export default function EditWorkOrdersModal({
                   showToastError(`No se pudo archivar: ${msg}`);
                 }
               }}
-              className="bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-800 cursor-pointer"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 cursor-pointer"
               title="Mover a archivadas"
             >
+              <Archive className="h-4 w-4" />
               Archivar
             </button>
           )}
@@ -1291,9 +1513,10 @@ export default function EditWorkOrdersModal({
                 showToastError(`No se pudo desarchivar: ${msg}`);
               }
             }}
-            className="bg-emerald-700 text-white px-4 py-2 rounded hover:bg-emerald-800 cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800 cursor-pointer"
             title="Sacar de archivadas"
           >
+            <Archive className="h-4 w-4" />
             Desarchivar
           </button>
         )}
@@ -1305,13 +1528,16 @@ export default function EditWorkOrdersModal({
             disabled={!canFullAccess}
             title={!canFullAccess ? 'No tienes permiso para editar' : undefined}
             className={
-              'bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer' +
+              'inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer' +
               (!canFullAccess ? ' opacity-50 cursor-not-allowed' : '')
             }
           >
+            <Save className="h-4 w-4" />
             Guardar Cambios
           </button>
         )}
+          </div>
+        </div>
       </div>
     </form>
   );
