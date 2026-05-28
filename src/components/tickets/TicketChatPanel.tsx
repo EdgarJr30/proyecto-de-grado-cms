@@ -1,16 +1,44 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 import { Clock3, MessageSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { showToastError, showToastSuccess } from '../../notifications';
+import { showConfirmAlert, showToastError, showToastSuccess } from '../../notifications';
 import { formatDateInTimezone } from '../../utils/formatDate';
 import {
   addTicketComment,
   listTicketComments,
   type TicketComment,
 } from '../../services/ticketCommentsService';
+import {
+  addTicketCollaborator,
+  canIManageCollaborators,
+  listCollaboratorCandidates,
+  type Collaborator,
+} from '../../services/collaboratorService';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
+}
+
+/**
+ * Detecta una mención "@..." activa justo antes del cursor.
+ * Devuelve el índice de la "@" y el texto escrito tras ella, o null.
+ */
+function detectMention(
+  value: string,
+  caret: number
+): { start: number; query: string } | null {
+  const before = value.slice(0, caret);
+  const m = before.match(/(^|\s)@([\p{L}\p{N}._-]*)$/u);
+  if (!m) return null;
+  const query = m[2] ?? '';
+  return { start: caret - query.length - 1, query };
 }
 
 type TicketChatPanelProps = {
@@ -33,6 +61,13 @@ export default function TicketChatPanel({
   const [postingComment, setPostingComment] = useState(false);
   const [commentDraft, setCommentDraft] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // --- Menciones (@usuario) para agregar colaboradores estilo Asana ---
+  const [canManageCollab, setCanManageCollab] = useState(false);
+  const [mention, setMention] = useState<{ start: number; query: string } | null>(null);
+  const [mentionCandidates, setMentionCandidates] = useState<Collaborator[]>([]);
+  const [addingCollab, setAddingCollab] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const validTicketId = useMemo(
     () => (Number.isInteger(ticketId) && ticketId > 0 ? ticketId : 0),
@@ -135,6 +170,93 @@ export default function TicketChatPanel({
     }
   }
 
+  // ¿El usuario actual puede gestionar colaboradores? (admin o responsable)
+  useEffect(() => {
+    if (!validTicketId) {
+      setCanManageCollab(false);
+      return;
+    }
+    let alive = true;
+    void canIManageCollaborators(validTicketId).then((v) => {
+      if (alive) setCanManageCollab(v);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [validTicketId]);
+
+  // Busca candidatos mientras hay una mención activa (solo si puede gestionar).
+  useEffect(() => {
+    if (!mention || !canManageCollab || !validTicketId) {
+      setMentionCandidates([]);
+      return;
+    }
+    let alive = true;
+    const handle = window.setTimeout(() => {
+      void listCollaboratorCandidates(validTicketId, mention.query)
+        .then((rows) => {
+          if (alive) setMentionCandidates(rows);
+        })
+        .catch(() => {
+          if (alive) setMentionCandidates([]);
+        });
+    }, 200);
+    return () => {
+      alive = false;
+      window.clearTimeout(handle);
+    };
+  }, [mention, canManageCollab, validTicketId]);
+
+  const handleDraftChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    setCommentDraft(value);
+    if (!canManageCollab) {
+      setMention(null);
+      return;
+    }
+    const caret = event.target.selectionStart ?? value.length;
+    setMention(detectMention(value, caret));
+  };
+
+  const handlePickMention = async (candidate: Collaborator) => {
+    const active = mention;
+    if (!active || addingCollab) return;
+
+    const ok = await showConfirmAlert({
+      title: 'Agregar colaborador',
+      text: `¿Quieres agregar a ${candidate.label} como colaborador de esta tarea? Estará recibiendo todas las modificaciones realizadas en ella.`,
+      icon: 'question',
+      confirmButtonText: 'Sí, agregar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#4f46e5',
+    });
+    if (!ok) {
+      setMention(null);
+      setMentionCandidates([]);
+      return;
+    }
+
+    setAddingCollab(true);
+    try {
+      await addTicketCollaborator(validTicketId, candidate.id);
+      // Reemplaza el token "@query" por "@Nombre " en el mensaje.
+      setCommentDraft((prev) => {
+        const tokenEnd = active.start + 1 + active.query.length;
+        return `${prev.slice(0, active.start)}@${candidate.label} ${prev.slice(tokenEnd)}`;
+      });
+      showToastSuccess(`${candidate.label} agregado como colaborador.`);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : 'No se pudo agregar el colaborador.';
+      showToastError(message);
+    } finally {
+      setAddingCollab(false);
+      setMention(null);
+      setMentionCandidates([]);
+      textareaRef.current?.focus();
+    }
+  };
+
   return (
     <section className="min-w-0 space-y-4 overflow-x-hidden">
       <div className="flex min-w-0 items-center gap-2">
@@ -145,20 +267,56 @@ export default function TicketChatPanel({
       </div>
 
       <div className="min-w-0 space-y-2">
-        <textarea
-          value={commentDraft}
-          onChange={(event) => setCommentDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
-              event.preventDefault();
-              void handleCommentSubmit();
-            }
-          }}
-          rows={3}
-          placeholder={composerPlaceholder}
-          disabled={postingComment}
-          className="block w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
-        />
+        <div className="relative min-w-0">
+          <textarea
+            ref={textareaRef}
+            value={commentDraft}
+            onChange={handleDraftChange}
+            onKeyDown={(event) => {
+              if (mention && event.key === 'Escape') {
+                event.preventDefault();
+                setMention(null);
+                setMentionCandidates([]);
+                return;
+              }
+              if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault();
+                void handleCommentSubmit();
+              }
+            }}
+            rows={3}
+            placeholder={composerPlaceholder}
+            disabled={postingComment}
+            className="block w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
+          />
+          {canManageCollab && mention && mentionCandidates.length > 0 && (
+            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+              <li className="border-b border-slate-100 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-700">
+                Agregar colaborador
+              </li>
+              {mentionCandidates.map((candidate) => (
+                <li key={candidate.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      void handlePickMention(candidate);
+                    }}
+                    disabled={addingCollab}
+                    className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-indigo-50 disabled:opacity-60 dark:hover:bg-indigo-500/10"
+                  >
+                    <span className="font-medium text-slate-800 dark:text-slate-100">
+                      {candidate.label}
+                    </span>
+                    {candidate.email && (
+                      <span className="text-xs text-slate-500">{candidate.email}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="flex justify-end">
           <button
             type="button"

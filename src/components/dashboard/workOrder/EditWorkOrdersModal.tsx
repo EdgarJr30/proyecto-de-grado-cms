@@ -14,6 +14,7 @@ import {
   Package,
   Save,
   ShieldCheck,
+  UserPlus,
   UserRound,
   Wrench,
 } from 'lucide-react';
@@ -59,6 +60,14 @@ import {
   type ApprovalRequest,
   type TicketApprover,
 } from '../../../services/approvalService';
+import {
+  listTicketCollaborators,
+  listCollaboratorCandidates,
+  addTicketCollaborator,
+  removeTicketCollaborator,
+  canIManageCollaborators,
+  type Collaborator,
+} from '../../../services/collaboratorService';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -103,6 +112,15 @@ export default function EditWorkOrdersModal({
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
   const [decisionNote, setDecisionNote] = useState('');
   const [deciding, setDeciding] = useState(false);
+
+  // --- Colaboradores (estilo Asana: usuarios con solo-lectura + chat) ---
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [canManageCollab, setCanManageCollab] = useState(false);
+  const [collabPickerOpen, setCollabPickerOpen] = useState(false);
+  const [collabSearch, setCollabSearch] = useState('');
+  const [collabCandidates, setCollabCandidates] = useState<Collaborator[]>([]);
+  const [collabBusy, setCollabBusy] = useState(false);
+
   const prefersReducedMotion = useReducedMotion();
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -210,6 +228,9 @@ export default function EditWorkOrdersModal({
     const initial = uniqSorted(ticket.secondary_assignee_ids ?? []);
     setSecondaryIds(initial);
     initialSecondaryRef.current = initial; // 👈 importante
+    setCollabPickerOpen(false);
+    setCollabSearch('');
+    setCollabCandidates([]);
   }, [ticket]);
 
   useEffect(() => {
@@ -241,6 +262,77 @@ export default function EditWorkOrdersModal({
     void loadApprovalContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticket.id]);
+
+  const loadCollaborators = async () => {
+    try {
+      const tid = Number(ticket.id);
+      const [list, canManage] = await Promise.all([
+        listTicketCollaborators(tid),
+        canIManageCollaborators(tid),
+      ]);
+      setCollaborators(list);
+      setCanManageCollab(canManage);
+    } catch {
+      /* best-effort: los colaboradores no deben romper el modal */
+    }
+  };
+
+  useEffect(() => {
+    void loadCollaborators();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id]);
+
+  // Búsqueda de candidatos a colaborador (debounced) cuando se puede gestionar.
+  useEffect(() => {
+    if (!canManageCollab || !collabPickerOpen) {
+      setCollabCandidates([]);
+      return;
+    }
+    const term = collabSearch.trim();
+    let alive = true;
+    const handle = window.setTimeout(() => {
+      void listCollaboratorCandidates(Number(ticket.id), term)
+        .then((rows) => {
+          if (alive) setCollabCandidates(rows);
+        })
+        .catch(() => {
+          if (alive) setCollabCandidates([]);
+        });
+    }, 250);
+    return () => {
+      alive = false;
+      window.clearTimeout(handle);
+    };
+  }, [collabSearch, canManageCollab, collabPickerOpen, ticket.id]);
+
+  const handleAddCollaborator = async (userId: string) => {
+    setCollabBusy(true);
+    try {
+      await addTicketCollaborator(Number(ticket.id), userId);
+      setCollabPickerOpen(false);
+      setCollabSearch('');
+      setCollabCandidates([]);
+      await loadCollaborators();
+      showToastSuccess('Colaborador agregado.');
+    } catch (err) {
+      showToastError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCollabBusy(false);
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string) => {
+    setCollabBusy(true);
+    try {
+      await removeTicketCollaborator(Number(ticket.id), userId);
+      await loadCollaborators();
+      showToastSuccess('Colaborador removido.');
+    } catch (err) {
+      showToastError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCollabBusy(false);
+    }
+  };
 
   // Abre el modal de evidencia automáticamente cuando se solicita desde el tablero.
   useEffect(() => {
@@ -854,6 +946,107 @@ export default function EditWorkOrdersModal({
                 </span>
               )}
             </div>
+          </div>
+
+          {/* === Colaboradores (estilo Asana: solo lectura + chat) === */}
+          <div>
+            <label className={labelClass}>Colaboradores</label>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Usuarios de la plataforma que pueden ver el ticket (solo lectura) y
+              participar en el chat. No son responsables; reciben las
+              notificaciones del ticket en su bandeja.
+            </p>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {collaborators.map((c) => (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200"
+                  title={c.email ?? undefined}
+                >
+                  {c.label}
+                  {canManageCollab && (
+                    <button
+                      type="button"
+                      className="hover:text-rose-600 disabled:opacity-60"
+                      onClick={() => void handleRemoveCollaborator(c.id)}
+                      disabled={collabBusy}
+                      title="Quitar colaborador"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </span>
+              ))}
+              {collaborators.length === 0 && (
+                <span className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                  Sin colaboradores.
+                </span>
+              )}
+            </div>
+
+            {canManageCollab && (
+              <div className="mt-3">
+                {!collabPickerOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setCollabPickerOpen(true)}
+                    disabled={collabBusy}
+                    className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Agregar colaborador
+                  </button>
+                ) : (
+                  <div className="relative rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/50">
+                    <div className="flex items-start gap-2">
+                      <input
+                        type="text"
+                        value={collabSearch}
+                        onChange={(e) => setCollabSearch(e.target.value)}
+                        placeholder="Buscar usuario por nombre o correo…"
+                        className={`${editableControlClass} mt-0`}
+                        disabled={collabBusy}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCollabPickerOpen(false);
+                          setCollabSearch('');
+                          setCollabCandidates([]);
+                        }}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+
+                    {collabCandidates.length > 0 && (
+                      <ul className="absolute left-3 right-3 z-20 mt-2 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                        {collabCandidates.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              onClick={() => void handleAddCollaborator(c.id)}
+                              disabled={collabBusy}
+                              className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-indigo-50 disabled:opacity-60 dark:hover:bg-indigo-500/10"
+                            >
+                              <span className="font-medium text-slate-800 dark:text-slate-100">
+                                {c.label}
+                              </span>
+                              {c.email && (
+                                <span className="text-xs text-slate-500">{c.email}</span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Prioridad */}

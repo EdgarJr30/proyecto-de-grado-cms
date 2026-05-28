@@ -11,6 +11,10 @@ import {
 } from '../services/ticketCommentsService';
 import type { WorkOrder } from '../types/Ticket';
 import TicketApprovalSection from '../components/tickets/TicketApprovalSection';
+import {
+  listTicketCollaborators,
+  type Collaborator,
+} from '../services/collaboratorService';
 import { showToastError, showToastSuccess } from '../notifications';
 import { formatDateInTimezone } from '../utils/formatDate';
 
@@ -28,6 +32,7 @@ export default function TicketDetailsPage() {
   const numericTicketId = useMemo(() => Number(ticketId), [ticketId]);
   const [ticket, setTicket] = useState<WorkOrder | null>(null);
   const [comments, setComments] = useState<TicketComment[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -48,6 +53,18 @@ export default function TicketDetailsPage() {
     setTicket(row);
   }, [numericTicketId]);
 
+  const loadCollaborators = useCallback(async () => {
+    if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
+      setCollaborators([]);
+      return;
+    }
+    try {
+      setCollaborators(await listTicketCollaborators(numericTicketId));
+    } catch {
+      setCollaborators([]);
+    }
+  }, [numericTicketId]);
+
   const loadComments = useCallback(async () => {
     if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
       setComments([]);
@@ -64,7 +81,7 @@ export default function TicketDetailsPage() {
     const bootstrap = async () => {
       setLoading(true);
       try {
-        await Promise.all([loadTicket(), loadComments()]);
+        await Promise.all([loadTicket(), loadComments(), loadCollaborators()]);
       } catch (error: unknown) {
         const msg =
           error instanceof Error
@@ -80,7 +97,7 @@ export default function TicketDetailsPage() {
     return () => {
       alive = false;
     };
-  }, [loadComments, loadTicket]);
+  }, [loadComments, loadTicket, loadCollaborators]);
 
   useEffect(() => {
     if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) return;
@@ -236,6 +253,25 @@ export default function TicketDetailsPage() {
                 </div>
               </div>
             </section>
+
+            {collaborators.length > 0 && (
+              <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <h3 className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  Colaboradores
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {collaborators.map((c) => (
+                    <span
+                      key={c.id}
+                      className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-200"
+                      title={c.email ?? undefined}
+                    >
+                      {c.label}
+                    </span>
+                  ))}
+                </div>
+              </section>
+            )}
 
             <TicketApprovalSection
               ticketId={ticket.id as unknown as number}

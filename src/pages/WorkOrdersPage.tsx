@@ -28,6 +28,7 @@ export default function WorkOrdersPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const canManageWorkOrderSettings = useCan('work_orders:full_access');
+  const canFullAccess = canManageWorkOrderSettings;
   const { profile } = useUser();
   // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
   const [filters, setFilters] = useState<Record<WorkOrdersFilterKey, unknown>>(
@@ -124,10 +125,14 @@ export default function WorkOrdersPage() {
     };
   }, [navigate, requestedTicketId]);
 
+  // Los usuarios sin full_access SOLO pueden ver sus asignaciones: el alcance
+  // queda fijo en 'mine' sin importar el estado del toggle (que para ellos se oculta).
+  const effectiveScope: AssignmentScope = canFullAccess ? assignmentScope : 'mine';
+
   const effectiveAssigneeFilter = useMemo(() => {
-    if (assignmentScope !== 'mine') return undefined;
+    if (effectiveScope !== 'mine') return undefined;
     return linkedAssigneeId ?? -1;
-  }, [assignmentScope, linkedAssigneeId]);
+  }, [effectiveScope, linkedAssigneeId]);
 
   // ✅ mergedFilters viene SOLO de FilterBar
   const mergedFilters = useMemo<FilterState<WorkOrdersFilterKey>>(
@@ -143,40 +148,44 @@ export default function WorkOrdersPage() {
 
   const viewSwitcher = (
     <div className="wo-module-actions flex flex-wrap items-center gap-2">
-      <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setAssignmentScope('all')}
-          className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer ${
-            assignmentScope === 'all'
-              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
-          }`}
-          title="Ver todas las órdenes"
-        >
-          Todas
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (!linkedAssigneeId) return;
-            setAssignmentScope('mine');
-          }}
-          disabled={!linkedAssigneeId || loadingLinkedAssignee}
-          className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
-            assignmentScope === 'mine'
-              ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
-              : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
-          } disabled:cursor-not-allowed disabled:opacity-50`}
-          title={
-            linkedAssigneeId
-              ? 'Ver solo las órdenes asignadas a mí'
-              : 'Este usuario aún no está vinculado a un técnico'
-          }
-        >
-          Asignadas a mí
-        </button>
-      </div>
+      {/* El toggle de alcance solo se muestra a quien tiene acceso total (full_access);
+          los demás quedan fijos en "Asignadas a mí" y no ven las órdenes de otros. */}
+      {canFullAccess && (
+        <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setAssignmentScope('all')}
+            className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium cursor-pointer ${
+              assignmentScope === 'all'
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+            }`}
+            title="Ver todas las órdenes"
+          >
+            Todas
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!linkedAssigneeId) return;
+              setAssignmentScope('mine');
+            }}
+            disabled={!linkedAssigneeId || loadingLinkedAssignee}
+            className={`wo-view-btn inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm font-medium ${
+              assignmentScope === 'mine'
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-700'
+                : 'bg-transparent border-transparent text-gray-600 hover:bg-gray-50'
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+            title={
+              linkedAssigneeId
+                ? 'Ver solo las órdenes asignadas a mí'
+                : 'Este usuario aún no está vinculado a un técnico'
+            }
+          >
+            Asignadas a mí
+          </button>
+        </div>
+      )}
 
       <div className="wo-view-switch inline-flex items-center gap-2 rounded-xl border border-gray-300/80 bg-white/85 px-1.5 py-1 shadow-sm">
         <button
