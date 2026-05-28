@@ -118,7 +118,12 @@ LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT CASE
-    WHEN p_event_type IN ('ticket.assigned', 'ticket.unassigned') THEN 'assignments'
+    WHEN p_event_type IN (
+      'ticket.assigned',
+      'ticket.unassigned',
+      'ticket.collaborator_added',
+      'ticket.collaborator_removed'
+    ) THEN 'assignments'
     WHEN p_event_type = 'ticket.comment_added' THEN 'comments'
     WHEN p_event_type IN (
       'ticket.status_changed',

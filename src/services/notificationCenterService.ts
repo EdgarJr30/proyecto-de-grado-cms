@@ -116,7 +116,12 @@ function resolveEventRow(row: DeliveryRow): NotificationEventRow | null {
 export function deriveNotificationCategory(
   eventType: string
 ): NotificationCategory {
-  if (eventType === 'ticket.assigned' || eventType === 'ticket.unassigned') {
+  if (
+    eventType === 'ticket.assigned' ||
+    eventType === 'ticket.unassigned' ||
+    eventType === 'ticket.collaborator_added' ||
+    eventType === 'ticket.collaborator_removed'
+  ) {
     return 'assignments';
   }
   if (eventType === 'ticket.comment_added') {
@@ -172,6 +177,10 @@ function formatDefaultMessage(eventType: string) {
       return 'Tienes una nueva asignación.';
     case 'ticket.unassigned':
       return 'Se actualizó una desasignación.';
+    case 'ticket.collaborator_added':
+      return 'Te agregaron como colaborador.';
+    case 'ticket.collaborator_removed':
+      return 'Te quitaron como colaborador.';
     case 'ticket.comment_added':
       return 'Hay un nuevo comentario.';
     case 'ticket.status_changed':

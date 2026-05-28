@@ -124,7 +124,8 @@ BEGIN
         'Te agregaron como colaborador del ticket #%s (%s).',
         p_ticket_id, COALESCE(v_title, 'sin título')
       ),
-      'url', format('/tickets/%s', p_ticket_id)
+      'url', format('/tickets/%s', p_ticket_id),
+      'notify_actor', true
     ),
     ARRAY[p_user_id], 3
   );
