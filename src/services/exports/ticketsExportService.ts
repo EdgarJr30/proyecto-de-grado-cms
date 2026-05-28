@@ -2,7 +2,7 @@
 import { supabase } from '../../lib/supabaseClient';
 import type { CsvHeader, CsvRow } from '../../utils/csv';
 import { recordActivity } from '../activityLogService';
-import { getWorkOrderIdsByAssigneeFilter } from '../ticketService';
+import { assigneeOrFilter } from '../ticketService';
 
 export type Priority = 'baja' | 'media' | 'alta';
 export type Status = 'Pendiente' | 'En Ejecución' | 'Finalizadas';
@@ -124,10 +124,7 @@ function serializeRow(r: TicketCompatRow): CsvRow {
   };
 }
 
-function buildQuery(
-  filters: WorkOrdersFilters,
-  assignedWorkOrderIds?: number[]
-) {
+function buildQuery(filters: WorkOrdersFilters) {
   let q = supabase
     .from('v_tickets_compat')
     .select(
@@ -173,12 +170,8 @@ function buildQuery(
   if (filters.status?.length) q = q.in('status', filters.status);
   if (filters.priority?.length) q = q.in('priority', filters.priority);
   if (filters.location_id) q = q.eq('location_id', filters.location_id);
-  if (Array.isArray(assignedWorkOrderIds)) {
-    q =
-      assignedWorkOrderIds.length > 0
-        ? q.in('id', assignedWorkOrderIds)
-        : q.eq('id', -1);
-  }
+  const assigneeFilter = assigneeOrFilter(filters.assignee_id);
+  if (assigneeFilter) q = q.or(assigneeFilter);
   if (filters.assignee) {
     const term = `%${filters.assignee}%`;
     q = q.or(
@@ -226,15 +219,12 @@ export async function fetchTicketsCsv(filters: WorkOrdersFilters): Promise<{
 }> {
   const rows: CsvRow[] = [];
   const pageSize = 2000;
-  const assignedWorkOrderIds = await getWorkOrderIdsByAssigneeFilter(
-    filters.assignee_id
-  );
 
   let from = 0;
   // loop de paginación
   while (true) {
     const to = from + pageSize - 1;
-    const query = buildQuery(filters, assignedWorkOrderIds);
+    const query = buildQuery(filters);
     const { data, error } = await query
       .range(from, to)
       .overrideTypes<TicketCompatRow[], { merge: false }>();

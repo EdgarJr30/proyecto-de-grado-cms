@@ -71,47 +71,21 @@ function parseAssigneeFilter(value: unknown): number | null {
   return null;
 }
 
-export async function getWorkOrderIdsByAssigneeFilter(
-  value: unknown
-): Promise<number[] | undefined> {
+/**
+ * Filtro server-side de "asignado al técnico X" sobre v_tickets_compat.
+ * Cubre responsable principal activo, secundarios activos y el assignee_id
+ * legacy en una sola consulta (sin resolver IDs ni usar `.in(...)`, que rompía
+ * con listas grandes por URL demasiado larga).
+ *
+ * Devuelve el string para pasar a `.or(...)`, o null si no hay filtro de técnico.
+ * Si el técnico es inválido (<= 0, p. ej. usuario sin técnico vinculado), fuerza
+ * un resultado vacío.
+ */
+export function assigneeOrFilter(value: unknown): string | null {
   const assigneeId = parseAssigneeFilter(value);
-  if (assigneeId == null) return undefined;
-  if (assigneeId <= 0) return [];
-
-  const [assignmentResult, legacyResult] = await Promise.all([
-    supabase
-      .from('v_work_order_assignees_current')
-      .select('work_order_id')
-      .eq('assignee_id', assigneeId),
-    supabase
-      .from('v_tickets_compat')
-      .select('id')
-      .eq('is_accepted', true)
-      .eq('assignee_id', assigneeId),
-  ]);
-
-  if (assignmentResult.error) {
-    throw new Error(
-      `No se pudieron resolver las órdenes asignadas al técnico ${assigneeId}. ${assignmentResult.error.message}`
-    );
-  }
-  if (legacyResult.error) {
-    throw new Error(
-      `No se pudieron resolver las órdenes legacy asignadas al técnico ${assigneeId}. ${legacyResult.error.message}`
-    );
-  }
-
-  const ids = new Set<number>();
-  (assignmentResult.data ?? []).forEach((row) => {
-    const id = Number(row.work_order_id);
-    if (Number.isFinite(id) && id > 0) ids.add(id);
-  });
-  (legacyResult.data ?? []).forEach((row) => {
-    const id = Number(row.id);
-    if (Number.isFinite(id) && id > 0) ids.add(id);
-  });
-
-  return [...ids];
+  if (assigneeId == null) return null;
+  if (assigneeId <= 0) return 'id.eq.-1';
+  return `primary_assignee_id.eq.${assigneeId},secondary_assignee_ids.cs.{${assigneeId}},assignee_id.eq.${assigneeId}`;
 }
 
 function buildWorkOrdersQuery<TKeys extends string>(
@@ -121,7 +95,6 @@ function buildWorkOrdersQuery<TKeys extends string>(
     status?: Status;
     select: string;
     head?: boolean;
-    assignedWorkOrderIds?: number[];
   }
 ) {
   let q = supabase
@@ -154,12 +127,10 @@ function buildWorkOrdersQuery<TKeys extends string>(
   const locationFilter = parseLocationFilter(locationRaw);
   if (locationFilter != null) q = q.eq('location_id', locationFilter);
 
-  if (Array.isArray(options.assignedWorkOrderIds)) {
-    q =
-      options.assignedWorkOrderIds.length > 0
-        ? q.in('id', options.assignedWorkOrderIds)
-        : q.eq('id', -1);
-  }
+  const assigneeFilter = assigneeOrFilter(
+    (values as Record<string, unknown>)['assignee_id']
+  );
+  if (assigneeFilter) q = q.or(assigneeFilter);
 
   const createdRaw = (values as Record<string, unknown>)['created_at'];
   if (createdRaw && typeof createdRaw === 'object') {
@@ -573,9 +544,6 @@ export async function getTicketCountsRPC(filters?: {
 export async function getWorkOrderCountsByFilters<TKeys extends string>(
   values: FilterState<TKeys>
 ): Promise<TicketCounts> {
-  const assignedWorkOrderIds = await getWorkOrderIdsByAssigneeFilter(
-    (values as Record<string, unknown>)['assignee_id']
-  );
   const statuses: Status[] = [
     'Pendiente',
     'En Ejecución',
@@ -589,7 +557,6 @@ export async function getWorkOrderCountsByFilters<TKeys extends string>(
         status,
         select: 'id',
         head: true,
-        assignedWorkOrderIds,
       });
       const { count, error } = await query;
       if (error) {
@@ -713,14 +680,10 @@ export async function getTicketsByWorkOrdersFiltersPaginated<
 ): Promise<{ data: WorkOrder[]; count: number }> {
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  const assignedWorkOrderIds = await getWorkOrderIdsByAssigneeFilter(
-    (values as Record<string, unknown>)['assignee_id']
-  );
 
   const q = buildWorkOrdersQuery(values, {
     archived: false,
     select: '*',
-    assignedWorkOrderIds,
   });
 
   const { data, error, count } = await q
@@ -754,14 +717,10 @@ export async function getArchivedWorkOrdersByFiltersPaginated<
 ): Promise<{ data: WorkOrder[]; count: number }> {
   const from = page * pageSize;
   const to = from + pageSize - 1;
-  const assignedWorkOrderIds = await getWorkOrderIdsByAssigneeFilter(
-    (values as Record<string, unknown>)['assignee_id']
-  );
 
   const q = buildWorkOrdersQuery(values, {
     archived: true,
     select: '*',
-    assignedWorkOrderIds,
   });
 
   const { data, error, count } = await q
