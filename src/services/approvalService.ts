@@ -201,6 +201,15 @@ export async function amIApprovalRequester(): Promise<boolean> {
   return data === true;
 }
 
+/** ¿El usuario actual es aprobador de algún proceso por el que pasó el ticket? */
+export async function amITicketApprover(ticketId: number): Promise<boolean> {
+  const { data, error } = await supabase.rpc('am_i_ticket_approver', {
+    p_ticket_id: ticketId,
+  });
+  if (error) return false;
+  return data === true;
+}
+
 /** Aprobadores asignados a la solicitud pendiente de un ticket. */
 export async function getTicketPendingApprovers(
   ticketId: number

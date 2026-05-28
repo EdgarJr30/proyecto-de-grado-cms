@@ -25,7 +25,10 @@ import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { showToastError } from '../../../notifications/toast';
 import { showConfirmAlert } from '../../../notifications';
-import { amIApprovalRequester } from '../../../services/approvalService';
+import {
+  amIApprovalRequester,
+  amITicketApprover,
+} from '../../../services/approvalService';
 import { useNavigate } from 'react-router-dom';
 
 type GroupMode = 'manual' | 'dateAsc' | 'dateDesc';
@@ -222,6 +225,7 @@ export default function WorkOrdersList({
     activeOnlyOptions: false,
   });
   const canMoveCards = useCan('work_orders:full_access');
+  const canApprovalsFullAccess = useCan('approvals:full_access');
   const [rows, setRows] = useState<WorkOrder[]>([]);
   const [manualOrderByStatus, setManualOrderByStatus] =
     useState<ManualOrderMap>(() => readManualOrderFromStorage());
@@ -466,6 +470,25 @@ export default function WorkOrdersList({
         return;
       }
 
+      // Una orden finalizada solo puede reabrirla un aprobador del ticket o un
+      // admin de aprobaciones. El técnico/solicitante no puede sacarla de
+      // 'Finalizadas'.
+      if (
+        sourceStatus === 'Finalizadas' &&
+        statusChanged &&
+        isApprovalRequester &&
+        !canApprovalsFullAccess &&
+        !(await amITicketApprover(ticketId))
+      ) {
+        setDraggedTicket(null);
+        setDraggedTicketId(null);
+        setDropTarget(null);
+        showToastError(
+          'Esta orden ya fue finalizada y validada. Solo un aprobador puede reabrirla.'
+        );
+        return;
+      }
+
       const previousRows = rows;
       const previousOrder = manualOrderByStatus;
 
@@ -503,7 +526,15 @@ export default function WorkOrdersList({
         setMovingTicketId(null);
       }
     },
-    [groupMode, manualOrderByStatus, movingTicketId, rows, isApprovalRequester, navigate]
+    [
+      groupMode,
+      manualOrderByStatus,
+      movingTicketId,
+      rows,
+      isApprovalRequester,
+      canApprovalsFullAccess,
+      navigate,
+    ]
   );
 
   const handleDrop = async (target?: DropTarget) => {

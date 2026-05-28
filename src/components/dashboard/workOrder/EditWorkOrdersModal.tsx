@@ -33,6 +33,7 @@ import TicketChatPanel from '../../tickets/TicketChatPanel';
 import { getCurrentUserId } from '../../../services/userService';
 import {
   amIApprovalRequester,
+  amITicketApprover,
   getLatestApprovalForTicket,
   getTicketPendingApprovers,
   uploadApprovalEvidence,
@@ -77,6 +78,7 @@ export default function EditWorkOrdersModal({
   // --- Aprobación / validación de cierre ---
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isRequester, setIsRequester] = useState(false);
+  const [isTicketApprover, setIsTicketApprover] = useState(false);
   const [latestApproval, setLatestApproval] = useState<ApprovalRequest | null>(null);
   const [pendingApprovers, setPendingApprovers] = useState<TicketApprover[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -99,6 +101,7 @@ export default function EditWorkOrdersModal({
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   const canFullAccess = useCan('work_orders:full_access');
+  const canApprovalsFullAccess = useCan('approvals:full_access');
 
   const pendingApproval =
     latestApproval && latestApproval.status === 'pending' ? latestApproval : null;
@@ -114,7 +117,16 @@ export default function EditWorkOrdersModal({
     ? parseEvidencePaths(pendingApproval.evidence_image)
     : [];
 
-  const isReadOnly = forceReadOnly || !canFullAccess || inValidation;
+  // Orden finalizada: un técnico/solicitante ya no puede actualizarla ni cambiar
+  // su estado; solo un aprobador del ticket o un admin de aprobaciones puede.
+  const finalizedLockedForTech =
+    edited.status === 'Finalizadas' &&
+    isRequester &&
+    !isTicketApprover &&
+    !canApprovalsFullAccess;
+
+  const isReadOnly =
+    forceReadOnly || !canFullAccess || inValidation || finalizedLockedForTech;
   const canInventoryRead = useCan('inventory:read');
   const canInventoryOperate = useCan([
     'inventory:work',
@@ -194,14 +206,16 @@ export default function EditWorkOrdersModal({
   const loadApprovalContext = async () => {
     try {
       const tid = Number(ticket.id);
-      const [uid, requester, latest, approvers] = await Promise.all([
+      const [uid, requester, ticketApprover, latest, approvers] = await Promise.all([
         getCurrentUserId(),
         amIApprovalRequester(),
+        amITicketApprover(tid),
         getLatestApprovalForTicket(tid),
         getTicketPendingApprovers(tid),
       ]);
       setCurrentUserId(uid);
       setIsRequester(requester);
+      setIsTicketApprover(ticketApprover);
       setLatestApproval(latest);
       setPendingApprovers(approvers);
     } catch {
@@ -889,6 +903,11 @@ export default function EditWorkOrdersModal({
                 </p>
               )}
             </div>
+          ) : finalizedLockedForTech ? (
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              Esta orden ya fue finalizada y validada. Solo un aprobador puede
+              reabrirla o cambiar su estado.
+            </p>
           ) : (
             isRequester &&
             edited.status !== 'Finalizadas' && (
@@ -1280,7 +1299,7 @@ export default function EditWorkOrdersModal({
         )}
 
         {/* Guardar (ediciones generales y secundarios si ya es OT) */}
-        {!forceReadOnly && !inValidation && (
+        {!forceReadOnly && !inValidation && !finalizedLockedForTech && (
           <button
             type="submit"
             disabled={!canFullAccess}

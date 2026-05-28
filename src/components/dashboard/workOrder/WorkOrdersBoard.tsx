@@ -22,7 +22,10 @@ import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
 import { showToastError } from '../../../notifications/toast';
 import { showConfirmAlert } from '../../../notifications';
-import { amIApprovalRequester } from '../../../services/approvalService';
+import {
+  amIApprovalRequester,
+  amITicketApprover,
+} from '../../../services/approvalService';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
@@ -220,6 +223,7 @@ export default function WorkOrdersBoard({
   const [draggedTicket, setDraggedTicket] = useState<WorkOrder | null>(null);
   const [movingTicketId, setMovingTicketId] = useState<number | null>(null);
   const canMoveCards = useCan('work_orders:full_access');
+  const canApprovalsFullAccess = useCan('approvals:full_access');
   const [isApprovalRequester, setIsApprovalRequester] = useState(false);
   const [autoOpenEvidence, setAutoOpenEvidence] = useState(false);
 
@@ -418,11 +422,17 @@ export default function WorkOrdersBoard({
     }
 
     refreshCountsTimeout.current = window.setTimeout(async () => {
-      const c = await getWorkOrderCountsByFilters(
-        (countsFiltersRef.current ?? {}) as FilterState<WorkOrdersFilterKey>
-      );
-      setCounts(c);
-      refreshCountsTimeout.current = null;
+      try {
+        const c = await getWorkOrderCountsByFilters(
+          (countsFiltersRef.current ?? {}) as FilterState<WorkOrdersFilterKey>
+        );
+        setCounts(c);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        showToastError(`No se pudieron actualizar los conteos de órdenes. ${msg}`);
+      } finally {
+        refreshCountsTimeout.current = null;
+      }
     }, 220);
   }, []);
 
@@ -440,11 +450,17 @@ export default function WorkOrdersBoard({
   useEffect(() => {
     let alive = true;
     (async () => {
-      const c = await getWorkOrderCountsByFilters(
-        (filters ?? {}) as FilterState<WorkOrdersFilterKey>
-      );
-      if (alive) {
-        setCounts(c);
+      try {
+        const c = await getWorkOrderCountsByFilters(
+          (filters ?? {}) as FilterState<WorkOrdersFilterKey>
+        );
+        if (alive) {
+          setCounts(c);
+        }
+      } catch (e: unknown) {
+        if (!alive) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        showToastError(`No se pudieron cargar los conteos de órdenes. ${msg}`);
       }
     })();
 
@@ -701,6 +717,23 @@ export default function WorkOrdersBoard({
         return;
       }
 
+      // Una orden finalizada solo puede reabrirla un aprobador del ticket o un
+      // admin de aprobaciones. El técnico/solicitante no puede sacarla de
+      // 'Finalizadas'.
+      if (
+        sourceStatus === 'Finalizadas' &&
+        statusChanged &&
+        isApprovalRequester &&
+        !canApprovalsFullAccess &&
+        !(await amITicketApprover(ticketId))
+      ) {
+        setDraggedTicket(null);
+        showToastError(
+          'Esta orden ya fue finalizada y validada. Solo un aprobador puede reabrirla.'
+        );
+        return;
+      }
+
       const previousRows = boardTickets;
       const previousOrder = manualOrderByStatus;
 
@@ -751,6 +784,7 @@ export default function WorkOrdersBoard({
       setBoardTickets,
       setManualOrderByStatus,
       isApprovalRequester,
+      canApprovalsFullAccess,
     ]
   );
 
