@@ -3,6 +3,7 @@ import type { Ticket } from "../types/Ticket";
 export const STATUSES: Ticket["status"][] = [
   "Pendiente",
   "En Ejecución",
+  "En Validación",
   "Finalizadas",
 ];
 

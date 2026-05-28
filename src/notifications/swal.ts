@@ -1,4 +1,5 @@
 import Swal from 'sweetalert2';
+import { recordClientError } from '../services/activityLogService';
 
 type ConfirmAlertOptions = {
   title: string;
@@ -57,6 +58,7 @@ export function showSuccessAlert(title: string, text: string) {
 }
 
 export function showErrorAlert(title: string, text: string) {
+  recordClientError({ source: 'alert', title, message: text });
   return Swal.fire({
     title,
     text,

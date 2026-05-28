@@ -15,9 +15,11 @@ import {
   setDeferredInstallPrompt,
   type BeforeInstallPromptEvent,
 } from './pwa/installPromptStore';
+import { recordClientError } from './services/activityLogService';
 
 let numericInputNormalizationAttached = false;
 let pwaInstallPromptListenersAttached = false;
+let clientErrorListenersAttached = false;
 
 function isNumericLikeInput(target: EventTarget | null): target is HTMLInputElement {
   if (!(target instanceof HTMLInputElement)) return false;
@@ -91,6 +93,47 @@ function setupGlobalInstallPromptCapture() {
   });
 }
 
+function stringifyErrorReason(reason: unknown): string {
+  if (reason instanceof Error) return reason.message;
+  if (typeof reason === 'string') return reason;
+  if (reason && typeof reason === 'object' && 'message' in reason) {
+    const message = (reason as { message?: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  try {
+    return JSON.stringify(reason);
+  } catch {
+    return String(reason);
+  }
+}
+
+function setupGlobalClientErrorCapture() {
+  if (clientErrorListenersAttached || typeof window === 'undefined') return;
+  clientErrorListenersAttached = true;
+
+  window.addEventListener('error', (event) => {
+    recordClientError({
+      source: 'window.error',
+      message: event.message || 'Error no controlado en el navegador.',
+      stack: event.error instanceof Error ? event.error.stack : undefined,
+      metadata: {
+        filename: event.filename || null,
+        lineno: event.lineno || null,
+        colno: event.colno || null,
+      },
+    });
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    recordClientError({
+      source: 'unhandledrejection',
+      message: stringifyErrorReason(reason) || 'Promesa rechazada sin manejar.',
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
+  });
+}
+
 // Vacía todos los logs en desarrollo
 if (process.env.NODE_ENV !== 'development') {
   console.log = function () {};
@@ -102,6 +145,7 @@ if (process.env.NODE_ENV !== 'development') {
 console.log('🚀 Aplicación iniciada en modo:', process.env.NODE_ENV);
 setupGlobalNumericInputNormalization();
 setupGlobalInstallPromptCapture();
+setupGlobalClientErrorCapture();
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

@@ -30,6 +30,7 @@ Archivo de referencia de inventario (sin cambios de contenido):
 16. `sql/modules/core_cmms/15_grants_auth.sql`
 17. `sql/modules/core_cmms/16_notifications.sql`
 18. `sql/modules/core_cmms/17_activity_log.sql`
+19. `sql/modules/core_cmms/18_approvals.sql`
 
 ### 2) Assets
 1. `sql/modules/assets/01_activos_fijos.sql`

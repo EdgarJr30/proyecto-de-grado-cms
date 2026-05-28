@@ -51,6 +51,7 @@ export const RESOURCES = {
   assets: 'assets',
   inventory: 'inventory',
   logs: 'logs',
+  approvals: 'approvals',
 } as const;
 
 type Resource = (typeof RESOURCES)[keyof typeof RESOURCES];
@@ -194,4 +195,13 @@ export const PERMISSIONS: PermissionDef[] = [
   // Bitácora de actividad (auditoría)
   p(RESOURCES.logs, 'read', 'Ver bitácora de actividad'),
   p(RESOURCES.logs, 'export', 'Exportar bitácora de actividad'),
+
+  // Procesos de aprobación
+  p(RESOURCES.approvals, 'read', 'Ver procesos de aprobación'),
+  p(RESOURCES.approvals, 'create', 'Crear procesos de aprobación'),
+  p(
+    RESOURCES.approvals,
+    'full_access',
+    'Acceso total a procesos de aprobación (crear/editar/miembros)'
+  ),
 ];

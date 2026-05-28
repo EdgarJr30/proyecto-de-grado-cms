@@ -29,6 +29,7 @@ export const WorkOrdersFilters: FilterSchema<WorkOrdersFilterKey> = {
       options: [
         { label: 'Pendiente', value: 'Pendiente' },
         { label: 'En Ejecución', value: 'En Ejecución' },
+        { label: 'En Validación', value: 'En Validación' },
         { label: 'Finalizadas', value: 'Finalizadas' },
       ],
       responsive: 'bar',

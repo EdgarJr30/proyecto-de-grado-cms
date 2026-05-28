@@ -79,7 +79,10 @@ BEGIN
       ('inventory','work','inventory:work','Reservar repuestos para OT',NULL),
       ('inventory','full_access','inventory:full_access','Acceso total inventario',NULL),
       ('logs','read','logs:read','Ver bitácora de actividad','Acceso de solo lectura a la bitácora de auditoría'),
-      ('logs','export','logs:export','Exportar bitácora de actividad','Permite exportar la bitácora de auditoría')
+      ('logs','export','logs:export','Exportar bitácora de actividad','Permite exportar la bitácora de auditoría'),
+      ('approvals','read','approvals:read','Ver procesos de aprobación','Acceso de lectura al módulo de aprobaciones'),
+      ('approvals','create','approvals:create','Crear procesos de aprobación',NULL),
+      ('approvals','full_access','approvals:full_access','Acceso total a procesos de aprobación','Crear/editar procesos y administrar aprobadores y solicitantes')
   )
   INSERT INTO public.permissions(id, resource, action, code, label, description, is_active, created_at)
   SELECT gen_random_uuid(), s.resource, s.action::permission_action, s.code, s.label, s.description, TRUE, NOW()

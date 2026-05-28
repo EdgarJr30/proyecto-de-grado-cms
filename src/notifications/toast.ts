@@ -1,4 +1,5 @@
 import { toast, type ToastOptions, type ToastContent } from 'react-toastify';
+import { recordClientError } from '../services/activityLogService';
 
 /** Normaliza mensaje a string legible para consola */
 function asText(msg: ToastContent) {
@@ -18,7 +19,9 @@ export function showToastSuccess(message: ToastContent, opts?: ToastOptions) {
 
 /** Toast de error con log */
 export function showToastError(message: ToastContent, opts?: ToastOptions) {
-  console.error(`❌ [toast-error] ${asText(message)}`);
+  const text = asText(message);
+  console.error(`❌ [toast-error] ${text}`);
+  recordClientError({ source: 'toast', message: text });
   return toast.error(message, opts);
 }
 

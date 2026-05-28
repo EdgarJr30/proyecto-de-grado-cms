@@ -27,6 +27,12 @@ export type ActivityLogFilters = {
   to?: string;
 };
 
+type ClientErrorSource =
+  | 'toast'
+  | 'alert'
+  | 'window.error'
+  | 'unhandledrejection';
+
 type ActivityLogRow = {
   id: string;
   occurred_at: string;
@@ -53,6 +59,41 @@ function getErrorMessage(error: unknown, fallback: string) {
     if (typeof message === 'string' && message.trim().length > 0) return message;
   }
   return fallback;
+}
+
+function truncate(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
+function redactSensitiveText(value: string): string {
+  return value
+    .replace(/(password|passwd|pwd|token|secret|apikey|api_key|authorization)=([^&\s]+)/gi, '$1=[omitido]')
+    .replace(/(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, '$1[omitido]');
+}
+
+function cleanLogText(value: unknown, fallback = ''): string {
+  const raw =
+    typeof value === 'string'
+      ? value
+      : value == null
+        ? fallback
+        : (() => {
+            try {
+              return JSON.stringify(value);
+            } catch {
+              return String(value);
+            }
+          })();
+  return truncate(redactSensitiveText(raw.trim() || fallback), 1200);
+}
+
+function getClientLocationMetadata(): Record<string, unknown> {
+  if (typeof window === 'undefined') return {};
+  return {
+    path: window.location.pathname,
+    search: truncate(redactSensitiveText(window.location.search), 500),
+  };
 }
 
 function parseMetadata(value: unknown): Record<string, unknown> {
@@ -150,6 +191,41 @@ export async function recordActivity(params: {
   } catch (e) {
     console.warn('[activity] record_activity threw:', getErrorMessage(e, ''));
   }
+}
+
+export function recordClientError(params: {
+  source: ClientErrorSource;
+  message: unknown;
+  title?: unknown;
+  stack?: unknown;
+  metadata?: Record<string, unknown>;
+}): void {
+  const message = cleanLogText(params.message, 'Error desconocido');
+  const title = params.title ? cleanLogText(params.title) : null;
+  const sourceLabel =
+    params.source === 'toast'
+      ? 'toast de error'
+      : params.source === 'alert'
+        ? 'alerta de error'
+        : 'error no controlado';
+
+  void recordActivity({
+    action:
+      params.source === 'window.error' || params.source === 'unhandledrejection'
+        ? 'client_error.unhandled'
+        : 'client_error.displayed',
+    resource: 'client_errors',
+    entityLabel: title ?? message,
+    summary: `Error de cliente registrado desde ${sourceLabel}: ${message}`,
+    metadata: {
+      source: params.source,
+      title,
+      message,
+      stack: params.stack ? truncate(redactSensitiveText(String(params.stack)), 4000) : null,
+      ...getClientLocationMetadata(),
+      ...(params.metadata ?? {}),
+    },
+  });
 }
 
 export function recordAuthEvent(kind: 'login' | 'logout'): Promise<void> {

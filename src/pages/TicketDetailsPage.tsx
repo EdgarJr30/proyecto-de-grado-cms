@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2, MessageSquare } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { markTicketCommentNotificationsRead } from '../services/notificationCenterService';
 import { getTicketById } from '../services/ticketService';
@@ -10,6 +10,7 @@ import {
   type TicketComment,
 } from '../services/ticketCommentsService';
 import type { WorkOrder } from '../types/Ticket';
+import TicketApprovalSection from '../components/tickets/TicketApprovalSection';
 import { showToastError, showToastSuccess } from '../notifications';
 import { formatDateInTimezone } from '../utils/formatDate';
 
@@ -156,6 +157,18 @@ export default function TicketDetailsPage() {
                     {ticket.status}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/ordenes_trabajo?ticketId=${ticket.id}`, {
+                      state: { openTicketId: ticket.id },
+                    })
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/15 dark:text-indigo-200 dark:hover:bg-indigo-500/25"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Ir al ticket
+                </button>
               </div>
 
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -222,6 +235,12 @@ export default function TicketDetailsPage() {
                 </div>
               </div>
             </section>
+
+            <TicketApprovalSection
+              ticketId={ticket.id as unknown as number}
+              status={ticket.status}
+              onChanged={loadTicket}
+            />
 
             <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="mb-3 flex items-center gap-2">

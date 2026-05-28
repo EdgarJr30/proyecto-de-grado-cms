@@ -8,7 +8,7 @@
 --   1) Triggers genéricos AFTER INSERT/UPDATE/DELETE -> public.log_activity()
 --   2) Triggers semánticos (comentarios, asignaciones) para entradas legibles
 --   3) Logging dentro de RPCs sensibles (ver 04_functions_triggers.sql)
---   4) RPC public.record_activity(...) para eventos de app (login/exportes)
+--   4) RPC public.record_activity(...) para eventos de app (login/exportes/errores cliente)
 --
 -- Acceso: RLS solo SELECT para quien tenga 'logs:read' o 'logs:export'.
 -- Escrituras: únicamente vía funciones SECURITY DEFINER (sin policies de cliente).
@@ -96,6 +96,7 @@ AS $$
     WHEN 'warehouses' THEN 'el almacén'
     WHEN 'inventory_docs' THEN 'el documento de inventario'
     WHEN 'vendors' THEN 'el proveedor'
+    WHEN 'client_errors' THEN 'el error de cliente'
     ELSE p_resource
   END;
 $$;
@@ -407,14 +408,15 @@ BEGIN
   IF p_action NOT IN (
     'auth.login', 'auth.logout',
     'tickets.exported', 'reports.exported',
-    'inventory.exported', 'activity_log.exported'
+    'inventory.exported', 'activity_log.exported',
+    'client_error.displayed', 'client_error.unhandled'
   ) THEN
     RAISE EXCEPTION 'Acción no permitida para registro manual: %', p_action;
   END IF;
 
   RETURN public.write_activity_log(
     p_action, p_resource, p_entity_id, p_entity_label, p_summary,
-    COALESCE(p_metadata, '{}'::jsonb), v_actor, p_user_agent
+    public.activity_redact_jsonb(COALESCE(p_metadata, '{}'::jsonb)), v_actor, p_user_agent
   );
 END;
 $$;
@@ -483,6 +485,7 @@ BEGIN
         OR a.actor_label ILIKE '%' || v_search || '%'
         OR a.entity_label ILIKE '%' || v_search || '%'
         OR a.action ILIKE '%' || v_search || '%'
+        OR a.metadata::text ILIKE '%' || v_search || '%'
       )
   )
   SELECT

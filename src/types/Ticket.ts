@@ -5,7 +5,7 @@ export interface Ticket {
   is_accepted: boolean;
   is_urgent: boolean;
   priority: 'Baja' | 'Media' | 'Alta';
-  status: 'Pendiente' | 'En Ejecución' | 'Finalizadas';
+  status: 'Pendiente' | 'En Ejecución' | 'En Validación' | 'Finalizadas';
   requester: string;
   location_id: number | null;
   location_name?: string | null;

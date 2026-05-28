@@ -29,6 +29,7 @@ const RESOURCE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'warehouses', label: 'Almacenes' },
   { value: 'inventory_docs', label: 'Documentos de inventario' },
   { value: 'vendors', label: 'Proveedores' },
+  { value: 'client_errors', label: 'Errores de usuario' },
   { value: 'logs', label: 'Bitácora' },
 ];
 
@@ -60,6 +61,9 @@ function actionBadgeClasses(action: string): string {
   }
   if (action.startsWith('auth.')) {
     return 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-300';
+  }
+  if (action.startsWith('client_error.')) {
+    return 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300';
   }
   if (action.includes('comment')) {
     return 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-300';

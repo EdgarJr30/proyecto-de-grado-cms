@@ -1,4 +1,8 @@
-export type TicketStatus = 'Pendiente' | 'En Ejecución' | 'Finalizadas';
+export type TicketStatus =
+  | 'Pendiente'
+  | 'En Ejecución'
+  | 'En Validación'
+  | 'Finalizadas';
 
 export interface ReportFilters {
   location_id?: string;

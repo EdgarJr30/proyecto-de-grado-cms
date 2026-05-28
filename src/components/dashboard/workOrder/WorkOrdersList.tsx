@@ -24,6 +24,9 @@ import { onDataInvalidated } from '../../../lib/dataInvalidation';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { showToastError } from '../../../notifications/toast';
+import { showConfirmAlert } from '../../../notifications';
+import { amIApprovalRequester } from '../../../services/approvalService';
+import { useNavigate } from 'react-router-dom';
 
 type GroupMode = 'manual' | 'dateAsc' | 'dateDesc';
 
@@ -46,17 +49,20 @@ const MANUAL_ORDER_STORAGE_KEY = 'work_orders_manual_order_v1';
 const STATUS_ORDER: Ticket['status'][] = [
   'Pendiente',
   'En Ejecución',
+  'En Validación',
   'Finalizadas',
 ];
 const STATUS_SECTION_LABEL: Record<Ticket['status'], string> = {
   Pendiente: 'Pendientes',
   'En Ejecución': 'En ejecución',
+  'En Validación': 'En validación',
   Finalizadas: 'Finalizadas',
 };
 
 function statusClass(s: Ticket['status']) {
   if (s === 'Pendiente') return 'bg-yellow-100 text-gray-800 border-gray-200';
   if (s === 'En Ejecución') return 'bg-blue-100 text-blue-800 border-blue-200';
+  if (s === 'En Validación') return 'bg-teal-100 text-teal-800 border-teal-200';
   return 'bg-green-100 text-green-800 border-green-200';
 }
 
@@ -85,6 +91,7 @@ function emptyManualOrder(): ManualOrderMap {
   return {
     Pendiente: [],
     'En Ejecución': [],
+    'En Validación': [],
     Finalizadas: [],
   };
 }
@@ -104,6 +111,11 @@ function readManualOrderFromStorage(): ManualOrderMap {
         : [],
       'En Ejecución': Array.isArray(parsed['En Ejecución'])
         ? parsed['En Ejecución']
+            .map(Number)
+            .filter((id) => Number.isFinite(id))
+        : [],
+      'En Validación': Array.isArray(parsed['En Validación'])
+        ? parsed['En Validación']
             .map(Number)
             .filter((id) => Number.isFinite(id))
         : [],
@@ -165,6 +177,7 @@ function moveIdWithinOrder(
   const next = {
     Pendiente: [...previous.Pendiente],
     'En Ejecución': [...previous['En Ejecución']],
+    'En Validación': [...previous['En Validación']],
     Finalizadas: [...previous.Finalizadas],
   };
 
@@ -408,6 +421,18 @@ export default function WorkOrdersList({
   const canRowDrag = canMoveCards && movingTicketId === null;
   const baseEase: [number, number, number, number] = [0.2, 0.8, 0.2, 1];
 
+  const navigate = useNavigate();
+  const [isApprovalRequester, setIsApprovalRequester] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void amIApprovalRequester().then((v) => {
+      if (alive) setIsApprovalRequester(v);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const clearDragState = () => {
     setDraggedTicket(null);
     setDraggedTicketId(null);
@@ -423,6 +448,23 @@ export default function WorkOrdersList({
       const statusChanged = sourceStatus !== targetStatus;
       const manualMode = groupMode === 'manual';
       if (!manualMode && !statusChanged) return;
+
+      // Técnico dentro de un proceso de aprobación: no puede finalizar arrastrando.
+      if (targetStatus === 'Finalizadas' && statusChanged && isApprovalRequester) {
+        setDraggedTicket(null);
+        setDraggedTicketId(null);
+        setDropTarget(null);
+        const ok = await showConfirmAlert({
+          title: 'Aprobación requerida',
+          text: 'Para finalizar esta orden primero debe pasar por la validación de tu aprobador. ¿Deseas abrir la orden para solicitar la aprobación y adjuntar la evidencia del trabajo terminado?',
+          icon: 'info',
+          confirmButtonText: 'Sí, solicitar aprobación',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#0d9488',
+        });
+        if (ok) navigate(`/tickets/${ticketId}`);
+        return;
+      }
 
       const previousRows = rows;
       const previousOrder = manualOrderByStatus;
@@ -461,7 +503,7 @@ export default function WorkOrdersList({
         setMovingTicketId(null);
       }
     },
-    [groupMode, manualOrderByStatus, movingTicketId, rows]
+    [groupMode, manualOrderByStatus, movingTicketId, rows, isApprovalRequester, navigate]
   );
 
   const handleDrop = async (target?: DropTarget) => {

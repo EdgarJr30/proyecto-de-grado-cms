@@ -241,6 +241,7 @@ export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
 const WORK_ORDER_STATUS_SET = new Set<Ticket['status']>([
   'Pendiente',
   'En Ejecución',
+  'En Validación',
   'Finalizadas',
 ]);
 
@@ -517,6 +518,7 @@ export async function getTicketCountsRPC(filters?: {
   const out: TicketCounts = {
     Pendiente: 0,
     'En Ejecución': 0,
+    'En Validación': 0,
     Finalizadas: 0,
   };
 
@@ -534,7 +536,12 @@ export async function getTicketCountsRPC(filters?: {
 export async function getWorkOrderCountsByFilters<TKeys extends string>(
   values: FilterState<TKeys>
 ): Promise<TicketCounts> {
-  const statuses: Status[] = ['Pendiente', 'En Ejecución', 'Finalizadas'];
+  const statuses: Status[] = [
+    'Pendiente',
+    'En Ejecución',
+    'En Validación',
+    'Finalizadas',
+  ];
   const counts = await Promise.all(
     statuses.map(async (status) => {
       const query = buildWorkOrdersQuery(values, {
@@ -557,6 +564,7 @@ export async function getWorkOrderCountsByFilters<TKeys extends string>(
     {
       Pendiente: 0,
       'En Ejecución': 0,
+      'En Validación': 0,
       Finalizadas: 0,
     }
   );

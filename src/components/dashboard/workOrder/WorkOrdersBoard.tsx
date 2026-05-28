@@ -21,12 +21,15 @@ import type { WorkOrdersFilterKey } from '../../../features/tickets/WorkOrdersFi
 import WorkOrdersColumn from './WorkOrdersColumn';
 import Modal from '../../ui/Modal';
 import { showToastError } from '../../../notifications/toast';
+import { showConfirmAlert } from '../../../notifications';
+import { amIApprovalRequester } from '../../../services/approvalService';
 import { useCan } from '../../../rbac/PermissionsContext';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 
 const STATUSES: Ticket['status'][] = [
   'Pendiente',
   'En Ejecución',
+  'En Validación',
   'Finalizadas',
 ];
 const BOARD_PAGE_SIZE = 200;
@@ -53,6 +56,7 @@ function emptyManualOrder(): ManualOrderMap {
   return {
     Pendiente: [],
     'En Ejecución': [],
+    'En Validación': [],
     Finalizadas: [],
   };
 }
@@ -72,6 +76,11 @@ function readManualOrderFromStorage(): ManualOrderMap {
         : [],
       'En Ejecución': Array.isArray(parsed['En Ejecución'])
         ? parsed['En Ejecución']
+            .map(Number)
+            .filter((id) => Number.isFinite(id))
+        : [],
+      'En Validación': Array.isArray(parsed['En Validación'])
+        ? parsed['En Validación']
             .map(Number)
             .filter((id) => Number.isFinite(id))
         : [],
@@ -130,6 +139,7 @@ function cloneManualOrder(order: ManualOrderMap): ManualOrderMap {
   return {
     Pendiente: [...order.Pendiente],
     'En Ejecución': [...order['En Ejecución']],
+    'En Validación': [...order['En Validación']],
     Finalizadas: [...order.Finalizadas],
   };
 }
@@ -204,11 +214,24 @@ export default function WorkOrdersBoard({
   const [counts, setCounts] = useState<Record<Ticket['status'], number>>({
     Pendiente: 0,
     'En Ejecución': 0,
+    'En Validación': 0,
     Finalizadas: 0,
   });
   const [draggedTicket, setDraggedTicket] = useState<WorkOrder | null>(null);
   const [movingTicketId, setMovingTicketId] = useState<number | null>(null);
   const canMoveCards = useCan('work_orders:full_access');
+  const [isApprovalRequester, setIsApprovalRequester] = useState(false);
+  const [autoOpenEvidence, setAutoOpenEvidence] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void amIApprovalRequester().then((v) => {
+      if (alive) setIsApprovalRequester(v);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   type WorkOrderWithSpecialIncident = WorkOrder & {
     special_incident_id?: number | null;
@@ -241,6 +264,7 @@ export default function WorkOrdersBoard({
     const grouped: Record<Ticket['status'], WorkOrder[]> = {
       Pendiente: [],
       'En Ejecución': [],
+      'En Validación': [],
       Finalizadas: [],
     };
 
@@ -271,6 +295,7 @@ export default function WorkOrdersBoard({
         {
           Pendiente: [] as WorkOrder[],
           'En Ejecución': [] as WorkOrder[],
+          'En Validación': [] as WorkOrder[],
           Finalizadas: [] as WorkOrder[],
         }
       );
@@ -286,6 +311,7 @@ export default function WorkOrdersBoard({
       {
         Pendiente: [] as WorkOrder[],
         'En Ejecución': [] as WorkOrder[],
+        'En Validación': [] as WorkOrder[],
         Finalizadas: [] as WorkOrder[],
       }
     );
@@ -528,6 +554,7 @@ export default function WorkOrdersBoard({
     setSelectedTicket(null);
     setModalOpen(false);
     setNestedModalLocked(false);
+    setAutoOpenEvidence(false);
   };
 
   const patchTicketInBoard = useCallback((ticketId: number, patch: Partial<WorkOrder>) => {
@@ -654,6 +681,26 @@ export default function WorkOrdersBoard({
         return;
       }
 
+      // Técnico dentro de un proceso de aprobación: no puede finalizar arrastrando.
+      // La tarjeta NO se mueve; se ofrece solicitar la validación con evidencia.
+      if (targetStatus === 'Finalizadas' && statusChanged && isApprovalRequester) {
+        setDraggedTicket(null);
+        const ok = await showConfirmAlert({
+          title: 'Aprobación requerida',
+          text: 'Para finalizar esta orden primero debe pasar por la validación de tu aprobador. ¿Deseas solicitar la aprobación ahora? Se te pedirá adjuntar la evidencia del trabajo terminado.',
+          icon: 'info',
+          confirmButtonText: 'Sí, solicitar aprobación',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#0d9488',
+        });
+        if (ok) {
+          setAutoOpenEvidence(true);
+          setSelectedTicket(ticket);
+          setModalOpen(true);
+        }
+        return;
+      }
+
       const previousRows = boardTickets;
       const previousOrder = manualOrderByStatus;
 
@@ -703,6 +750,7 @@ export default function WorkOrdersBoard({
       scheduleCountsRefresh,
       setBoardTickets,
       setManualOrderByStatus,
+      isApprovalRequester,
     ]
   );
 
@@ -759,6 +807,7 @@ export default function WorkOrdersBoard({
             const styles: Record<ColumnStatus, string> = {
               Pendiente: 'bg-amber-50 text-amber-800 border-amber-200',
               'En Ejecución': 'bg-sky-50 text-sky-800 border-sky-200',
+              'En Validación': 'bg-teal-50 text-teal-800 border-teal-200',
               Finalizadas: 'bg-emerald-50 text-emerald-800 border-emerald-200',
               Archivadas: 'bg-slate-50 text-slate-700 border-slate-300',
             };
@@ -810,6 +859,11 @@ export default function WorkOrdersBoard({
             showFullImage={showFullImage}
             setShowFullImage={setShowFullImage}
             onModalLockChange={setNestedModalLocked}
+            onApprovalChanged={async () => {
+              await loadBoardTickets();
+              scheduleCountsRefresh();
+            }}
+            autoOpenEvidence={autoOpenEvidence}
             forceReadOnly={Boolean(selectedTicket?.is_archived)}
             getSpecialIncidentAdornment={(t) => {
               const siId = (

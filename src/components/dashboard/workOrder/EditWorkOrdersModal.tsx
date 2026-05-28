@@ -30,6 +30,18 @@ import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { normalizeLocationId } from '../../../utils/locationId';
 import AnimatedDialog from '../../ui/AnimatedDialog';
 import TicketChatPanel from '../../tickets/TicketChatPanel';
+import { getCurrentUserId } from '../../../services/userService';
+import {
+  amIApprovalRequester,
+  getLatestApprovalForTicket,
+  getTicketPendingApprovers,
+  uploadApprovalEvidence,
+  requestTicketApproval,
+  decideTicketApproval,
+  parseEvidencePaths,
+  type ApprovalRequest,
+  type TicketApprover,
+} from '../../../services/approvalService';
 
 interface EditWorkOrdersModalProps {
   isOpen: boolean;
@@ -41,6 +53,10 @@ interface EditWorkOrdersModalProps {
   getSpecialIncidentAdornment?: (t: WorkOrder) => JSX.Element | null;
   forceReadOnly?: boolean;
   onModalLockChange?: (locked: boolean) => void;
+  /** Se llama tras enviar a validación / aprobar / rechazar para refrescar la vista. */
+  onApprovalChanged?: () => void | Promise<void>;
+  /** Abre directamente el modal de evidencia (p. ej. al intentar finalizar desde el tablero). */
+  autoOpenEvidence?: boolean;
 }
 
 export default function EditWorkOrdersModal({
@@ -51,10 +67,24 @@ export default function EditWorkOrdersModal({
   getSpecialIncidentAdornment,
   forceReadOnly = false,
   onModalLockChange,
+  onApprovalChanged,
+  autoOpenEvidence = false,
 }: EditWorkOrdersModalProps) {
   const [edited, setEdited] = useState<WorkOrder>(ticket);
   const [fullImageIdx, setFullImageIdx] = useState<number | null>(null);
   const [chatModalOpen, setChatModalOpen] = useState(false);
+
+  // --- Aprobación / validación de cierre ---
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isRequester, setIsRequester] = useState(false);
+  const [latestApproval, setLatestApproval] = useState<ApprovalRequest | null>(null);
+  const [pendingApprovers, setPendingApprovers] = useState<TicketApprover[]>([]);
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const [evidenceNote, setEvidenceNote] = useState('');
+  const [submittingEvidence, setSubmittingEvidence] = useState(false);
+  const [decisionNote, setDecisionNote] = useState('');
+  const [deciding, setDeciding] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const { loading: loadingAssignees, bySectionActive } = useAssignees();
@@ -69,7 +99,22 @@ export default function EditWorkOrdersModal({
   > = ['SIN ASIGNAR', 'Internos', 'TERCEROS', 'OTROS'];
 
   const canFullAccess = useCan('work_orders:full_access');
-  const isReadOnly = forceReadOnly || !canFullAccess;
+
+  const pendingApproval =
+    latestApproval && latestApproval.status === 'pending' ? latestApproval : null;
+  // Mientras está en validación, NADIE edita campos desde este modal.
+  const inValidation = edited.status === 'En Validación' && !!pendingApproval;
+  const viewerIsApprover =
+    !!currentUserId && pendingApprovers.some((a) => a.id === currentUserId);
+  const rejectedNote =
+    latestApproval && latestApproval.status === 'rejected'
+      ? latestApproval.decision_note
+      : null;
+  const evidencePaths = pendingApproval
+    ? parseEvidencePaths(pendingApproval.evidence_image)
+    : [];
+
+  const isReadOnly = forceReadOnly || !canFullAccess || inValidation;
   const canInventoryRead = useCan('inventory:read');
   const canInventoryOperate = useCan([
     'inventory:work',
@@ -146,6 +191,34 @@ export default function EditWorkOrdersModal({
     return () => onModalLockChange?.(false);
   }, [chatModalOpen, onModalLockChange]);
 
+  const loadApprovalContext = async () => {
+    try {
+      const tid = Number(ticket.id);
+      const [uid, requester, latest, approvers] = await Promise.all([
+        getCurrentUserId(),
+        amIApprovalRequester(),
+        getLatestApprovalForTicket(tid),
+        getTicketPendingApprovers(tid),
+      ]);
+      setCurrentUserId(uid);
+      setIsRequester(requester);
+      setLatestApproval(latest);
+      setPendingApprovers(approvers);
+    } catch {
+      /* best-effort: la validación de cierre no debe romper el modal */
+    }
+  };
+
+  useEffect(() => {
+    void loadApprovalContext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id]);
+
+  // Abre el modal de evidencia automáticamente cuando se solicita desde el tablero.
+  useEffect(() => {
+    if (autoOpenEvidence) setEvidenceOpen(true);
+  }, [autoOpenEvidence]);
+
   // Si el principal es uno de los secundarios, lo quitamos de secundarios
   useEffect(() => {
     if (typeof primaryId === 'number') {
@@ -198,6 +271,20 @@ export default function EditWorkOrdersModal({
   // Guardar cambios generales + secundarios
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Técnico dentro de un proceso de aprobación: no puede finalizar directo.
+    if (
+      isRequester &&
+      edited.status === 'Finalizadas' &&
+      ticket.status !== 'Finalizadas'
+    ) {
+      showToastError(
+        'Debes cargar la evidencia del trabajo finalizado antes de cerrar la orden.'
+      );
+      setEvidenceOpen(true);
+      return;
+    }
+
     if (!canFullAccess) return;
 
     try {
@@ -293,21 +380,81 @@ export default function EditWorkOrdersModal({
     }
   };
 
+  const submitEvidence = async () => {
+    if (evidenceFiles.length === 0) {
+      showToastError('Debes adjuntar al menos una imagen del trabajo terminado.');
+      return;
+    }
+    setSubmittingEvidence(true);
+    try {
+      const paths = await uploadApprovalEvidence(Number(ticket.id), evidenceFiles);
+      await requestTicketApproval({
+        ticketId: Number(ticket.id),
+        evidencePaths: paths,
+        note: evidenceNote,
+      });
+      showToastSuccess('Enviado a validación. El aprobador fue notificado.');
+      setEvidenceOpen(false);
+      setEvidenceFiles([]);
+      setEvidenceNote('');
+      // El RPC ya cambió el estado en BD; solo refrescamos la vista.
+      await onApprovalChanged?.();
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToastError(msg);
+    } finally {
+      setSubmittingEvidence(false);
+    }
+  };
+
+  const handleDecision = async (approve: boolean) => {
+    if (!pendingApproval) return;
+    if (!approve && decisionNote.trim().length === 0) {
+      showToastError('Debes indicar un comentario para rechazar la solicitud.');
+      return;
+    }
+    setDeciding(true);
+    try {
+      await decideTicketApproval({
+        requestId: pendingApproval.id,
+        approve,
+        note: decisionNote,
+      });
+      showToastSuccess(approve ? 'Orden validada y finalizada.' : 'Solicitud rechazada.');
+      setDecisionNote('');
+      // El RPC ya actualizó el estado en BD; solo refrescamos la vista.
+      await onApprovalChanged?.();
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      showToastError(msg);
+    } finally {
+      setDeciding(false);
+    }
+  };
+
   if (!ticket) return null;
 
   // Opciones de técnicos
+  // El responsable principal debe ser un técnico CON usuario en la plataforma
+  // (es quien podrá dar seguimiento y solicitar la validación de cierre).
   const renderAssigneeOptions = () =>
-    SECTIONS_ORDER.map((grupo) => (
-      <optgroup key={grupo} label={grupo}>
-        {(bySectionActive[grupo] ?? []).map((a: Assignee | undefined) =>
-          a ? (
+    SECTIONS_ORDER.map((grupo) => {
+      const linked = (bySectionActive[grupo] ?? []).filter(
+        (a: Assignee | undefined): a is Assignee => Boolean(a && a.user_id)
+      );
+      if (linked.length === 0) return null;
+      return (
+        <optgroup key={grupo} label={grupo}>
+          {linked.map((a) => (
             <option key={a.id} value={a.id}>
               {formatAssigneeFullName(a)}
             </option>
-          ) : null
-        )}
-      </optgroup>
-    ));
+          ))}
+        </optgroup>
+      );
+    });
 
   // === deadline helpers ===
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -458,11 +605,10 @@ export default function EditWorkOrdersModal({
               <option value="">Selecciona responsable…</option>
               {renderAssigneeOptions()}
             </select>
-            {!edited.is_accepted && (
-              <p className="text-xs text-gray-500 mt-1">
-                Obligatorio para aceptar la orden.
-              </p>
-            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Solo técnicos con usuario en la plataforma
+              {!edited.is_accepted ? ' · obligatorio para aceptar la orden.' : '.'}
+            </p>
           </div>
 
           {/* === NUEVO: Técnicos secundarios (chips) === */}
@@ -649,6 +795,121 @@ export default function EditWorkOrdersModal({
         </div>
       </div>
 
+      {/* ✅ Validación de cierre (aprobación) */}
+      {edited.is_accepted && (rejectedNote || inValidation || isRequester) && (
+        <div className="rounded-2xl border border-teal-200 bg-teal-50/80 p-4 sm:p-5 dark:border-teal-400/40 dark:bg-teal-500/10">
+          <h3 className="mb-2 text-base font-semibold text-teal-900 dark:text-teal-200">
+            Validación de cierre
+          </h3>
+
+          {/* Comentario de rechazo (vuelve al técnico) */}
+          {rejectedNote && !inValidation && (
+            <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 dark:border-rose-400/40 dark:bg-rose-500/10 dark:text-rose-200">
+              <span className="font-semibold">Rechazada por el aprobador:</span>{' '}
+              {rejectedNote}
+            </div>
+          )}
+
+          {inValidation ? (
+            <div className="space-y-3">
+              <p className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">
+                En validación — esperando aprobación
+              </p>
+
+              {pendingApprovers.length > 0 && (
+                <p className="text-sm text-slate-700 dark:text-slate-200">
+                  <span className="font-semibold">Aprobador(es):</span>{' '}
+                  {pendingApprovers.map((a) => a.label).join(', ')}
+                </p>
+              )}
+
+              {pendingApproval?.note && (
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  <span className="font-semibold">Nota del técnico:</span>{' '}
+                  {pendingApproval.note}
+                </p>
+              )}
+
+              {evidencePaths.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {evidencePaths.map((path) => (
+                    <a
+                      key={path}
+                      href={getPublicImageUrl(path)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block h-20 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600"
+                    >
+                      <img
+                        src={getPublicImageUrl(path)}
+                        alt="Evidencia"
+                        className="h-full w-full object-cover"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {viewerIsApprover ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={decisionNote}
+                    onChange={(e) => setDecisionNote(e.target.value)}
+                    rows={2}
+                    placeholder="Comentario de la decisión (obligatorio si rechazas)"
+                    className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-200 dark:border-slate-600 dark:bg-slate-950/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:ring-teal-500/25"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleDecision(true)}
+                      disabled={deciding}
+                      className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    >
+                      Validar y finalizar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleDecision(false)}
+                      disabled={deciding || decisionNote.trim().length === 0}
+                      title={
+                        decisionNote.trim().length === 0
+                          ? 'Escribe un comentario para poder rechazar'
+                          : undefined
+                      }
+                      className="rounded border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-400/60 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 dark:text-slate-300">
+                  La orden está bloqueada para edición hasta que un aprobador la valide.
+                </p>
+              )}
+            </div>
+          ) : (
+            isRequester &&
+            edited.status !== 'Finalizadas' && (
+              <div className="space-y-2">
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  Para finalizar esta orden debes enviarla a validación adjuntando una
+                  imagen del trabajo terminado.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setEvidenceOpen(true)}
+                  className="rounded bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400"
+                >
+                  Finalizar (requiere validación)
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      )}
+
       {/* ✅ Repuestos (solo si is_accepted=true) */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -660,8 +921,17 @@ export default function EditWorkOrdersModal({
               Disponible al aceptar (OT)
             </span>
           )}
+          {inValidation && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+              🔒 Bloqueado durante la validación
+            </span>
+          )}
         </div>
 
+        <div
+          className={inValidation ? 'pointer-events-none select-none opacity-60' : ''}
+          aria-disabled={inValidation}
+        >
         {edited.is_accepted && !canUseTicketPartsPanel ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {canInventoryRead ? (
@@ -686,6 +956,7 @@ export default function EditWorkOrdersModal({
             isAccepted={Boolean(edited.is_accepted)}
           />
         )}
+        </div>
       </div>
 
       {/* ✅ Activos fijos vinculados al ticket */}
@@ -699,6 +970,11 @@ export default function EditWorkOrdersModal({
               Disponible al aceptar (OT)
             </span>
           )}
+          {inValidation && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-800">
+              🔒 Bloqueado durante la validación
+            </span>
+          )}
         </div>
 
         <TicketAssetsPanel
@@ -707,7 +983,7 @@ export default function EditWorkOrdersModal({
           ticketTitle={edited.title}
           ticketStatus={edited.status}
           requester={edited.requester}
-          canManageLinks={canAssetsUpdate}
+          canManageLinks={canAssetsUpdate && !inValidation}
         />
       </div>
 
@@ -857,6 +1133,70 @@ export default function EditWorkOrdersModal({
         </div>
       </AnimatedDialog>
 
+      {/* Modal: evidencia obligatoria para enviar a validación */}
+      <AnimatedDialog
+        open={evidenceOpen}
+        onClose={() => setEvidenceOpen(false)}
+        zIndexClassName="z-[160]"
+        overlayClassName="bg-slate-950/45 backdrop-blur-sm"
+        panelClassName="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+        containerClassName="fixed inset-0 flex items-center justify-center p-4"
+        lockScroll
+      >
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h3 className="text-lg font-semibold text-slate-900">
+            Evidencia del trabajo finalizado
+          </h3>
+          <p className="text-sm text-slate-600">
+            Adjunta una imagen del trabajo terminado. Al enviar, la orden pasará a
+            validación de tu aprobador.
+          </p>
+        </div>
+        <div className="space-y-3 px-5 py-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">
+              Imagen del trabajo terminado (obligatoria)
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setEvidenceFiles(Array.from(e.target.files ?? []))}
+              className="mt-1 block w-full text-sm"
+            />
+            {evidenceFiles.length > 0 && (
+              <p className="mt-1 text-xs text-slate-500">
+                {evidenceFiles.length} archivo(s) seleccionado(s).
+              </p>
+            )}
+          </div>
+          <textarea
+            value={evidenceNote}
+            onChange={(e) => setEvidenceNote(e.target.value)}
+            rows={2}
+            placeholder="Nota para el aprobador (opcional)"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={() => setEvidenceOpen(false)}
+            className="rounded border border-slate-300 px-4 py-2 text-sm font-medium"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={() => void submitEvidence()}
+            disabled={submittingEvidence || evidenceFiles.length === 0}
+            className="rounded bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-60"
+          >
+            {submittingEvidence ? 'Enviando...' : 'Enviar a validación'}
+          </button>
+        </div>
+      </AnimatedDialog>
+
       {/* Footer acciones */}
       <div className="flex justify-end gap-2 mt-6">
         <button
@@ -940,7 +1280,7 @@ export default function EditWorkOrdersModal({
         )}
 
         {/* Guardar (ediciones generales y secundarios si ya es OT) */}
-        {!forceReadOnly && (
+        {!forceReadOnly && !inValidation && (
           <button
             type="submit"
             disabled={!canFullAccess}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import WorkOrdersBoard from '../components/dashboard/workOrder/WorkOrdersBoard';
 import WorkOrdersList from '../components/dashboard/workOrder/WorkOrdersList';
@@ -6,7 +7,7 @@ import WorkOrdersFiltersBar from '../components/dashboard/workOrder/WorkOrdersFi
 import Modal from '../components/ui/Modal';
 import EditTicketModal from '../components/dashboard/workOrder/EditWorkOrdersModal';
 import WorkOrdersSettingsModal from '../components/dashboard/workOrder/WorkOrdersSettingsModal';
-import { updateTicket } from '../services/ticketService';
+import { getTicketById, updateTicket } from '../services/ticketService';
 import { showToastError } from '../notifications/toast';
 import type { FilterState } from '../types/filters';
 import type { WorkOrdersFilterKey } from '../features/tickets/WorkOrdersFilters';
@@ -24,6 +25,8 @@ type AssignmentScope = 'all' | 'mine';
 
 export default function WorkOrdersPage() {
   const prefersReducedMotion = useReducedMotion();
+  const location = useLocation();
+  const navigate = useNavigate();
   const canManageWorkOrderSettings = useCan('work_orders:full_access');
   const { profile } = useUser();
   // 🔁 Filtros avanzados (ÚNICA fuente de verdad para filtros)
@@ -49,6 +52,16 @@ export default function WorkOrdersPage() {
   const [lastUpdatedTicket, setLastUpdatedTicket] = useState<WorkOrder | null>(
     null
   );
+
+  const requestedTicketId = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const queryId = Number(params.get('ticketId'));
+    const stateId = Number(
+      (location.state as { openTicketId?: unknown } | null)?.openTicketId
+    );
+    const id = Number.isInteger(queryId) && queryId > 0 ? queryId : stateId;
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }, [location.search, location.state]);
 
   useEffect(() => {
     const userId = profile?.id?.trim();
@@ -82,6 +95,34 @@ export default function WorkOrdersPage() {
       cancelled = true;
     };
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!requestedTicketId) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const row = await getTicketById(requestedTicketId);
+        if (cancelled) return;
+        setView('list');
+        setSelectedTicket(row);
+        setModalOpen(true);
+      } catch (e: unknown) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        showToastError(`No se pudo abrir el ticket #${requestedTicketId}. ${msg}`);
+      } finally {
+        if (!cancelled) {
+          navigate('/ordenes_trabajo', { replace: true, state: null });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, requestedTicketId]);
 
   const effectiveAssigneeFilter = useMemo(() => {
     if (assignmentScope !== 'mine') return undefined;
