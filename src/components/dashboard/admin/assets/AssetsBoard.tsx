@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   CalendarDays,
@@ -201,6 +202,7 @@ type PreventiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'DUE_30' | 'OVERDUE';
 const PAGE_SIZE = 10;
 
 export default function AssetsBoard() {
+  const navigate = useNavigate();
   const [assets, setAssets] = useState<AssetView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
@@ -847,6 +849,10 @@ export default function AssetsBoard() {
           loading={historyLoading}
           error={historyError}
           onClose={() => setActivityModal(null)}
+          onOpenTicket={(ticketId) => {
+            setActivityModal(null);
+            navigate(`/tickets/${ticketId}`);
+          }}
         />
       ) : null}
 
@@ -1079,7 +1085,7 @@ function AssetDetailPanel({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-1 min-[1800px]:grid-cols-2">
           <ActivityCard
             icon={<ClipboardList className="h-5 w-5" />}
-            label="Tickets"
+            label="Histórico"
             value={tickets.length}
             onClick={() => onOpenActivity('tickets')}
           />
@@ -1176,6 +1182,7 @@ function ActivityModal({
   loading,
   error,
   onClose,
+  onOpenTicket,
 }: {
   asset: AssetView;
   type: DetailTab;
@@ -1184,9 +1191,10 @@ function ActivityModal({
   loading: boolean;
   error: string;
   onClose: () => void;
+  onOpenTicket: (ticketId: BigIntLike) => void;
 }) {
   const isTickets = type === 'tickets';
-  const title = isTickets ? 'Tickets del activo' : 'Bitácora del activo';
+  const title = isTickets ? 'Histórico de mantenimientos' : 'Bitácora del activo';
   const count = isTickets ? tickets.length : maintenanceLog.length;
 
   return (
@@ -1204,7 +1212,8 @@ function ActivityModal({
             {title}
           </h2>
           <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
-            {asset.code} · {asset.name} · {count} registro(s)
+            {asset.code} · {asset.name} · {count}{' '}
+            {isTickets ? 'mantenimiento(s)' : 'registro(s)'}
           </p>
         </div>
         <button
@@ -1225,6 +1234,7 @@ function ActivityModal({
           maintenanceLog={maintenanceLog}
           loading={loading}
           error={error}
+          onOpenTicket={onOpenTicket}
         />
       </div>
     </AnimatedDialog>
@@ -1237,12 +1247,14 @@ function ActivityList({
   maintenanceLog,
   loading,
   error,
+  onOpenTicket,
 }: {
   detailTab: DetailTab;
   tickets: AssetTicketView[];
   maintenanceLog: AssetMaintenanceLog[];
   loading: boolean;
   error: string;
+  onOpenTicket: (ticketId: BigIntLike) => void;
 }) {
   if (loading) {
     return (
@@ -1264,7 +1276,7 @@ function ActivityList({
     if (tickets.length === 0) {
       return (
         <div className="mt-4 rounded-xl border border-slate-200 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-          Sin tickets vinculados.
+          Sin mantenimientos vinculados.
         </div>
       );
     }
@@ -1272,20 +1284,28 @@ function ActivityList({
     return (
       <div className="mt-4 max-h-64 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
         {tickets.map((ticket) => (
-          <div
+          <button
+            type="button"
             key={`${ticket.asset_id}-${String(ticket.id)}`}
-            className="border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
+            onClick={() => onOpenTicket(ticket.id)}
+            className="flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-blue-50/70 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 dark:border-slate-800 dark:hover:bg-blue-950/20"
           >
-            <div className="flex items-start gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
-              <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-              <span className="min-w-0 truncate">
-                #{String(ticket.id)} {ticket.title ?? 'Ticket'}
-              </span>
+            <div className="min-w-0">
+              <div className="flex items-start gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+                <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+                <span className="min-w-0 truncate">
+                  #{String(ticket.id)} {ticket.title ?? 'Ticket'}
+                </span>
+              </div>
+              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                {ticket.status ?? '—'} · {formatDateTime(ticket.created_at)}
+              </div>
             </div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              {ticket.status ?? '—'} · {formatDateTime(ticket.created_at)}
-            </div>
-          </div>
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-300">
+              Ver ticket
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          </button>
         ))}
       </div>
     );
