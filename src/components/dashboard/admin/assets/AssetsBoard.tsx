@@ -1,5 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  CalendarX2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Clock3,
+  Grid2X2,
+  MapPin,
+  MoreVertical,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  ScrollText,
+  Search,
+  SlidersHorizontal,
+  Wrench,
+  X,
+} from 'lucide-react';
 import type {
   AssetMaintenanceLog,
   AssetStatus,
@@ -17,6 +39,7 @@ import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetCreateForm from './AssetCreateForm';
 import AssetCategoriesManager from './AssetCategoriesManager';
 import AssetEditForm from './AssetEditForm';
+import AnimatedDialog from '../../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | null | undefined | 0>) {
   return classes.filter(Boolean).join(' ');
@@ -88,7 +111,7 @@ function statusTone(value: AssetStatus) {
 }
 
 function preventiveFrequencyLabel(asset: AssetView | null) {
-  if (!asset?.preventive_is_active) return 'Desactivado';
+  if (!asset?.preventive_is_active) return 'Sin plan';
 
   const every = asset.preventive_frequency_value ?? 1;
   const unit = asset.preventive_frequency_unit ?? 'MONTH';
@@ -119,7 +142,7 @@ function preventiveState(asset: AssetView | null): {
   if (days == null) {
     return {
       label: 'Plan activo',
-      tone: 'border-sky-200 bg-sky-50 text-sky-700',
+      tone: 'border-blue-200 bg-blue-50 text-blue-700',
     };
   }
 
@@ -133,7 +156,7 @@ function preventiveState(asset: AssetView | null): {
   if (days <= 30) {
     return {
       label: `Próximo (${days} día(s))`,
-      tone: 'border-amber-200 bg-amber-50 text-amber-700',
+      tone: 'border-orange-200 bg-orange-50 text-orange-700',
     };
   }
 
@@ -151,21 +174,19 @@ function criticalityLabel(value: number) {
   return 'Muy baja';
 }
 
-function CriticalityPill({ value }: { value: number }) {
-  const tone =
-    value >= 5
-      ? 'border-rose-200 bg-rose-50 text-rose-700'
-      : value === 4
-        ? 'border-amber-200 bg-amber-50 text-amber-700'
-        : value === 3
-          ? 'border-sky-200 bg-sky-50 text-sky-700'
-          : 'border-slate-200 bg-slate-100 text-slate-700';
+function criticalityTone(value: number) {
+  if (value >= 5) return 'border-rose-200 bg-rose-50 text-rose-700';
+  if (value === 4) return 'border-orange-200 bg-orange-50 text-orange-700';
+  if (value === 3) return 'border-blue-200 bg-blue-50 text-blue-700';
+  return 'border-slate-200 bg-slate-100 text-slate-700';
+}
 
+function CriticalityPill({ value }: { value: number }) {
   return (
     <span
       className={cx(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
-        tone
+        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
+        criticalityTone(value)
       )}
     >
       C{value} · {criticalityLabel(value)}
@@ -176,6 +197,8 @@ function CriticalityPill({ value }: { value: number }) {
 type ViewMode = 'none' | 'create' | 'edit';
 type DetailTab = 'tickets' | 'maintenance';
 type PreventiveFilter = 'ALL' | 'ACTIVE' | 'INACTIVE' | 'DUE_30' | 'OVERDUE';
+
+const PAGE_SIZE = 10;
 
 export default function AssetsBoard() {
   const [assets, setAssets] = useState<AssetView[]>([]);
@@ -188,13 +211,14 @@ export default function AssetsBoard() {
   const [locationFilter, setLocationFilter] = useState<string>('ALL');
   const [preventiveFilter, setPreventiveFilter] =
     useState<PreventiveFilter>('ALL');
+  const [page, setPage] = useState(1);
 
   const [selectedAssetId, setSelectedAssetId] = useState<BigIntLike | null>(
     null
   );
 
   const [modal, setModal] = useState<ViewMode>('none');
-  const [detailTab, setDetailTab] = useState<DetailTab>('tickets');
+  const [activityModal, setActivityModal] = useState<DetailTab | null>(null);
 
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
@@ -334,6 +358,26 @@ export default function AssetsBoard() {
   }, [assets, locationFilter, preventiveFilter, search, statusFilter]);
 
   useEffect(() => {
+    setPage(1);
+  }, [locationFilter, preventiveFilter, search, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedAssets = filteredAssets.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+  const pageStart =
+    filteredAssets.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const pageEnd = Math.min(currentPage * PAGE_SIZE, filteredAssets.length);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  useEffect(() => {
     if (filteredAssets.length === 0) {
       setSelectedAssetId(null);
       return;
@@ -352,6 +396,10 @@ export default function AssetsBoard() {
     const id = toId(selectedAssetId);
     return filteredAssets.find((asset) => toId(asset.id) === id) ?? null;
   }, [filteredAssets, selectedAssetId]);
+
+  useEffect(() => {
+    if (!selectedAsset) setActivityModal(null);
+  }, [selectedAsset]);
 
   useEffect(() => {
     if (!selectedAssetId) {
@@ -437,489 +485,370 @@ export default function AssetsBoard() {
     locationFilter !== 'ALL' ||
     preventiveFilter !== 'ALL';
 
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter('ALL');
+    setLocationFilter('ALL');
+    setPreventiveFilter('ALL');
+  };
+
   return (
-    <div className="h-full min-h-0 p-1 sm:p-2">
+    <div className="h-full max-h-full max-w-full overflow-y-auto overflow-x-hidden bg-[#f7f9fc] px-4 py-6 text-slate-900 md:px-6 lg:px-8 dark:bg-slate-950 dark:text-slate-100">
       {error ? (
-        <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
           {error}
         </div>
       ) : null}
 
-      <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
-        <header className="border-b border-slate-200 px-4 py-4 sm:px-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900">
-                Maestro de activos
-              </h2>
-              <p className="mt-1 text-sm text-slate-600">
-                Vista operacional estilo ERP: consulta, prioriza y gestiona
-                mantenimiento preventivo por equipo.
-              </p>
-            </div>
+      <header className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold tracking-normal text-slate-950 dark:text-white">
+            Activos fijos
+          </h1>
+          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+            Gestione el inventario de activos físicos y su mantenimiento
+            preventivo.
+          </p>
+        </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void handleRunPreventiveScheduler()}
-                disabled={isRunningScheduler}
-                className={cx(
-                  'rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100',
-                  isRunningScheduler && 'cursor-not-allowed opacity-60'
-                )}
-                title="Ejecuta ahora la generación automática de OT preventivas"
-              >
-                {isRunningScheduler
-                  ? 'Ejecutando preventivo...'
-                  : 'Ejecutar preventivo ahora'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setModal('create')}
-                className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
-              >
-                Nuevo activo
-              </button>
-              <AssetCategoriesManager />
-              <button
-                type="button"
-                disabled={!selectedAsset}
-                onClick={() => setModal('edit')}
-                className={cx(
-                  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50',
-                  !selectedAsset && 'cursor-not-allowed opacity-50'
-                )}
-              >
-                Editar seleccionado
-              </button>
-              <button
-                type="button"
-                onClick={() => void reload()}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                Refrescar
-              </button>
-            </div>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setModal('create')}
+            className="inline-flex h-12 items-center gap-2 rounded-lg bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          >
+            <Plus className="h-5 w-5" />
+            Nuevo activo
+          </button>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Buscar
-              </label>
+          <button
+            type="button"
+            onClick={() => void handleRunPreventiveScheduler()}
+            disabled={isRunningScheduler}
+            className={cx(
+              'inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
+              isRunningScheduler && 'cursor-not-allowed opacity-60'
+            )}
+            title="Ejecuta ahora la generación automática de OT preventivas"
+          >
+            <Play className="h-4 w-4 fill-slate-800 dark:fill-slate-100" />
+            {isRunningScheduler ? 'Ejecutando' : 'Ejecutar preventivo'}
+          </button>
+
+          <AssetCategoriesManager />
+
+          <button
+            type="button"
+            onClick={() => void reload()}
+            className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Actualizar
+          </button>
+        </div>
+      </header>
+
+      <section className="mt-6 rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))_auto]">
+          <FieldShell label="Búsqueda">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Código, nombre, serie, categoría o ubicación"
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-blue-500/20"
               />
             </div>
+          </FieldShell>
 
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Estado
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value as AssetStatus | 'ALL')
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              >
-                <option value="ALL">Todos los estados</option>
-                <option value="OPERATIVO">Operativo</option>
-                <option value="EN_MANTENIMIENTO">En mantenimiento</option>
-                <option value="FUERA_DE_SERVICIO">Fuera de servicio</option>
-                <option value="RETIRADO">Retirado</option>
-              </select>
-            </div>
+          <FieldShell label="Estado">
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as AssetStatus | 'ALL')
+              }
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-blue-500/20"
+            >
+              <option value="ALL">Todos los estados</option>
+              <option value="OPERATIVO">Operativo</option>
+              <option value="EN_MANTENIMIENTO">En mantenimiento</option>
+              <option value="FUERA_DE_SERVICIO">Fuera de servicio</option>
+              <option value="RETIRADO">Retirado</option>
+            </select>
+          </FieldShell>
 
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Ubicación
-              </label>
-              <select
-                value={locationFilter}
-                onChange={(event) => setLocationFilter(event.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              >
-                <option value="ALL">Todas las ubicaciones</option>
-                {locationOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <FieldShell label="Ubicación">
+            <select
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-blue-500/20"
+            >
+              <option value="ALL">Todas las ubicaciones</option>
+              {locationOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </FieldShell>
 
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Mantenimiento preventivo
-              </label>
-              <select
-                value={preventiveFilter}
-                onChange={(event) =>
-                  setPreventiveFilter(event.target.value as PreventiveFilter)
-                }
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              >
-                <option value="ALL">Todos</option>
-                <option value="ACTIVE">Con plan activo</option>
-                <option value="INACTIVE">Sin plan activo</option>
-                <option value="DUE_30">Vence en 30 días</option>
-                <option value="OVERDUE">Vencido</option>
-              </select>
-            </div>
-          </div>
+          <FieldShell label="Mantenimiento preventivo">
+            <select
+              value={preventiveFilter}
+              onChange={(event) =>
+                setPreventiveFilter(event.target.value as PreventiveFilter)
+              }
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-blue-500/20"
+            >
+              <option value="ALL">Todos</option>
+              <option value="ACTIVE">Con plan activo</option>
+              <option value="INACTIVE">Sin plan activo</option>
+              <option value="DUE_30">Vence en 30 días</option>
+              <option value="OVERDUE">Vencido</option>
+            </select>
+          </FieldShell>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="text-xs text-slate-500">
-              Mostrando <span className="font-semibold text-slate-700">{filteredAssets.length}</span>{' '}
-              activo(s) de {assets.length}
-            </div>
+          <div className="flex items-end">
             <button
               type="button"
-              className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              onClick={() => {
-                setSearch('');
-                setStatusFilter('ALL');
-                setLocationFilter('ALL');
-                setPreventiveFilter('ALL');
-              }}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 lg:w-auto dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-800"
+              onClick={clearFilters}
             >
+              <SlidersHorizontal className="h-4 w-4" />
               Limpiar filtros
             </button>
           </div>
-        </header>
-
-        <div className="grid grid-cols-2 gap-3 border-b border-slate-200 bg-slate-50/70 px-4 py-3 sm:grid-cols-4 xl:grid-cols-7 sm:px-5">
-          <KpiCard label="Total" value={kpis.total} tone="slate" />
-          <KpiCard label="Operativos" value={kpis.operational} tone="emerald" />
-          <KpiCard
-            label="En mantenimiento"
-            value={kpis.inMaintenance}
-            tone="amber"
-          />
-          <KpiCard
-            label="Fuera de servicio"
-            value={kpis.outOfService}
-            tone="rose"
-          />
-          <KpiCard
-            label="Plan preventivo"
-            value={kpis.preventiveActive}
-            tone="indigo"
-          />
-          <KpiCard label="Vence ≤ 30d" value={kpis.due30} tone="orange" />
-          <KpiCard label="Vencidos" value={kpis.overdue} tone="rose" />
-        </div>
-
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 p-4 xl:grid-cols-[1fr_370px] sm:p-5">
-          <div className="min-h-0 overflow-hidden rounded-xl border border-slate-200">
-            <div className="h-full min-h-0 overflow-auto">
-              <table className="min-w-full divide-y divide-slate-200 text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Código
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Activo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Ubicación
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Estado
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Preventivo
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Criticidad
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 bg-white">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                        Cargando activos...
-                      </td>
-                    </tr>
-                  ) : filteredAssets.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                        {showEmptyByFilters
-                          ? 'No hay activos que cumplan los filtros actuales.'
-                          : 'No hay activos registrados.'}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredAssets.map((asset) => {
-                      const selected = toId(asset.id) === toId(selectedAssetId);
-                      const pState = preventiveState(asset);
-
-                      return (
-                        <tr
-                          key={toId(asset.id)}
-                          onClick={() => setSelectedAssetId(asset.id)}
-                          className={cx(
-                            'cursor-pointer transition hover:bg-indigo-50/40',
-                            selected && 'bg-indigo-50/70'
-                          )}
-                        >
-                          <td className="whitespace-nowrap px-4 py-3 font-semibold text-slate-900">
-                            {asset.code}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="font-semibold text-slate-900">{asset.name}</div>
-                            <div className="text-xs text-slate-500">
-                              {asset.category_name ?? 'Sin categoría'}
-                              {asset.model ? ` · ${asset.model}` : ''}
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3 text-slate-600">
-                            {asset.location_name ?? '—'}
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3">
-                            <span
-                              className={cx(
-                                'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
-                                statusTone(asset.status)
-                              )}
-                            >
-                              {statusLabel(asset.status)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-1">
-                              <span
-                                className={cx(
-                                  'inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-xs font-medium',
-                                  pState.tone
-                                )}
-                              >
-                                {pState.label}
-                              </span>
-                              {asset.preventive_is_active ? (
-                                <span className="text-xs text-slate-500">
-                                  {preventiveFrequencyLabel(asset)} · Próx.{' '}
-                                  {formatDateOnly(asset.preventive_next_due_on)}
-                                </span>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="whitespace-nowrap px-4 py-3">
-                            <CriticalityPill value={asset.criticality ?? 3} />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <aside className="min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            {!selectedAsset ? (
-              <div className="flex h-full items-center justify-center px-6 text-center text-sm text-slate-500">
-                Selecciona un activo para ver su detalle operativo.
-              </div>
-            ) : (
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="border-b border-slate-200 px-4 py-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-slate-900">
-                        {selectedAsset.code} · {selectedAsset.name}
-                      </div>
-                      <div className="mt-1 truncate text-xs text-slate-500">
-                        {selectedAsset.category_name ?? 'Sin categoría'} ·{' '}
-                        {selectedAsset.location_name ?? 'Sin ubicación'}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setModal('edit')}
-                      className="rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      Editar
-                    </button>
-                  </div>
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-                  <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                      Resumen técnico
-                    </h4>
-                    <div className="mt-2 space-y-2 text-xs text-slate-700">
-                      <RowLabel
-                        label="Estado"
-                        value={
-                          <span
-                            className={cx(
-                              'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                              statusTone(selectedAsset.status)
-                            )}
-                          >
-                            {statusLabel(selectedAsset.status)}
-                          </span>
-                        }
-                      />
-                      <RowLabel
-                        label="Criticidad"
-                        value={<CriticalityPill value={selectedAsset.criticality ?? 3} />}
-                      />
-                      <RowLabel label="Modelo" value={selectedAsset.model ?? '—'} />
-                      <RowLabel
-                        label="No. serie"
-                        value={selectedAsset.serial_number ?? '—'}
-                      />
-                      <RowLabel
-                        label="Asset tag"
-                        value={selectedAsset.asset_tag ?? '—'}
-                      />
-                      <RowLabel
-                        label="Garantía"
-                        value={formatDateOnly(selectedAsset.warranty_end_date)}
-                      />
-                    </div>
-                  </section>
-
-                  <section className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
-                        Plan preventivo
-                      </h4>
-                      <span
-                        className={cx(
-                          'inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                          preventiveState(selectedAsset).tone
-                        )}
-                      >
-                        {preventiveState(selectedAsset).label}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 space-y-2 text-xs text-slate-700">
-                      <RowLabel
-                        label="Frecuencia"
-                        value={preventiveFrequencyLabel(selectedAsset)}
-                      />
-                      <RowLabel
-                        label="Próxima OT"
-                        value={formatDateOnly(selectedAsset.preventive_next_due_on)}
-                      />
-                      <RowLabel
-                        label="Inicio"
-                        value={formatDateOnly(selectedAsset.preventive_start_on)}
-                      />
-                      <RowLabel
-                        label="Generar con anticipación"
-                        value={`${selectedAsset.preventive_lead_days ?? 0} día(s)`}
-                      />
-                      <RowLabel
-                        label="Última OT creada"
-                        value={formatDateTime(selectedAsset.preventive_last_generated_at)}
-                      />
-                      <RowLabel
-                        label="Último cierre"
-                        value={formatDateTime(selectedAsset.preventive_last_completed_at)}
-                      />
-                    </div>
-
-                    {selectedAsset.preventive_instructions ? (
-                      <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-2 text-xs text-slate-600">
-                        {selectedAsset.preventive_instructions}
-                      </div>
-                    ) : null}
-                  </section>
-
-                  <section className="mt-3 rounded-lg border border-slate-200 bg-white">
-                    <div className="flex border-b border-slate-200 p-1">
-                      <button
-                        type="button"
-                        onClick={() => setDetailTab('tickets')}
-                        className={cx(
-                          'flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition',
-                          detailTab === 'tickets'
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-50'
-                        )}
-                      >
-                        Tickets ({assetTickets.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDetailTab('maintenance')}
-                        className={cx(
-                          'flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition',
-                          detailTab === 'maintenance'
-                            ? 'bg-indigo-600 text-white'
-                            : 'text-slate-600 hover:bg-slate-50'
-                        )}
-                      >
-                        Bitácora ({maintenanceLog.length})
-                      </button>
-                    </div>
-
-                    {historyLoading ? (
-                      <div className="px-3 py-5 text-xs text-slate-500">Cargando...</div>
-                    ) : historyError ? (
-                      <div className="px-3 py-5 text-xs text-rose-600">{historyError}</div>
-                    ) : detailTab === 'tickets' ? (
-                      assetTickets.length === 0 ? (
-                        <div className="px-3 py-5 text-xs text-slate-500">
-                          Sin tickets vinculados.
-                        </div>
-                      ) : (
-                        <div className="max-h-60 overflow-auto divide-y divide-slate-100">
-                          {assetTickets.map((ticket) => (
-                            <div
-                              key={`${ticket.asset_id}-${String(ticket.id)}`}
-                              className="px-3 py-2"
-                            >
-                              <div className="text-xs font-semibold text-slate-900">
-                                #{String(ticket.id)} {ticket.title ?? 'Ticket'}
-                              </div>
-                              <div className="mt-0.5 text-[11px] text-slate-500">
-                                {ticket.status ?? '—'} · {formatDateTime(ticket.created_at)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    ) : maintenanceLog.length === 0 ? (
-                      <div className="px-3 py-5 text-xs text-slate-500">
-                        Sin mantenimientos registrados.
-                      </div>
-                    ) : (
-                      <div className="max-h-60 overflow-auto divide-y divide-slate-100">
-                        {maintenanceLog.map((entry) => (
-                          <div key={String(entry.id)} className="px-3 py-2">
-                            <div className="text-xs font-semibold text-slate-900">
-                              {entry.maintenance_type} · {entry.summary}
-                            </div>
-                            <div className="mt-0.5 text-[11px] text-slate-500">
-                              {formatDateTime(entry.performed_at)}
-                              {entry.ticket_id
-                                ? ` · OT #${String(entry.ticket_id)}`
-                                : ''}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                </div>
-              </div>
-            )}
-          </aside>
         </div>
       </section>
+
+      <section className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+        <MetricCard
+          icon={<Grid2X2 className="h-7 w-7" />}
+          label="Total"
+          value={kpis.total}
+          tone="blue"
+        />
+        <MetricCard
+          icon={<CheckCircle2 className="h-7 w-7" />}
+          label="Operativos"
+          value={kpis.operational}
+          tone="emerald"
+        />
+        <MetricCard
+          icon={<Wrench className="h-7 w-7" />}
+          label="En mantenimiento"
+          value={kpis.inMaintenance}
+          tone="amber"
+        />
+        <MetricCard
+          icon={<AlertTriangle className="h-7 w-7" />}
+          label="Fuera de servicio"
+          value={kpis.outOfService}
+          tone="rose"
+        />
+        <MetricCard
+          icon={<CalendarDays className="h-7 w-7" />}
+          label="Con plan preventivo"
+          value={kpis.preventiveActive}
+          tone="blue"
+        />
+        <MetricCard
+          icon={<Clock3 className="h-7 w-7" />}
+          label="Vence ≤ 30 días"
+          value={kpis.due30}
+          tone="orange"
+        />
+        <MetricCard
+          icon={<CalendarX2 className="h-7 w-7" />}
+          label="Vencidos"
+          value={kpis.overdue}
+          tone="rose"
+        />
+      </section>
+
+      <section className="mt-5 grid min-w-0 max-w-full grid-cols-1 items-start gap-5 overflow-hidden min-[1500px]:grid-cols-[minmax(0,1fr)_minmax(300px,340px)]">
+        <div className="flex h-[36rem] max-h-[36rem] w-full min-w-0 max-w-none flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex min-h-14 items-center border-b border-slate-200 px-5 dark:border-slate-800">
+            <h2 className="text-base font-bold text-slate-950 dark:text-white">
+              Lista de activos ({filteredAssets.length})
+            </h2>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-auto">
+            <table className="min-w-[720px] w-full table-fixed text-left text-sm">
+              <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                <tr>
+                  <th className="w-24 px-4 py-4">Código</th>
+                  <th className="w-[22%] px-4 py-4">Activo</th>
+                  <th className="w-[18%] px-4 py-4">Ubicación</th>
+                  <th className="w-[15%] px-4 py-4">Estado</th>
+                  <th className="w-[24%] px-4 py-4">Preventivo</th>
+                  <th className="w-[15%] px-4 py-4">Criticidad</th>
+                  <th className="w-12 px-3 py-4 text-right"> </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center text-slate-500">
+                      Cargando activos...
+                    </td>
+                  </tr>
+                ) : filteredAssets.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-16 text-center text-slate-500">
+                      {showEmptyByFilters
+                        ? 'No hay activos que cumplan los filtros actuales.'
+                        : 'No hay activos registrados.'}
+                    </td>
+                  </tr>
+                ) : (
+                  pagedAssets.map((asset) => {
+                    const selected = toId(asset.id) === toId(selectedAssetId);
+                    const pState = preventiveState(asset);
+
+                    return (
+                      <tr
+                        key={toId(asset.id)}
+                        onClick={() => {
+                          setSelectedAssetId(asset.id);
+                          setModal('edit');
+                        }}
+                        className={cx(
+                          'group cursor-pointer transition hover:bg-blue-50/50 dark:hover:bg-blue-950/20',
+                          selected &&
+                            'bg-blue-50/70 shadow-[inset_4px_0_0_#2563eb] dark:bg-blue-950/30'
+                        )}
+                      >
+                        <td className="whitespace-nowrap px-4 py-5 align-middle font-bold text-slate-900 dark:text-slate-100">
+                          {asset.code}
+                        </td>
+                        <td className="px-4 py-5 align-middle">
+                          <div className="truncate font-bold text-slate-950 dark:text-white">
+                            {asset.name}
+                          </div>
+                          <div className="mt-1 truncate text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {asset.category_name ?? 'Sin categoría'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 align-middle text-slate-700 dark:text-slate-300">
+                          <span className="inline-flex max-w-full items-center gap-1.5">
+                            <MapPin className="h-4 w-4 text-slate-500" />
+                            <span className="truncate">{asset.location_name ?? '—'}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-5 align-middle">
+                          <StatusPill status={asset.status} />
+                        </td>
+                        <td className="px-4 py-5 align-middle">
+                          <div className="flex flex-col gap-1.5">
+                            <span
+                              className={cx(
+                                'inline-flex w-fit items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
+                                pState.tone
+                              )}
+                            >
+                              {pState.label}
+                            </span>
+                            {asset.preventive_is_active ? (
+                              <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                                {preventiveFrequencyLabel(asset)} · Próx.{' '}
+                                {formatDateOnly(asset.preventive_next_due_on)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-5 align-middle">
+                          <CriticalityPill value={asset.criticality ?? 3} />
+                        </td>
+                        <td className="px-3 py-5 text-right align-middle">
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-white"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setSelectedAssetId(asset.id);
+                              setModal('edit');
+                            }}
+                            aria-label={`Editar ${asset.code}`}
+                            title="Editar"
+                          >
+                            <MoreVertical className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:text-slate-400">
+            <div className="flex items-center gap-2">
+              <span>Mostrar</span>
+              <span className="inline-flex h-9 min-w-14 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 font-semibold text-slate-800 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                {PAGE_SIZE}
+              </span>
+              <span>por página</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-6 sm:justify-end">
+              <div>
+                {pageStart} - {pageEnd} de {filteredAssets.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                  aria-label="Página anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-blue-600 px-3 text-sm font-bold text-white shadow-sm shadow-blue-600/25">
+                  {currentPage}
+                </span>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 dark:hover:bg-slate-800"
+                  disabled={currentPage >= totalPages}
+                  onClick={() =>
+                    setPage((value) => Math.min(totalPages, value + 1))
+                  }
+                  aria-label="Página siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full min-w-0 min-[1500px]:max-w-[340px]">
+          <AssetDetailPanel
+            asset={selectedAsset}
+            tickets={assetTickets}
+            maintenanceLog={maintenanceLog}
+            onEdit={() => setModal('edit')}
+            onOpenActivity={setActivityModal}
+          />
+        </div>
+      </section>
+
+      {selectedAsset && activityModal ? (
+        <ActivityModal
+          asset={selectedAsset}
+          type={activityModal}
+          tickets={assetTickets}
+          maintenanceLog={maintenanceLog}
+          loading={historyLoading}
+          error={historyError}
+          onClose={() => setActivityModal(null)}
+        />
+      ) : null}
 
       {modal === 'create' ? (
         <AssetCreateForm onClose={() => setModal('none')} onCreated={reload} />
@@ -936,30 +865,255 @@ export default function AssetsBoard() {
   );
 }
 
-function KpiCard({
+function FieldShell({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">
+        {label}
+      </span>
+      <div className="mt-2">{children}</div>
+    </label>
+  );
+}
+
+type MetricTone = 'blue' | 'emerald' | 'amber' | 'rose' | 'orange';
+
+function MetricCard({
+  icon,
   label,
   value,
   tone,
 }: {
+  icon: ReactNode;
   label: string;
   value: number;
-  tone: 'slate' | 'emerald' | 'amber' | 'rose' | 'indigo' | 'orange';
+  tone: MetricTone;
 }) {
-  const toneMap: Record<typeof tone, string> = {
-    slate: 'border-slate-200 bg-white text-slate-800',
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    amber: 'border-amber-200 bg-amber-50 text-amber-800',
-    rose: 'border-rose-200 bg-rose-50 text-rose-800',
-    indigo: 'border-indigo-200 bg-indigo-50 text-indigo-800',
-    orange: 'border-orange-200 bg-orange-50 text-orange-800',
+  const toneMap: Record<
+    MetricTone,
+    { frame: string; icon: string; value: string }
+  > = {
+    blue: {
+      frame: 'bg-blue-50',
+      icon: 'text-blue-600',
+      value: 'text-blue-700',
+    },
+    emerald: {
+      frame: 'bg-emerald-50',
+      icon: 'text-emerald-600',
+      value: 'text-slate-950 dark:text-white',
+    },
+    amber: {
+      frame: 'bg-amber-50',
+      icon: 'text-amber-600',
+      value: 'text-slate-950 dark:text-white',
+    },
+    rose: {
+      frame: 'bg-rose-50',
+      icon: 'text-rose-600',
+      value: 'text-rose-600',
+    },
+    orange: {
+      frame: 'bg-orange-50',
+      icon: 'text-orange-600',
+      value: 'text-slate-950 dark:text-white',
+    },
   };
+  const current = toneMap[tone];
 
   return (
-    <div className={cx('rounded-lg border px-3 py-2.5', toneMap[tone])}>
-      <div className="text-[11px] font-semibold uppercase tracking-wide">{label}</div>
-      <div className="mt-1 text-xl font-bold leading-none">{value}</div>
-    </div>
+    <article className="flex min-h-24 items-center gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div
+        className={cx(
+          'flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl',
+          current.frame,
+          current.icon
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold text-slate-600 dark:text-slate-400">
+          {label}
+        </div>
+        <div className={cx('mt-1 text-2xl font-bold leading-none', current.value)}>
+          {value}
+        </div>
+      </div>
+    </article>
   );
+}
+
+function StatusPill({ status }: { status: AssetStatus }) {
+  return (
+    <span
+      className={cx(
+        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold',
+        statusTone(status)
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function AssetDetailPanel({
+  asset,
+  tickets,
+  maintenanceLog,
+  onEdit,
+  onOpenActivity,
+}: {
+  asset: AssetView | null;
+  tickets: AssetTicketView[];
+  maintenanceLog: AssetMaintenanceLog[];
+  onEdit: () => void;
+  onOpenActivity: (tab: DetailTab) => void;
+}) {
+  if (!asset) {
+    return (
+      <aside className="min-w-0 flex h-[36rem] max-h-[36rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-8 text-center text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+        Selecciona un activo para ver su detalle operativo.
+      </aside>
+    );
+  }
+
+  const preventive = preventiveState(asset);
+
+  return (
+    <aside className="min-w-0 flex h-[36rem] max-h-[36rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="truncate text-xl font-bold text-slate-950 dark:text-white">
+              {asset.code} · {asset.name}
+            </h2>
+            <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
+              {asset.category_name ?? 'Sin categoría'} ·{' '}
+              {asset.location_name ?? 'Sin ubicación'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-800"
+          >
+            <Pencil className="h-4 w-4" />
+            Editar
+          </button>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <section>
+          <SectionTitle icon={<Grid2X2 className="h-4 w-4" />}>
+            Resumen técnico
+          </SectionTitle>
+          <div className="mt-3 space-y-3 text-sm">
+            <RowLabel label="Estado" value={<StatusPill status={asset.status} />} />
+            <RowLabel
+              label="Criticidad"
+              value={<CriticalityPill value={asset.criticality ?? 3} />}
+            />
+            <RowLabel label="Modelo" value={asset.model ?? '—'} />
+            <RowLabel label="No. serie" value={asset.serial_number ?? '—'} />
+            <RowLabel label="Asset tag" value={asset.asset_tag ?? '—'} />
+            <RowLabel label="Garantía" value={formatDateOnly(asset.warranty_end_date)} />
+          </div>
+        </section>
+
+        <Divider />
+
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <SectionTitle icon={<CalendarDays className="h-4 w-4" />}>
+              Plan preventivo
+            </SectionTitle>
+            <span
+              className={cx(
+                'inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-xs font-semibold',
+                preventive.tone
+              )}
+            >
+              {preventive.label}
+            </span>
+          </div>
+
+          <div className="mt-3 space-y-3 text-sm">
+            <RowLabel label="Frecuencia" value={preventiveFrequencyLabel(asset)} />
+            <RowLabel
+              label="Próxima OT"
+              value={formatDateOnly(asset.preventive_next_due_on)}
+            />
+            <RowLabel label="Inicio" value={formatDateOnly(asset.preventive_start_on)} />
+            <RowLabel
+              label="Generar con anticipación"
+              value={`${asset.preventive_lead_days ?? 0} día(s)`}
+            />
+            <RowLabel
+              label="Última OT creada"
+              value={formatDateTime(asset.preventive_last_generated_at)}
+            />
+            <RowLabel
+              label="Último cierre"
+              value={formatDateTime(asset.preventive_last_completed_at)}
+            />
+          </div>
+
+          {asset.preventive_instructions ? (
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+              {asset.preventive_instructions}
+            </div>
+          ) : null}
+        </section>
+
+        <Divider />
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-1 min-[1800px]:grid-cols-2">
+          <ActivityCard
+            icon={<ClipboardList className="h-5 w-5" />}
+            label="Tickets"
+            value={tickets.length}
+            onClick={() => onOpenActivity('tickets')}
+          />
+          <ActivityCard
+            icon={<Wrench className="h-5 w-5" />}
+            label="Bitácora"
+            value={maintenanceLog.length}
+            onClick={() => onOpenActivity('maintenance')}
+          />
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function SectionTitle({
+  icon,
+  children,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+        {icon}
+      </span>
+      {children}
+    </h3>
+  );
+}
+
+function Divider() {
+  return <div className="my-4 border-t border-slate-200 dark:border-slate-800" />;
 }
 
 function RowLabel({
@@ -970,9 +1124,200 @@ function RowLabel({
   value: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-right font-medium text-slate-800">{value}</span>
+    <div className="flex items-center justify-between gap-4">
+      <span className="min-w-0 text-slate-500 dark:text-slate-400">{label}</span>
+      <span className="max-w-[58%] truncate text-right font-semibold text-slate-800 dark:text-slate-100">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ActivityCard({
+  icon,
+  label,
+  value,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-20 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm hover:border-blue-200 hover:bg-blue-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-blue-950/20"
+    >
+      <span className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-300">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block whitespace-nowrap text-sm font-bold text-slate-800 dark:text-slate-100">
+            {label}
+          </span>
+          <span className="mt-1 block text-2xl font-bold leading-none text-slate-950 dark:text-white">
+            {value}
+          </span>
+        </span>
+      </span>
+      <ChevronRight className="h-5 w-5 shrink-0 text-slate-700 dark:text-slate-300" />
+    </button>
+  );
+}
+
+function ActivityModal({
+  asset,
+  type,
+  tickets,
+  maintenanceLog,
+  loading,
+  error,
+  onClose,
+}: {
+  asset: AssetView;
+  type: DetailTab;
+  tickets: AssetTicketView[];
+  maintenanceLog: AssetMaintenanceLog[];
+  loading: boolean;
+  error: string;
+  onClose: () => void;
+}) {
+  const isTickets = type === 'tickets';
+  const title = isTickets ? 'Tickets del activo' : 'Bitácora del activo';
+  const count = isTickets ? tickets.length : maintenanceLog.length;
+
+  return (
+    <AnimatedDialog
+      open
+      onClose={onClose}
+      lockScroll
+      overlayClassName="bg-slate-950/50 backdrop-blur-[2px]"
+      containerClassName="fixed inset-0 flex items-start justify-center overflow-y-auto px-4 py-6 sm:py-10"
+      panelClassName="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+    >
+      <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+        <div className="min-w-0">
+          <h2 className="truncate text-xl font-bold text-slate-950 dark:text-white">
+            {title}
+          </h2>
+          <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">
+            {asset.code} · {asset.name} · {count} registro(s)
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          aria-label="Cerrar"
+          title="Cerrar"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      <div className="max-h-[70vh] overflow-y-auto px-5 py-5">
+        <ActivityList
+          detailTab={type}
+          tickets={tickets}
+          maintenanceLog={maintenanceLog}
+          loading={loading}
+          error={error}
+        />
+      </div>
+    </AnimatedDialog>
+  );
+}
+
+function ActivityList({
+  detailTab,
+  tickets,
+  maintenanceLog,
+  loading,
+  error,
+}: {
+  detailTab: DetailTab;
+  tickets: AssetTicketView[];
+  maintenanceLog: AssetMaintenanceLog[];
+  loading: boolean;
+  error: string;
+}) {
+  if (loading) {
+    return (
+      <div className="mt-4 rounded-xl border border-slate-200 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        Cargando...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-5 text-sm text-rose-700">
+        {error}
+      </div>
+    );
+  }
+
+  if (detailTab === 'tickets') {
+    if (tickets.length === 0) {
+      return (
+        <div className="mt-4 rounded-xl border border-slate-200 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          Sin tickets vinculados.
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-4 max-h-64 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        {tickets.map((ticket) => (
+          <div
+            key={`${ticket.asset_id}-${String(ticket.id)}`}
+            className="border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
+          >
+            <div className="flex items-start gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+              <ClipboardList className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+              <span className="min-w-0 truncate">
+                #{String(ticket.id)} {ticket.title ?? 'Ticket'}
+              </span>
+            </div>
+            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {ticket.status ?? '—'} · {formatDateTime(ticket.created_at)}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (maintenanceLog.length === 0) {
+    return (
+      <div className="mt-4 rounded-xl border border-slate-200 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        Sin mantenimientos registrados.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 max-h-64 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
+      {maintenanceLog.map((entry) => (
+        <div
+          key={String(entry.id)}
+          className="border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
+        >
+          <div className="flex items-start gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
+            <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+            <span className="min-w-0 truncate">
+              {entry.maintenance_type} · {entry.summary}
+            </span>
+          </div>
+          <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {formatDateTime(entry.performed_at)}
+            {entry.ticket_id ? ` · OT #${String(entry.ticket_id)}` : ''}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Grid2X2 } from 'lucide-react';
 import { useCan } from '../../../../rbac/PermissionsContext';
 import type {
   AssetCategory,
@@ -188,9 +189,10 @@ export default function AssetCategoriesManager() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        className="inline-flex h-12 items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
       >
-        Categorías de activos
+        <Grid2X2 className="h-4 w-4" />
+        Categorías
       </button>
 
       <AnimatedDialog
