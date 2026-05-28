@@ -4,6 +4,7 @@ import DefaultLogo from '../assets/logo.png';
 import DefaultCollage from '../assets/login_img.png';
 import AppVersion from '../components/ui/AppVersion';
 import { signInWithPassword } from '../utils/auth';
+import { recordAuthEvent } from '../services/activityLogService';
 import { useBranding } from '../context/BrandingContext';
 import { showToastError, showToastSuccess } from '../notifications/toast';
 import PasswordInput from '../components/ui/password-input';
@@ -66,6 +67,7 @@ export default function LoginPage() {
       }
 
       if (data.session?.user) {
+        void recordAuthEvent('login');
         showToastSuccess('Inicio de sesión exitoso. Bienvenido.');
         navigateToHome();
       }

@@ -1,6 +1,7 @@
 // src/services/exports/ticketsExportService.ts
 import { supabase } from '../../lib/supabaseClient';
 import type { CsvHeader, CsvRow } from '../../utils/csv';
+import { recordActivity } from '../activityLogService';
 
 export type Priority = 'baja' | 'media' | 'alta';
 export type Status = 'Pendiente' | 'En Ejecución' | 'Finalizadas';
@@ -243,6 +244,13 @@ export async function fetchTicketsCsv(filters: WorkOrdersFilters): Promise<{
     if (data.length < pageSize) break;
     from += pageSize;
   }
+
+  void recordActivity({
+    action: 'tickets.exported',
+    resource: 'tickets',
+    summary: `Exportación de tickets (${rows.length} registros)`,
+    metadata: { count: rows.length, filters },
+  });
 
   return {
     rows,

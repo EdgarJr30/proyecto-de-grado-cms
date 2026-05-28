@@ -77,7 +77,9 @@ BEGIN
       ('inventory','approve','inventory:approve','Publicar documentos de inventario',NULL),
       ('inventory','cancel','inventory:cancel','Cancelar documentos de inventario',NULL),
       ('inventory','work','inventory:work','Reservar repuestos para OT',NULL),
-      ('inventory','full_access','inventory:full_access','Acceso total inventario',NULL)
+      ('inventory','full_access','inventory:full_access','Acceso total inventario',NULL),
+      ('logs','read','logs:read','Ver bitácora de actividad','Acceso de solo lectura a la bitácora de auditoría'),
+      ('logs','export','logs:export','Exportar bitácora de actividad','Permite exportar la bitácora de auditoría')
   )
   INSERT INTO public.permissions(id, resource, action, code, label, description, is_active, created_at)
   SELECT gen_random_uuid(), s.resource, s.action::permission_action, s.code, s.label, s.description, TRUE, NOW()

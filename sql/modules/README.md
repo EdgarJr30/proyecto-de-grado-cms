@@ -29,6 +29,7 @@ Archivo de referencia de inventario (sin cambios de contenido):
 15. `sql/modules/core_cmms/14_storage.sql`
 16. `sql/modules/core_cmms/15_grants_auth.sql`
 17. `sql/modules/core_cmms/16_notifications.sql`
+18. `sql/modules/core_cmms/17_activity_log.sql`
 
 ### 2) Assets
 1. `sql/modules/assets/01_activos_fijos.sql`
@@ -37,6 +38,12 @@ Archivo de referencia de inventario (sin cambios de contenido):
 
 ### 3) Inventory / Repuestos
 1. `sql/Inventario&RepuestosMantenimiento.sql`
+
+### 4) Post-SQL bitácora (tras assets/inventory)
+- `17_activity_log.sql` engancha el logging genérico a las tablas core. Para
+  cubrir también las tablas de `assets` e `inventory` (creadas después), ejecuta
+  una vez al final: `SELECT public.refresh_activity_logging();`
+- Es idempotente y omite tablas que no existan.
 
 ## Notas
 

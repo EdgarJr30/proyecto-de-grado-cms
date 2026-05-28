@@ -11,6 +11,7 @@ import {
   Building2,
   KeyRound,
   Megaphone,
+  ScrollText,
   Search,
   Settings,
   ShieldCheck,
@@ -28,6 +29,7 @@ import RoleUsersModal from './RoleUsersModal';
 import SpecialIncidentsTable from '../../components/dashboard/special-incidents/SpecialIncidentsTable';
 import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
+import ActivityLogPanel from '../../components/dashboard/admin/activity-log/ActivityLogPanel';
 
 type TabKey =
   | 'general'
@@ -35,7 +37,8 @@ type TabKey =
   | 'permissions'
   | 'incidents'
   | 'announcements'
-  | 'sociedad';
+  | 'sociedad'
+  | 'logs';
 
 type ModuleTone = {
   iconBg: string;
@@ -61,6 +64,7 @@ const TAB_ORDER: TabKey[] = [
   'incidents',
   'announcements',
   'sociedad',
+  'logs',
   'general',
 ];
 
@@ -106,6 +110,13 @@ const TAB_TONES: Record<TabKey, ModuleTone> = {
     selectedBg: 'bg-emerald-50 dark:bg-emerald-500/15',
     selectedBorder: 'border-emerald-200 dark:border-emerald-400/30',
     focusRing: 'focus-visible:ring-emerald-500',
+  },
+  logs: {
+    iconBg: 'bg-slate-100 dark:bg-slate-500/15',
+    iconColor: 'text-slate-700 dark:text-slate-300',
+    selectedBg: 'bg-slate-50 dark:bg-slate-500/15',
+    selectedBorder: 'border-slate-200 dark:border-slate-400/30',
+    focusRing: 'focus-visible:ring-slate-500',
   },
   general: {
     iconBg: 'bg-blue-100 dark:bg-blue-500/15',
@@ -315,6 +326,8 @@ export default function AdminSettingsHubPage() {
   const canManageSociety =
     canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
 
+  const canViewLogs = useCan(['logs:read', 'logs:export']);
+
   const modules = useMemo<SettingsModule[]>(
     () => [
       {
@@ -363,6 +376,15 @@ export default function AdminSettingsHubPage() {
         tone: TAB_TONES.sociedad,
       },
       {
+        key: 'logs',
+        label: 'Bitácora',
+        description: 'Audita las acciones realizadas en la plataforma.',
+        helper: 'Registro de auditoría',
+        icon: ScrollText,
+        enabled: canViewLogs,
+        tone: TAB_TONES.logs,
+      },
+      {
         key: 'general',
         label: 'General',
         description: 'Ajustes transversales del sistema y catálogos base.',
@@ -378,6 +400,7 @@ export default function AdminSettingsHubPage() {
       canManageIncidents,
       canManageAnnouncements,
       canManageSociety,
+      canViewLogs,
     ]
   );
 
@@ -659,6 +682,12 @@ export default function AdminSettingsHubPage() {
                     {tab === 'sociedad' && (
                       <Can perm="society:read">
                         <SocietySettingsTable />
+                      </Can>
+                    )}
+
+                    {tab === 'logs' && (
+                      <Can perm={['logs:read', 'logs:export']}>
+                        <ActivityLogPanel />
                       </Can>
                     )}
 

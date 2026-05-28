@@ -328,6 +328,12 @@ begin
     select lower((p->>'resource')||':'||(p->>'action'))
     from jsonb_array_elements(perms) p
   );
+
+  perform public.write_activity_log(
+    'rbac.permissions_synced', 'rbac', null, null,
+    format('Catálogo de permisos sincronizado (%s definiciones)', jsonb_array_length(perms)),
+    jsonb_build_object('count', jsonb_array_length(perms))
+  );
 end;
 $$;
 
@@ -348,6 +354,13 @@ begin
   delete from public.role_permissions rp
   where rp.role_id = p_role_id
     and rp.permission_id not in (select id from public.permissions where code = any(p_perm_codes));
+
+  perform public.write_activity_log(
+    'rbac.role_permissions_changed', 'roles', p_role_id::text,
+    (select name from public.roles where id = p_role_id),
+    format('Permisos del rol actualizados (%s permisos)', coalesce(array_length(p_perm_codes, 1), 0)),
+    jsonb_build_object('role_id', p_role_id, 'codes', to_jsonb(p_perm_codes))
+  );
 end;
 $$;
 

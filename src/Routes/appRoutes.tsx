@@ -62,6 +62,7 @@ const NotificationCenterPage = lazy(
   () => import('../pages/NotificationCenterPage')
 );
 const TicketDetailsPage = lazy(() => import('../pages/TicketDetailsPage'));
+const ActivityLogPage = lazy(() => import('../pages/admin/ActivityLogPage'));
 
 // Tipado de la ruta
 export type AppRoute = {
@@ -568,10 +569,21 @@ export const APP_ROUTES: AppRoute[] = [
       // Assets
       'assets:read',
       'assets:full_access',
+
+      // Bitácora
+      'logs:read',
+      'logs:export',
     ],
     name: 'Configuración',
     icon: IconPermissions,
     showInSidebar: true,
+  },
+  {
+    path: '/admin/bitacora',
+    element: <ActivityLogPage />,
+    allowPerms: ['logs:read', 'logs:export'],
+    name: 'Bitácora',
+    showInSidebar: false,
   },
   {
     path: '/admin/permisos',

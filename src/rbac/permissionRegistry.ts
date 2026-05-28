@@ -50,6 +50,7 @@ export const RESOURCES = {
   locations: 'locations',
   assets: 'assets',
   inventory: 'inventory',
+  logs: 'logs',
 } as const;
 
 type Resource = (typeof RESOURCES)[keyof typeof RESOURCES];
@@ -189,4 +190,8 @@ export const PERMISSIONS: PermissionDef[] = [
     'full_access',
     'Acceso total inventario (maestros + movimientos)'
   ),
+
+  // Bitácora de actividad (auditoría)
+  p(RESOURCES.logs, 'read', 'Ver bitácora de actividad'),
+  p(RESOURCES.logs, 'export', 'Exportar bitácora de actividad'),
 ];
