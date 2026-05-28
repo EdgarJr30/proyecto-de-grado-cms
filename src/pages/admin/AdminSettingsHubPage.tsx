@@ -93,16 +93,16 @@ function SettingsModulePicker({
   const ActiveIcon = activeModule.icon;
 
   return (
-    <label className="flex w-full max-w-[28rem] items-center gap-3 rounded-xl border border-slate-300/20 bg-slate-950/20 px-4 py-2 text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] dark:border-slate-600/60 dark:bg-slate-950/30">
-      <span className="shrink-0 text-slate-400">Módulo</span>
+    <label className="flex w-full max-w-[28rem] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-600/60 dark:bg-slate-950/30 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+      <span className="shrink-0 text-slate-500 dark:text-slate-400">Módulo</span>
       <span className="relative min-w-0 flex-1">
-        <span className="pointer-events-none absolute left-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-teal-500/15 text-teal-300 ring-1 ring-teal-400/10">
+        <span className="pointer-events-none absolute left-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-teal-50 text-teal-600 ring-1 ring-teal-200/70 dark:bg-teal-500/15 dark:text-teal-300 dark:ring-teal-400/10">
           <ActiveIcon className="h-4 w-4" />
         </span>
         <select
           value={value}
           onChange={(event) => onChange(event.target.value as TabKey)}
-          className="h-10 w-full appearance-none rounded-lg border border-slate-500/40 bg-slate-950/30 py-0 pl-12 pr-10 text-sm font-semibold text-slate-100 outline-none transition hover:border-slate-400/70 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20"
+          className="h-10 w-full appearance-none rounded-lg border border-slate-300 bg-white py-0 pl-12 pr-10 text-sm font-semibold text-slate-900 outline-none transition hover:border-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-500/40 dark:bg-slate-950/30 dark:text-slate-100 dark:hover:border-slate-400/70 dark:focus:ring-sky-500/20"
         >
           {modules.map((module) => (
             <option key={module.key} value={module.key}>
@@ -110,7 +110,7 @@ function SettingsModulePicker({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-300" />
       </span>
     </label>
   );
