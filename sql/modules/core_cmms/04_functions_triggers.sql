@@ -14,6 +14,7 @@ BEGIN
         ('tickets', 'trg_tickets_set_updated_at'),
         ('tickets', 'trg_guard_tickets_cancel'),
         ('tickets', 'trg_guard_accept_requires_assignee'),
+        ('tickets', 'trg_sync_ticket_primary_assignee_to_woa'),
         ('assignees', 'trg_assignees_guard_cancel'),
         ('users', 'trg_users_guard_cancel'),
         ('users', 'trg_users_guard_role_change'),
@@ -111,7 +112,11 @@ $$;
 
 -- 16) Aceptar work order (corrige variables p_* incoherentes)
 CREATE OR REPLACE FUNCTION public.accept_work_order(p_work_order_id bigint, p_primary_assignee_id bigint)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   v_creator uuid;
 BEGIN
@@ -133,7 +138,8 @@ BEGIN
 
   -- Marca aceptación en tickets
   UPDATE public.tickets
-     SET is_accepted = true
+     SET assignee_id = p_primary_assignee_id,
+         is_accepted = true
    WHERE id = p_work_order_id AND COALESCE(is_accepted,false) = false;
 
   IF NOT FOUND THEN
@@ -141,6 +147,104 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- 16.1) Mantiene tickets.assignee_id alineado con work_order_assignees.
+-- Esto cubre flujos legacy que aceptan/asignan actualizando directamente tickets.
+CREATE OR REPLACE FUNCTION public.sync_ticket_primary_assignee_to_woa()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_now timestamp := (now() AT TIME ZONE 'America/Santo_Domingo');
+BEGIN
+  IF NEW.is_accepted IS DISTINCT FROM true THEN
+    RETURN NEW;
+  END IF;
+
+  IF NOT (
+    OLD.assignee_id IS DISTINCT FROM NEW.assignee_id
+    OR OLD.is_accepted IS DISTINCT FROM NEW.is_accepted
+  ) THEN
+    RETURN NEW;
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(NEW.id);
+
+  IF NEW.assignee_id IS NULL THEN
+    UPDATE public.work_order_assignees
+       SET is_active = false,
+           unassigned_at = COALESCE(unassigned_at, v_now),
+           updated_at = v_now,
+           updated_by = auth.uid()
+     WHERE work_order_id = NEW.id
+       AND role = 'PRIMARY'
+       AND is_active = true;
+    RETURN NEW;
+  END IF;
+
+  UPDATE public.work_order_assignees
+     SET is_active = false,
+         unassigned_at = COALESCE(unassigned_at, v_now),
+         updated_at = v_now,
+         updated_by = auth.uid()
+   WHERE work_order_id = NEW.id
+     AND role = 'PRIMARY'
+     AND is_active = true
+     AND assignee_id <> NEW.assignee_id;
+
+  INSERT INTO public.work_order_assignees(
+    work_order_id,
+    assignee_id,
+    role,
+    is_active,
+    assigned_at,
+    unassigned_at,
+    created_by,
+    updated_by,
+    created_at,
+    updated_at
+  )
+  VALUES (
+    NEW.id,
+    NEW.assignee_id,
+    'PRIMARY',
+    true,
+    v_now,
+    NULL,
+    auth.uid(),
+    auth.uid(),
+    v_now,
+    v_now
+  )
+  ON CONFLICT (work_order_id, assignee_id) DO UPDATE
+     SET role = 'PRIMARY',
+         is_active = true,
+         assigned_at = CASE
+           WHEN public.work_order_assignees.is_active = false THEN v_now
+           ELSE public.work_order_assignees.assigned_at
+         END,
+         unassigned_at = NULL,
+         updated_at = v_now,
+         updated_by = auth.uid()
+   WHERE public.work_order_assignees.role IS DISTINCT FROM 'PRIMARY'
+      OR public.work_order_assignees.is_active IS DISTINCT FROM true
+      OR public.work_order_assignees.unassigned_at IS NOT NULL;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sync_ticket_primary_assignee_to_woa ON public.tickets;
+CREATE TRIGGER trg_sync_ticket_primary_assignee_to_woa
+AFTER UPDATE OF assignee_id, is_accepted ON public.tickets
+FOR EACH ROW
+WHEN (
+  OLD.assignee_id IS DISTINCT FROM NEW.assignee_id
+  OR OLD.is_accepted IS DISTINCT FROM NEW.is_accepted
+)
+EXECUTE FUNCTION public.sync_ticket_primary_assignee_to_woa();
 
 -- 17) set_secondary_assignees (versión final con lock y validaciones)
 CREATE OR REPLACE FUNCTION public.set_secondary_assignees(
