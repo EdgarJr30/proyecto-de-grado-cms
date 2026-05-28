@@ -135,13 +135,51 @@ using (
   )
 );
 
+-- Helper: ¿el usuario es el técnico asignado (principal/secundario activo o legacy)?
+create or replace function public.is_ticket_assigned_technician(p_uid uuid, p_ticket_id bigint)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1
+    from public.assignees a
+    where a.user_id = p_uid
+      and (
+        exists (
+          select 1 from public.work_order_assignees wa
+          where wa.work_order_id = p_ticket_id
+            and wa.assignee_id = a.id
+            and wa.is_active = true
+        )
+        or exists (
+          select 1 from public.tickets t
+          where t.id = p_ticket_id and t.assignee_id = a.id
+        )
+      )
+  );
+$$;
+
+create or replace function public.am_i_ticket_assigned_technician(p_ticket_id bigint)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.is_ticket_assigned_technician(auth.uid(), p_ticket_id);
+$$;
+
+grant execute on function public.is_ticket_assigned_technician(uuid, bigint) to authenticated;
+grant execute on function public.am_i_ticket_assigned_technician(bigint) to authenticated;
+
 create policy tickets_select_work_orders
 on public.tickets for select to authenticated
 using (
   is_accepted=true and (
     public.me_has_permission('work_orders:read')
     or public.me_has_permission('work_orders:full_access')
-    or (public.me_has_permission('work_orders:read_own') and created_by = auth.uid())
+    or (
+      public.me_has_permission('work_orders:read_own')
+      and (
+        created_by = auth.uid()
+        or public.is_ticket_assigned_technician(auth.uid(), id)
+      )
+    )
   )
 );
 
@@ -166,12 +204,14 @@ using (
   is_accepted=true and (
     public.me_has_permission('work_orders:full_access')
     or (public.me_has_permission('work_orders:create') and created_by = auth.uid())
+    or public.is_ticket_assigned_technician(auth.uid(), id)
   )
 )
 with check (
   is_accepted=true and (
     public.me_has_permission('work_orders:full_access')
     or (public.me_has_permission('work_orders:create') and created_by = auth.uid())
+    or public.is_ticket_assigned_technician(auth.uid(), id)
   )
 );
 

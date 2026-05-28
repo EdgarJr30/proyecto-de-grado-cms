@@ -27,7 +27,11 @@ import {
   getPublicImageUrl,
 } from '../../../services/storageService';
 import { MAX_COMMENTS_LENGTH } from '../../../utils/validators';
-import { archiveTicket, unarchiveTicket } from '../../../services/ticketService';
+import {
+  archiveTicket,
+  unarchiveTicket,
+  amITicketAssignedTechnician,
+} from '../../../services/ticketService';
 import { formatAssigneeFullName } from '../../../services/assigneeService';
 import type { Assignee } from '../../../types/Assignee';
 import { useCan } from '../../../rbac/PermissionsContext';
@@ -105,6 +109,7 @@ export default function EditWorkOrdersModal({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isRequester, setIsRequester] = useState(false);
   const [isTicketApprover, setIsTicketApprover] = useState(false);
+  const [isAssignedTech, setIsAssignedTech] = useState(false);
   const [latestApproval, setLatestApproval] = useState<ApprovalRequest | null>(null);
   const [pendingApprovers, setPendingApprovers] = useState<TicketApprover[]>([]);
   const [evidenceOpen, setEvidenceOpen] = useState(false);
@@ -166,8 +171,13 @@ export default function EditWorkOrdersModal({
     !isTicketApprover &&
     !canApprovalsFullAccess;
 
+  // El técnico asignado puede operar su propia OT (estado, fechas, notas, etc.)
+  // sin full_access. La gestión de responsables sigue siendo solo de full_access.
+  const canEdit = canFullAccess || isAssignedTech;
+  const canManageAssignees = canFullAccess;
+
   const isReadOnly =
-    forceReadOnly || !canFullAccess || inValidation || finalizedLockedForTech;
+    forceReadOnly || !canEdit || inValidation || finalizedLockedForTech;
   const canInventoryRead = useCan('inventory:read');
   const canInventoryOperate = useCan([
     'inventory:work',
@@ -199,7 +209,7 @@ export default function EditWorkOrdersModal({
   );
 
   const addSecondary = (id: number) => {
-    if (isReadOnly || !id) return;
+    if (isReadOnly || !canManageAssignees || !id) return;
     if (typeof primaryId === 'number' && id === primaryId) return;
     const next = uniqSorted([...secondaryIds, id]);
     if (next.length > maxSecondary) {
@@ -248,18 +258,21 @@ export default function EditWorkOrdersModal({
   const loadApprovalContext = async () => {
     try {
       const tid = Number(ticket.id);
-      const [uid, requester, ticketApprover, latest, approvers] = await Promise.all([
-        getCurrentUserId(),
-        amIApprovalRequester(),
-        amITicketApprover(tid),
-        getLatestApprovalForTicket(tid),
-        getTicketPendingApprovers(tid),
-      ]);
+      const [uid, requester, ticketApprover, latest, approvers, assignedTech] =
+        await Promise.all([
+          getCurrentUserId(),
+          amIApprovalRequester(),
+          amITicketApprover(tid),
+          getLatestApprovalForTicket(tid),
+          getTicketPendingApprovers(tid),
+          amITicketAssignedTechnician(tid),
+        ]);
       setCurrentUserId(uid);
       setIsRequester(requester);
       setIsTicketApprover(ticketApprover);
       setLatestApproval(latest);
       setPendingApprovers(approvers);
+      setIsAssignedTech(assignedTech);
     } catch {
       /* best-effort: la validación de cierre no debe romper el modal */
     }
@@ -412,7 +425,7 @@ export default function EditWorkOrdersModal({
       return;
     }
 
-    if (!canFullAccess) return;
+    if (!canEdit) return;
 
     try {
       // Normaliza secundarios antes de comparar/enviar
@@ -427,7 +440,8 @@ export default function EditWorkOrdersModal({
         normalizedInitial
       );
 
-      if (edited.is_accepted && secondariesChanged) {
+      // La gestión de responsables es solo para full_access.
+      if (canManageAssignees && edited.is_accepted && secondariesChanged) {
         // Validación de tope por si acaso
         if (normalizedCurrent.length > maxSecondary) {
           throw new Error(
@@ -864,7 +878,7 @@ export default function EditWorkOrdersModal({
               value={primaryId === '' ? '' : Number(primaryId)}
               onChange={(e) => setPrimaryId(Number(e.target.value) || '')}
               className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
-              disabled={loadingAssignees || isReadOnly}
+              disabled={loadingAssignees || isReadOnly || !canManageAssignees}
             >
               <option value="">Selecciona responsable…</option>
               {renderAssigneeOptions()}
@@ -893,6 +907,7 @@ export default function EditWorkOrdersModal({
                 disabled={
                   loadingAssignees ||
                   isReadOnly ||
+                  !canManageAssignees ||
                   secondaryIds.length >= maxSecondary
                 }
                 className={`${editableControlClass} cursor-pointer${disabledSoftClass}`}
@@ -940,7 +955,7 @@ export default function EditWorkOrdersModal({
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
                   >
                     {label}
-                    {!isReadOnly && (
+                    {!isReadOnly && canManageAssignees && (
                       <button
                         type="button"
                         className="hover:text-rose-600"
@@ -1754,11 +1769,11 @@ export default function EditWorkOrdersModal({
         {!forceReadOnly && !inValidation && !finalizedLockedForTech && (
           <button
             type="submit"
-            disabled={!canFullAccess}
-            title={!canFullAccess ? 'No tienes permiso para editar' : undefined}
+            disabled={!canEdit}
+            title={!canEdit ? 'No tienes permiso para editar' : undefined}
             className={
               'inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 cursor-pointer' +
-              (!canFullAccess ? ' opacity-50 cursor-not-allowed' : '')
+              (!canEdit ? ' opacity-50 cursor-not-allowed' : '')
             }
           >
             <Save className="h-4 w-4" />

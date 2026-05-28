@@ -267,6 +267,7 @@ export const APP_ROUTES: AppRoute[] = [
     element: <WorkOrdersPage />,
     allowPerms: [
       'work_orders:read',
+      'work_orders:read_own',
       'work_orders:full_access',
       'work_orders:cancel',
       'work_orders:delete',

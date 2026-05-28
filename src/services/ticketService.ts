@@ -234,6 +234,15 @@ export async function getTicketById(id: number): Promise<WorkOrder | null> {
   return normalized as WorkOrder;
 }
 
+/** ¿El usuario actual es el técnico asignado (principal/secundario/legacy) del ticket? */
+export async function amITicketAssignedTechnician(ticketId: number): Promise<boolean> {
+  const { data, error } = await supabase.rpc('am_i_ticket_assigned_technician', {
+    p_ticket_id: ticketId,
+  });
+  if (error) return false;
+  return data === true;
+}
+
 export async function updateTicket(id: number, updatedData: Partial<Ticket>) {
   const { error } = await supabase
     .from('tickets')
