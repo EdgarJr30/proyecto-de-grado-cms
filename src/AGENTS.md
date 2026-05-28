@@ -26,6 +26,12 @@
 - After mutations, dispatch `invalidateData(...)` for relevant domains when needed.
 - Preserve backward-compatible fallbacks where services already support missing RPCs.
 
+## Activity Log Events (Bitácora) — MANDATORY
+- Data mutations are already captured by DB triggers; do NOT duplicate them from the client.
+- Only app-level actions the database cannot observe must be logged from `src`: auth (login/logout), file/CSV exports, and similar. Use `recordActivity(...)` / `recordAuthEvent(...)` from `src/services/activityLogService.ts` (best-effort, never block the flow).
+- Any new manual action string must also be whitelisted in the `record_activity` RPC (see `sql/modules/core_cmms/17_activity_log.sql`); otherwise it is rejected server-side.
+- New log views/queries must go through `list_activity_log` and stay gated by `logs:read` / `logs:export`. Keep the export button visible only with `logs:export`.
+
 ## Environment Variables Used by Frontend
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`

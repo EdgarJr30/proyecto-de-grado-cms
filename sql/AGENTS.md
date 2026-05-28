@@ -23,6 +23,13 @@
 - Match permission codes with frontend registry (`src/rbac/permissionRegistry.ts`).
 - Keep naming and file ordering numeric (`NN_description.sql`) to preserve deterministic bootstrap.
 
+## Activity Log Capture (Bitácora) — MANDATORY
+- Source of truth: `core_cmms/17_activity_log.sql`. Any new actionable change (insert/update/delete, state change, assignment, security-relevant op) must produce an `public.activity_log` entry.
+- New business table → add its name to `public.refresh_activity_logging()` so the generic `log_activity()` trigger attaches (idempotent; safe to re-run with `SELECT public.refresh_activity_logging();`). Mirror the addition in the rollout migration under `supabase/migrations/`.
+- Generic trigger only fits single-`id` tables. For junction tables (no single PK) and bulk RPCs, emit a single semantic entry by calling `public.write_activity_log(action, resource, entity_id, entity_label, summary, metadata, actor)` inside the relevant `SECURITY DEFINER` function/trigger (see `set_role_permissions`, `sync_permissions`, `log_ticket_comment_added`, `log_work_order_assignment_change`).
+- Never store sensitive values: extend the redaction list in `activity_redact_jsonb()` if a new column could be sensitive (password/token/image/etc.).
+- Do not weaken `activity_log` RLS: SELECT-only, gated by `logs:read`/`logs:export`; writes only through `SECURITY DEFINER` functions (no client INSERT/UPDATE/DELETE grants).
+
 ## Testing and Verification
 - Validate on a fresh database using module order before promoting to shared environments.
 - After policy changes, verify table RLS status, policy existence/compilation, and authorized vs unauthorized behavior.

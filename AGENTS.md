@@ -40,6 +40,15 @@
 - Keep permission codes aligned across frontend RBAC and SQL policy/seed definitions.
 - Prefer compatibility-safe changes when DB RPCs may not yet exist in all environments.
 
+## Activity Log Requirement (Bitácora) — MANDATORY
+- Every new actionable feature MUST be captured in the activity log (`public.activity_log`). "Actionable" = anything that mutates business data (create/update/delete), changes state, assigns/unassigns, comments, or is security-relevant (auth, role/permission changes, exports). Read-only views are NOT logged.
+- Default mechanism is the database trigger layer (it cannot be bypassed by the client). When you add a new business table, register it in `public.refresh_activity_logging()` inside `sql/modules/core_cmms/17_activity_log.sql` AND its rollout migration under `supabase/migrations/`.
+- For actions the generic table trigger cannot capture well (junction tables without a single `id`, bulk RPC operations, semantic events), call `public.write_activity_log(...)` inside the relevant `SECURITY DEFINER` function/trigger to emit a single readable entry.
+- For app-only events the DB cannot see (login/logout, file/CSV exports), call `record_activity(...)` via `src/services/activityLogService.ts` (best-effort, must not block the flow). New manual actions must be added to the whitelist in `record_activity`.
+- Never log sensitive values (passwords, tokens, base64 images): rely on/extend the redaction list in `activity_redact_jsonb()` and the generic trigger.
+- Gate any new log surface/query behind the `logs:read` / `logs:export` RBAC permissions; do not weaken `activity_log` RLS (SELECT-only by permission, writes only via `SECURITY DEFINER`).
+- See `sql/modules/core_cmms/17_activity_log.sql`, `sql/AGENTS.md`, and `src/AGENTS.md` for the concrete patterns.
+
 ## Release and Commit Conventions
 - Follow Conventional Commits (`feat(...)`, `fix(...)`, `docs(...)`, `chore(...)`).
 - Use release scripts for versioning: `npm run release:patch`, `npm run release:minor`, `npm run release:major`.
