@@ -6,7 +6,7 @@ import {
   useState,
   type ChangeEvent,
 } from 'react';
-import { Clock3, MessageSquare } from 'lucide-react';
+import { Clock3, Globe, MessageSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { showConfirmAlert, showToastError, showToastSuccess } from '../../notifications';
 import { formatDateInTimezone } from '../../utils/formatDate';
@@ -35,10 +35,58 @@ function detectMention(
   caret: number
 ): { start: number; query: string } | null {
   const before = value.slice(0, caret);
-  const m = before.match(/(^|\s)@([\p{L}\p{N}._-]*)$/u);
+  const m = before.match(/(^|\s)@([\p{L}\p{N}._@-]*)$/u);
   if (!m) return null;
   const query = m[2] ?? '';
   return { start: caret - query.length - 1, query };
+}
+
+// --- Helpers visuales para la sugerencia de menciones (estilo Notion) ---
+const AVATAR_COLORS = [
+  'bg-indigo-500',
+  'bg-sky-500',
+  'bg-emerald-500',
+  'bg-amber-500',
+  'bg-rose-500',
+  'bg-violet-500',
+  'bg-teal-500',
+  'bg-fuchsia-500',
+  'bg-cyan-500',
+  'bg-orange-500',
+];
+
+function hashString(value: string): number {
+  let h = 0;
+  for (let i = 0; i < value.length; i += 1) h = (h * 31 + value.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+function avatarColorClass(seed: string): string {
+  return AVATAR_COLORS[hashString(seed) % AVATAR_COLORS.length];
+}
+
+function initialsFromLabel(label: string): string {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/** Resalta (en negrita) la porción del texto que coincide con la búsqueda. */
+function highlightMatch(label: string, query: string) {
+  const q = query.trim();
+  if (!q) return label;
+  const idx = label.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return label;
+  return (
+    <>
+      {label.slice(0, idx)}
+      <span className="font-semibold text-slate-900 dark:text-white">
+        {label.slice(idx, idx + q.length)}
+      </span>
+      {label.slice(idx + q.length)}
+    </>
+  );
 }
 
 type TicketChatPanelProps = {
@@ -290,10 +338,7 @@ export default function TicketChatPanel({
             className="block w-full min-w-0 resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-indigo-500/30"
           />
           {canManageCollab && mention && mentionCandidates.length > 0 && (
-            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
-              <li className="border-b border-slate-100 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:border-slate-700">
-                Agregar colaborador
-              </li>
+            <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-2xl ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-900 dark:ring-white/10">
               {mentionCandidates.map((candidate) => (
                 <li key={candidate.id}>
                   <button
@@ -303,14 +348,27 @@ export default function TicketChatPanel({
                       void handlePickMention(candidate);
                     }}
                     disabled={addingCollab}
-                    className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-indigo-50 disabled:opacity-60 dark:hover:bg-indigo-500/10"
+                    className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition hover:bg-slate-100 disabled:opacity-60 dark:hover:bg-slate-800"
                   >
-                    <span className="font-medium text-slate-800 dark:text-slate-100">
-                      {candidate.label}
+                    <span
+                      className={cx(
+                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white',
+                        avatarColorClass(candidate.id)
+                      )}
+                    >
+                      {initialsFromLabel(candidate.label)}
                     </span>
-                    {candidate.email && (
-                      <span className="text-xs text-slate-500">{candidate.email}</span>
-                    )}
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
+                      <span className="truncate text-sm text-slate-700 dark:text-slate-200">
+                        {highlightMatch(candidate.label, mention.query)}
+                      </span>
+                      {candidate.email && (
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate text-xs text-slate-400 dark:text-slate-500">
+                          <span className="truncate">{candidate.email}</span>
+                          <Globe className="h-3 w-3 shrink-0" />
+                        </span>
+                      )}
+                    </span>
                   </button>
                 </li>
               ))}
