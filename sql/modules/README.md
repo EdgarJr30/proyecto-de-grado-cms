@@ -37,6 +37,7 @@ Archivo de referencia de inventario (sin cambios de contenido):
 1. `sql/modules/assets/01_activos_fijos.sql`
 2. `sql/modules/assets/02_ticket_assets_policies_patch.sql`
 3. `sql/modules/assets/03_preventive_maintenance.sql`
+4. `sql/modules/assets/04_asset_manuals.sql`
 
 ### 3) Inventory / Repuestos
 1. `sql/Inventario&RepuestosMantenimiento.sql`

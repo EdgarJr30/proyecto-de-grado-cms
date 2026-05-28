@@ -90,6 +90,24 @@ export type AssetOption = Pick<
   'id' | 'code' | 'name' | 'status' | 'is_active' | 'location_name'
 >;
 
+// ============ TABLE: public.asset_manuals ============
+export interface AssetManual {
+  id: BigIntLike;
+  asset_id: BigIntLike;
+  title: string;
+  file_path: string;
+  file_name: string | null;
+  mime_type: string | null;
+  size_bytes: number | null;
+  created_at: ISOTimestamp;
+  created_by: UUID | null;
+}
+
+export type AssetManualInsert = Omit<
+  AssetManual,
+  'id' | 'created_at'
+> & { id?: never };
+
 // ============ TABLE: public.asset_status_history ============
 export interface AssetStatusHistory {
   id: BigIntLike;

@@ -13,6 +13,7 @@ import type {
   AssetStatusHistoryInsert,
   AssetMaintenanceLog,
   AssetMaintenanceLogInsert,
+  AssetManual,
   TicketAsset,
   TicketAssetInsert,
   AssetTicketView,
@@ -327,6 +328,128 @@ export async function deleteAssetMaintenanceLog(id: BigIntLike): Promise<void> {
     .delete()
     .eq('id', id);
   if (error) throw new Error(toErrorMessage(error));
+}
+
+// ============ ASSET MANUALS (manuales técnicos) ============
+
+const ASSET_MANUALS_BUCKET = 'asset-manuals';
+
+function sanitizeFileName(name: string): string {
+  const dot = name.lastIndexOf('.');
+  const base = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : '';
+  const safeBase = base
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'manual';
+  const safeExt = ext.replace(/[^a-z0-9]/g, '').slice(0, 12);
+  return safeExt ? `${safeBase}.${safeExt}` : safeBase;
+}
+
+/** Lista los manuales técnicos de un activo. */
+export async function listAssetManuals(
+  asset_id: BigIntLike
+): Promise<AssetManual[]> {
+  const { data, error } = await supabase
+    .from('asset_manuals')
+    .select('*')
+    .eq('asset_id', asset_id)
+    .order('created_at', { ascending: false });
+
+  return assertOk(data, error, 'No se pudieron obtener los manuales del activo.');
+}
+
+/** Sube un archivo al bucket y registra el manual en la base de datos. */
+export async function uploadAssetManual(params: {
+  asset_id: BigIntLike;
+  title: string;
+  file: File;
+}): Promise<AssetManual> {
+  const assetId = toId(params.asset_id);
+  const safeName = sanitizeFileName(params.file.name);
+  const filePath = `${assetId}/${Date.now()}_${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(ASSET_MANUALS_BUCKET)
+    .upload(filePath, params.file, {
+      upsert: false,
+      contentType: params.file.type || 'application/octet-stream',
+      cacheControl: '3600',
+    });
+
+  if (uploadError) throw new Error(toErrorMessage(uploadError));
+
+  const { data, error } = await supabase
+    .from('asset_manuals')
+    .insert({
+      asset_id: assetId,
+      title: params.title.trim(),
+      file_path: filePath,
+      file_name: params.file.name,
+      mime_type: params.file.type || null,
+      size_bytes: params.file.size ?? null,
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    // Rollback del archivo si falló el insert para no dejar huérfanos.
+    await supabase.storage.from(ASSET_MANUALS_BUCKET).remove([filePath]);
+    throw new Error(toErrorMessage(error));
+  }
+
+  return data as AssetManual;
+}
+
+/** Elimina el manual (registro + archivo en storage). */
+export async function deleteAssetManual(params: {
+  id: BigIntLike;
+  file_path: string;
+}): Promise<void> {
+  const { error } = await supabase
+    .from('asset_manuals')
+    .delete()
+    .eq('id', params.id);
+
+  if (error) throw new Error(toErrorMessage(error));
+
+  // Borrar el archivo es best-effort: el registro ya no existe.
+  await supabase.storage.from(ASSET_MANUALS_BUCKET).remove([params.file_path]);
+}
+
+/** URL pública para descargar un manual. */
+export function getAssetManualPublicUrl(path: string): string {
+  return supabase.storage.from(ASSET_MANUALS_BUCKET).getPublicUrl(path).data
+    .publicUrl;
+}
+
+const OFFICE_EXTENSIONS = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+
+function manualExtension(manual: Pick<AssetManual, 'file_name' | 'file_path'>) {
+  const source = manual.file_name || manual.file_path || '';
+  const dot = source.lastIndexOf('.');
+  return dot >= 0 ? source.slice(dot + 1).toLowerCase() : '';
+}
+
+/**
+ * URL para VER el manual en línea (pestaña nueva).
+ * - PDF / imágenes / texto: el navegador los renderiza con la URL pública.
+ * - Office (Word/Excel/PowerPoint): se abre con el visor de Office Online.
+ * - Otros (p. ej. ZIP): cae a la URL pública (probablemente descarga).
+ */
+export function getAssetManualViewUrl(
+  manual: Pick<AssetManual, 'file_path' | 'file_name'>
+): string {
+  const publicUrl = getAssetManualPublicUrl(manual.file_path);
+  if (OFFICE_EXTENSIONS.includes(manualExtension(manual))) {
+    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(
+      publicUrl
+    )}`;
+  }
+  return publicUrl;
 }
 
 // ============ TICKET-ASSETS (many-to-many) ============

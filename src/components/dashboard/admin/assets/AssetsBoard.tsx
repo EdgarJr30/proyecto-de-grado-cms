@@ -10,6 +10,9 @@ import {
   ChevronRight,
   ClipboardList,
   Clock3,
+  Download,
+  Eye,
+  FileText,
   Grid2X2,
   MapPin,
   MoreVertical,
@@ -25,6 +28,7 @@ import {
 } from 'lucide-react';
 import type {
   AssetMaintenanceLog,
+  AssetManual,
   AssetStatus,
   AssetTicketView,
   AssetView,
@@ -32,8 +36,11 @@ import type {
 } from '../../../../types/Asset';
 import {
   getAssetMaintenanceLog,
+  getAssetManualPublicUrl,
+  getAssetManualViewUrl,
   getAssetTicketsView,
   getAssets,
+  listAssetManuals,
   runAssetPreventiveSchedulerNow,
 } from '../../../../services/assetsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
@@ -228,6 +235,8 @@ export default function AssetsBoard() {
   const [maintenanceLog, setMaintenanceLog] = useState<AssetMaintenanceLog[]>(
     []
   );
+  const [assetManuals, setAssetManuals] = useState<AssetManual[]>([]);
+  const [manualsRefreshKey, setManualsRefreshKey] = useState(0);
 
   async function reload() {
     setError('');
@@ -446,6 +455,28 @@ export default function AssetsBoard() {
       cancelled = true;
     };
   }, [selectedAssetId]);
+
+  useEffect(() => {
+    if (!selectedAssetId) {
+      setAssetManuals([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const manuals = await listAssetManuals(selectedAssetId);
+        if (!cancelled) setAssetManuals(manuals);
+      } catch {
+        if (!cancelled) setAssetManuals([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAssetId, manualsRefreshKey]);
 
   const kpis = useMemo(() => {
     const total = filteredAssets.length;
@@ -834,6 +865,7 @@ export default function AssetsBoard() {
             asset={selectedAsset}
             tickets={assetTickets}
             maintenanceLog={maintenanceLog}
+            manuals={assetManuals}
             onEdit={() => setModal('edit')}
             onOpenActivity={setActivityModal}
           />
@@ -865,6 +897,7 @@ export default function AssetsBoard() {
           asset={selectedAsset}
           onClose={() => setModal('none')}
           onUpdated={reload}
+          onManualsChanged={() => setManualsRefreshKey((value) => value + 1)}
         />
       ) : null}
     </div>
@@ -974,12 +1007,14 @@ function AssetDetailPanel({
   asset,
   tickets,
   maintenanceLog,
+  manuals,
   onEdit,
   onOpenActivity,
 }: {
   asset: AssetView | null;
   tickets: AssetTicketView[];
   maintenanceLog: AssetMaintenanceLog[];
+  manuals: AssetManual[];
   onEdit: () => void;
   onOpenActivity: (tab: DetailTab) => void;
 }) {
@@ -1078,6 +1113,66 @@ function AssetDetailPanel({
               {asset.preventive_instructions}
             </div>
           ) : null}
+        </section>
+
+        <Divider />
+
+        <section>
+          <div className="flex items-center justify-between gap-3">
+            <SectionTitle icon={<FileText className="h-4 w-4" />}>
+              Manuales técnicos
+            </SectionTitle>
+            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              {manuals.length}
+            </span>
+          </div>
+
+          {manuals.length === 0 ? (
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              Sin manuales cargados. Agrégalos desde el botón Editar.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {manuals.map((manual) => (
+                <div
+                  key={String(manual.id)}
+                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-blue-600" />
+                  <a
+                    href={getAssetManualViewUrl(manual)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 hover:text-blue-700 dark:text-slate-100 dark:hover:text-blue-300"
+                    title="Ver en línea"
+                  >
+                    {manual.title}
+                  </a>
+                  <a
+                    href={getAssetManualViewUrl(manual)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800"
+                    title="Ver en línea"
+                    aria-label={`Ver ${manual.title}`}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </a>
+                  <a
+                    href={getAssetManualPublicUrl(manual.file_path)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={manual.file_name ?? undefined}
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-blue-600 dark:hover:bg-slate-800"
+                    title="Descargar"
+                    aria-label={`Descargar ${manual.title}`}
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <Divider />

@@ -6,6 +6,7 @@ import {
 } from '../../../../services/assetsService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetFormFields from './AssetFormFields';
+import AssetManualsManager from './AssetManualsManager';
 import AnimatedDialog from '../../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -16,6 +17,7 @@ type Props = {
   asset: AssetView;
   onClose: () => void;
   onUpdated: () => Promise<void> | void;
+  onManualsChanged?: () => void;
 };
 
 type AssetEditFormState = AssetUpdate & {
@@ -30,7 +32,12 @@ type AssetEditFormState = AssetUpdate & {
   preventive_allow_open_work_orders: boolean;
 };
 
-export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
+export default function AssetEditForm({
+  asset,
+  onClose,
+  onUpdated,
+  onManualsChanged,
+}: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string>('');
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -228,6 +235,16 @@ export default function AssetEditForm({ asset, onClose, onUpdated }: Props) {
                 showLocationId
                 lockedFields={{ code: true }}
               />
+
+              <div className="mt-4">
+                <AssetManualsManager
+                  assetId={
+                    typeof asset.id === 'string' ? Number(asset.id) : asset.id
+                  }
+                  disabled={isSaving}
+                  onChanged={onManualsChanged}
+                />
+              </div>
             </div>
 
             {/* Footer sticky */}
