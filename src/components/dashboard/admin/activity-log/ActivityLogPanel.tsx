@@ -26,6 +26,8 @@ const RESOURCE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'app_settings', label: 'Configuración' },
   { value: 'assets', label: 'Activos' },
   { value: 'parts', label: 'Repuestos' },
+  { value: 'tools', label: 'Herramientas' },
+  { value: 'ticket_tool_requests', label: 'Reservas de herramientas' },
   { value: 'warehouses', label: 'Almacenes' },
   { value: 'inventory_docs', label: 'Documentos de inventario' },
   { value: 'vendors', label: 'Proveedores' },

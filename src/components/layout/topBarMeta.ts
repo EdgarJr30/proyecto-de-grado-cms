@@ -40,7 +40,7 @@ const INVENTORY_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
       { label: 'Inicio', to: '/inicio' },
       { label: 'Inventario' },
     ],
-    badges: ['13 módulos'],
+    badges: ['14 módulos'],
   },
   {
     path: '/inventory/parts',
@@ -50,6 +50,16 @@ const INVENTORY_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
     breadcrumbs: [
       { label: 'Inventario', to: '/inventario' },
       { label: 'Repuestos' },
+    ],
+  },
+  {
+    path: '/inventory/tools',
+    title: 'Herramientas',
+    description:
+      'Catálogo de herramientas con ubicación, estado, calibración y disponibilidad.',
+    breadcrumbs: [
+      { label: 'Inventario', to: '/inventario' },
+      { label: 'Herramientas' },
     ],
   },
   {
@@ -208,7 +218,7 @@ const INVENTORY_TOP_BAR_ROUTES: TopBarMetaRoute[] = [
     path: '/inventory/reservations',
     title: 'Reservas por OT',
     description:
-      'Reserva, entrega, devolución y liberación de repuestos por orden de trabajo.',
+      'Reserva, entrega, devolución y liberación de repuestos y herramientas por orden de trabajo.',
     breadcrumbs: [
       { label: 'Inventario', to: '/inventario' },
       { label: 'Reservas por OT' },

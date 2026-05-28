@@ -1,8 +1,11 @@
 import { supabase } from '../../lib/supabaseClient';
 import type {
   AvailableStockRow,
+  AvailableToolRow,
   TicketPartRequestRow,
+  TicketToolRequestRow,
   PartPick,
+  ToolReturnCondition,
   TicketWoPick,
   WarehouseBinPick,
   WarehousePick,
@@ -62,6 +65,19 @@ export async function listTicketPartRequests(
   })) as TicketPartRequestRow[];
 }
 
+export async function listTicketToolRequests(
+  ticketId: number
+): Promise<TicketToolRequestRow[]> {
+  const { data, error } = await supabase
+    .from('ticket_tool_requests')
+    .select('*')
+    .eq('ticket_id', ticketId)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as TicketToolRequestRow[];
+}
+
 export async function listPartsPick(): Promise<PartPick[]> {
   const { data, error } = await supabase
     .from('parts')
@@ -82,6 +98,16 @@ export async function listWarehousesPick(): Promise<WarehousePick[]> {
 
   if (error) throw error;
   return (data ?? []) as WarehousePick[];
+}
+
+export async function listAvailableToolsPick(): Promise<AvailableToolRow[]> {
+  const { data, error } = await supabase
+    .from('v_available_tools')
+    .select('*')
+    .order('tool_code', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as AvailableToolRow[];
 }
 
 export async function listAcceptedWorkOrders(
@@ -233,4 +259,75 @@ export async function releaseTicketPartReservation(input: {
   });
 
   if (error) throw error;
+}
+
+export async function reserveTicketTool(input: {
+  ticketId: number;
+  toolId: string;
+  expectedReturnAt?: string | null;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('reserve_ticket_tool', {
+    p_ticket_id: input.ticketId,
+    p_tool_id: input.toolId,
+    p_expected_return_at: input.expectedReturnAt ?? null,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) throw error;
+  return String(data);
+}
+
+export async function issueTicketTool(input: {
+  ticketId: number;
+  toolId: string;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('issue_ticket_tool', {
+    p_ticket_id: input.ticketId,
+    p_tool_id: input.toolId,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) throw error;
+  return String(data);
+}
+
+export async function returnTicketTool(input: {
+  ticketId: number;
+  toolId: string;
+  warehouseId: string;
+  binId?: string | null;
+  condition?: ToolReturnCondition;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('return_ticket_tool', {
+    p_ticket_id: input.ticketId,
+    p_tool_id: input.toolId,
+    p_warehouse_id: input.warehouseId,
+    p_bin_id: input.binId ?? null,
+    p_condition: input.condition ?? 'GOOD',
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) throw error;
+  return String(data);
+}
+
+export async function releaseTicketToolReservation(input: {
+  ticketId: number;
+  toolId: string;
+  notes?: string | null;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc(
+    'release_ticket_tool_reservation',
+    {
+      p_ticket_id: input.ticketId,
+      p_tool_id: input.toolId,
+      p_notes: input.notes ?? null,
+    }
+  );
+
+  if (error) throw error;
+  return String(data);
 }

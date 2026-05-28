@@ -190,6 +190,14 @@ export default function InventoryHomePage() {
       icon: PackageSearch,
     },
     {
+      title: 'Herramientas',
+      description:
+        'Catálogo de herramientas, ubicación, estado, calibración y reservas.',
+      to: '/inventory/tools',
+      perm: 'inventory:read',
+      icon: Wrench,
+    },
+    {
       title: 'Categorías de repuestos',
       description:
         'Árbol de categorías (padre/hijo) para clasificar repuestos.',
@@ -277,7 +285,7 @@ export default function InventoryHomePage() {
     {
       title: 'Reservas por OT (tickets)',
       description:
-        'Reservar repuestos para tickets aceptados (reserve_ticket_part).',
+        'Reservar repuestos y herramientas para tickets aceptados.',
       to: '/inventory/reservations',
       perm: 'inventory:read',
       tone: 'warning',

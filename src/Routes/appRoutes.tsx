@@ -32,6 +32,7 @@ const PartCategoriesPage = lazy(
   () => import('../pages/inventory/parts/part_categories/PartCategoriesPage')
 );
 const PartsPage = lazy(() => import('../pages/inventory/parts/PartsPage'));
+const ToolsPage = lazy(() => import('../pages/inventory/tools/ToolsPage'));
 const WarehousesPage = lazy(() => import('../pages/inventory/warehouses/WarehousesPage'));
 const WarehouseBinsPage = lazy(() => import('../pages/inventory/WarehouseBinsPage'));
 const StockOverviewPage = lazy(() => import('../pages/inventory/StockOverviewPage'));
@@ -444,6 +445,12 @@ export const APP_ROUTES: AppRoute[] = [
   {
     path: '/inventory/parts',
     element: <PartsPage />,
+    allowPerms: ['inventory:read'],
+    showInSidebar: false,
+  },
+  {
+    path: '/inventory/tools',
+    element: <ToolsPage />,
     allowPerms: ['inventory:read'],
     showInSidebar: false,
   },

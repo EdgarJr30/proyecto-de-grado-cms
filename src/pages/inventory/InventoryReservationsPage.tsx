@@ -4,6 +4,7 @@ import { usePermissions } from '../../rbac/PermissionsContext';
 import { showToastError } from '../../notifications';
 import { listAcceptedWorkOrders } from '../../services/inventory/inventoryRequests';
 import TicketPartsPanel from './parts/TicketPartsPanel';
+import TicketToolsPanel from './tools/TicketToolsPanel';
 import type { TicketWoPick } from '../../types/inventory/inventoryRequests';
 import { MotionSpin } from '../../components/ui/motionPrimitives';
 import { InventoryFiltersDropdown } from './components/InventoryFiltersDropdown';
@@ -21,6 +22,7 @@ export default function InventoryReservationsPage() {
   const [tickets, setTickets] = useState<TicketWoPick[]>([]);
   const [ticketId, setTicketId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
+  const [activePanel, setActivePanel] = useState<'parts' | 'tools'>('parts');
 
   async function loadTickets() {
     setLoading(true);
@@ -180,11 +182,48 @@ export default function InventoryReservationsPage() {
                 </div>
 
                 {canWork ? (
-                  <TicketPartsPanel
-                    ticketId={selectedTicket.id}
-                    isAccepted={true}
-                    enableWorkflowActions={true}
-                  />
+                  <div className="space-y-4">
+                    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+                      <button
+                        type="button"
+                        onClick={() => setActivePanel('parts')}
+                        className={cx(
+                          'rounded-lg px-3 py-1.5 text-sm font-semibold transition',
+                          activePanel === 'parts'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        )}
+                      >
+                        Repuestos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActivePanel('tools')}
+                        className={cx(
+                          'rounded-lg px-3 py-1.5 text-sm font-semibold transition',
+                          activePanel === 'tools'
+                            ? 'bg-white text-slate-900 shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900'
+                        )}
+                      >
+                        Herramientas
+                      </button>
+                    </div>
+
+                    {activePanel === 'parts' ? (
+                      <TicketPartsPanel
+                        ticketId={selectedTicket.id}
+                        isAccepted={true}
+                        enableWorkflowActions={true}
+                      />
+                    ) : (
+                      <TicketToolsPanel
+                        ticketId={selectedTicket.id}
+                        isAccepted={true}
+                        enableWorkflowActions={true}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                     No tienes permisos para operar reservas/consumos en esta OT.

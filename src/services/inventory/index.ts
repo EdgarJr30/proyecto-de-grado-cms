@@ -11,3 +11,4 @@ export * from './ticketPartRequestsService';
 export * from './reorderPoliciesService';
 export * from './partCostsService';
 export * from './viewsService';
+export * from './toolsService';

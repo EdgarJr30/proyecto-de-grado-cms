@@ -8,6 +8,7 @@
 
 -- VIEWS
 DROP VIEW IF EXISTS public.v_available_stock;
+DROP VIEW IF EXISTS public.v_available_tools;
 DROP VIEW IF EXISTS public.v_reorder_suggestions;
 DROP VIEW IF EXISTS public.v_inventory_kardex;
 DROP VIEW IF EXISTS public.v_stock_by_location;
@@ -15,6 +16,9 @@ DROP VIEW IF EXISTS public.v_part_stock_summary;
 
 -- TABLES
 DROP TABLE IF EXISTS public.inventory_doc_counters CASCADE;
+DROP TABLE IF EXISTS public.ticket_tool_requests CASCADE;
+DROP TABLE IF EXISTS public.tools CASCADE;
+DROP TABLE IF EXISTS public.tool_categories CASCADE;
 DROP TABLE IF EXISTS public.part_costs CASCADE;
 DROP TABLE IF EXISTS public.reorder_policies CASCADE;
 DROP TABLE IF EXISTS public.ticket_part_requests CASCADE;
@@ -31,6 +35,13 @@ DROP TABLE IF EXISTS public.warehouses CASCADE;
 DROP TABLE IF EXISTS public.uoms CASCADE;
 
 -- FUNCTIONS (inventory)
+DROP FUNCTION IF EXISTS public.release_ticket_tool_reservation(bigint, uuid, text);
+DROP FUNCTION IF EXISTS public.return_ticket_tool(bigint, uuid, uuid, uuid, text, text);
+DROP FUNCTION IF EXISTS public.issue_ticket_tool(bigint, uuid, text);
+DROP FUNCTION IF EXISTS public.reserve_ticket_tool(bigint, uuid, timestamptz, text);
+DROP FUNCTION IF EXISTS public.release_ticket_tools_on_ticket_terminal_state();
+DROP FUNCTION IF EXISTS public.release_ticket_tool_reservations_for_ticket(bigint, text);
+DROP FUNCTION IF EXISTS public.set_tool_code_default();
 DROP FUNCTION IF EXISTS public.release_ticket_part_reservation(bigint, uuid, uuid, numeric);
 DROP FUNCTION IF EXISTS public.return_ticket_part(bigint, uuid, uuid, numeric, uuid, text, text);
 DROP FUNCTION IF EXISTS public.issue_ticket_part(bigint, uuid, uuid, numeric, uuid, text, text);
@@ -47,6 +58,9 @@ DROP FUNCTION IF EXISTS public.prevent_negative_stock();
 DROP FUNCTION IF EXISTS public.validate_inventory_doc_line_qty();
 DROP FUNCTION IF EXISTS public.audit_set_defaults();
 DROP FUNCTION IF EXISTS public.now_santo_domingo();
+
+-- SEQUENCES
+DROP SEQUENCE IF EXISTS public.tool_code_seq;
 
 -- TYPES
 DROP TYPE IF EXISTS public.part_criticality;

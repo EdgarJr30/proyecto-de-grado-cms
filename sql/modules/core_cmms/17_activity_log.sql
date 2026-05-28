@@ -93,6 +93,9 @@ AS $$
     WHEN 'asset_categories' THEN 'la categoría de activo'
     WHEN 'parts' THEN 'el repuesto'
     WHEN 'part_categories' THEN 'la categoría de repuesto'
+    WHEN 'tools' THEN 'la herramienta'
+    WHEN 'tool_categories' THEN 'la categoría de herramienta'
+    WHEN 'ticket_tool_requests' THEN 'la reserva de herramienta'
     WHEN 'warehouses' THEN 'el almacén'
     WHEN 'inventory_docs' THEN 'el documento de inventario'
     WHEN 'vendors' THEN 'el proveedor'
@@ -278,6 +281,7 @@ DECLARE
     'asset_preventive_maintenance_runs',
     -- inventory
     'warehouses', 'warehouse_bins', 'uoms', 'parts', 'part_categories',
+    'tools', 'tool_categories', 'ticket_tool_requests',
     'part_costs', 'part_vendors', 'vendors', 'inventory_docs',
     'inventory_doc_lines', 'reorder_policies'
   ];

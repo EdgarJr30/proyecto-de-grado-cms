@@ -46,6 +46,7 @@ import {
   confirmArchiveWorkOrder,
 } from '../../../notifications/index';
 import TicketPartsPanel from '../../../pages/inventory/parts/TicketPartsPanel';
+import TicketToolsPanel from '../../../pages/inventory/tools/TicketToolsPanel';
 import TicketAssetsPanel from '../../../pages/inventory/assets/TicketAssetsPanel';
 import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { normalizeLocationId } from '../../../utils/locationId';
@@ -1365,7 +1366,7 @@ export default function EditWorkOrdersModal({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="text-base font-semibold text-slate-950 dark:text-white">
-                Repuestos y reservas
+                Repuestos, herramientas y reservas
               </h3>
               <div className="flex flex-wrap gap-2">
                 {!edited.is_accepted && (
@@ -1381,7 +1382,7 @@ export default function EditWorkOrdersModal({
               </div>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Reserva materiales necesarios para ejecutar la orden y consulta su disponibilidad.
+              Reserva materiales y herramientas necesarios para ejecutar la orden y consulta su disponibilidad.
             </p>
           </div>
         </div>
@@ -1409,10 +1410,16 @@ export default function EditWorkOrdersModal({
             )}
           </div>
         ) : (
-          <TicketPartsPanel
-            ticketId={Number(ticket.id)}
-            isAccepted={Boolean(edited.is_accepted)}
-          />
+          <div className="space-y-5">
+            <TicketPartsPanel
+              ticketId={Number(ticket.id)}
+              isAccepted={Boolean(edited.is_accepted)}
+            />
+            <TicketToolsPanel
+              ticketId={Number(ticket.id)}
+              isAccepted={Boolean(edited.is_accepted)}
+            />
+          </div>
         )}
         </div>
       </section>

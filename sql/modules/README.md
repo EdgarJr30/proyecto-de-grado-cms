@@ -42,6 +42,7 @@ Archivo de referencia de inventario (sin cambios de contenido):
 
 ### 3) Inventory / Repuestos
 1. `sql/Inventario&RepuestosMantenimiento.sql`
+2. `sql/modules/inventory/17_inventory_tools.sql`
 
 ### 4) Post-SQL bitácora (tras assets/inventory)
 - `17_activity_log.sql` engancha el logging genérico a las tablas core. Para
