@@ -431,6 +431,7 @@ GRANT EXECUTE ON FUNCTION public.record_activity(text, text, text, text, text, j
 CREATE OR REPLACE FUNCTION public.list_activity_log(
   p_search   text DEFAULT NULL,
   p_resource text DEFAULT NULL,
+  p_entity_id text DEFAULT NULL,
   p_action   text DEFAULT NULL,
   p_actor    uuid DEFAULT NULL,
   p_from     timestamptz DEFAULT NULL,
@@ -464,6 +465,7 @@ DECLARE
   v_offset int := GREATEST(COALESCE(p_offset, 0), 0);
   v_search text := NULLIF(trim(COALESCE(p_search, '')), '');
   v_resource text := NULLIF(trim(COALESCE(p_resource, '')), '');
+  v_entity_id text := NULLIF(trim(COALESCE(p_entity_id, '')), '');
   v_action text := NULLIF(trim(COALESCE(p_action, '')), '');
 BEGIN
   IF NOT (public.me_has_permission('logs:read') OR public.me_has_permission('logs:export')) THEN
@@ -475,6 +477,7 @@ BEGIN
     SELECT a.*
     FROM public.activity_log a
     WHERE (v_resource IS NULL OR a.resource = v_resource)
+      AND (v_entity_id IS NULL OR a.entity_id = v_entity_id)
       AND (v_action IS NULL OR a.action = v_action)
       AND (p_actor IS NULL OR a.actor_user_id = p_actor)
       AND (p_from IS NULL OR a.occurred_at >= p_from)
@@ -500,7 +503,7 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.list_activity_log(
-  text, text, text, uuid, timestamptz, timestamptz, int, int
+  text, text, text, text, uuid, timestamptz, timestamptz, int, int
 ) TO authenticated;
 
 -- -----------------------------------------------------------------------------

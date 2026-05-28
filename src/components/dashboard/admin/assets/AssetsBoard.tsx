@@ -27,7 +27,6 @@ import {
   X,
 } from 'lucide-react';
 import type {
-  AssetMaintenanceLog,
   AssetManual,
   AssetStatus,
   AssetTicketView,
@@ -35,7 +34,6 @@ import type {
   BigIntLike,
 } from '../../../../types/Asset';
 import {
-  getAssetMaintenanceLog,
   getAssetManualPublicUrl,
   getAssetManualViewUrl,
   getAssetTicketsView,
@@ -43,6 +41,10 @@ import {
   listAssetManuals,
   runAssetPreventiveSchedulerNow,
 } from '../../../../services/assetsService';
+import {
+  listActivityLog,
+  type ActivityLogItem,
+} from '../../../../services/activityLogService';
 import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetCreateForm from './AssetCreateForm';
 import AssetCategoriesManager from './AssetCategoriesManager';
@@ -231,10 +233,9 @@ export default function AssetsBoard() {
 
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [activityLogError, setActivityLogError] = useState('');
   const [assetTickets, setAssetTickets] = useState<AssetTicketView[]>([]);
-  const [maintenanceLog, setMaintenanceLog] = useState<AssetMaintenanceLog[]>(
-    []
-  );
+  const [assetActivityLog, setAssetActivityLog] = useState<ActivityLogItem[]>([]);
   const [assetManuals, setAssetManuals] = useState<AssetManual[]>([]);
   const [manualsRefreshKey, setManualsRefreshKey] = useState(0);
 
@@ -415,8 +416,9 @@ export default function AssetsBoard() {
   useEffect(() => {
     if (!selectedAssetId) {
       setAssetTickets([]);
-      setMaintenanceLog([]);
+      setAssetActivityLog([]);
       setHistoryError('');
+      setActivityLogError('');
       return;
     }
 
@@ -425,30 +427,44 @@ export default function AssetsBoard() {
     (async () => {
       setHistoryLoading(true);
       setHistoryError('');
+      setActivityLogError('');
 
-      try {
-        const [tickets, logs] = await Promise.all([
-          getAssetTicketsView(selectedAssetId),
-          getAssetMaintenanceLog(selectedAssetId),
-        ]);
+      const [ticketsResult, logsResult] = await Promise.allSettled([
+        getAssetTicketsView(selectedAssetId),
+        listActivityLog({
+          filters: {
+            resource: 'assets',
+            entityId: toId(selectedAssetId),
+          },
+          limit: 100,
+        }),
+      ]);
 
-        if (cancelled) return;
+      if (cancelled) return;
 
-        setAssetTickets(tickets);
-        setMaintenanceLog(logs);
-      } catch (err: unknown) {
-        if (cancelled) return;
-
+      if (ticketsResult.status === 'fulfilled') {
+        setAssetTickets(ticketsResult.value);
+      } else {
+        setAssetTickets([]);
         setHistoryError(
-          err instanceof Error
-            ? err.message
+          ticketsResult.reason instanceof Error
+            ? ticketsResult.reason.message
             : 'No se pudo cargar el historial del activo.'
         );
-        setAssetTickets([]);
-        setMaintenanceLog([]);
-      } finally {
-        if (!cancelled) setHistoryLoading(false);
       }
+
+      if (logsResult.status === 'fulfilled') {
+        setAssetActivityLog(logsResult.value.items);
+      } else {
+        setAssetActivityLog([]);
+        setActivityLogError(
+          logsResult.reason instanceof Error
+            ? logsResult.reason.message
+            : 'No se pudo cargar la bitácora del activo.'
+        );
+      }
+
+      setHistoryLoading(false);
     })();
 
     return () => {
@@ -864,7 +880,7 @@ export default function AssetsBoard() {
           <AssetDetailPanel
             asset={selectedAsset}
             tickets={assetTickets}
-            maintenanceLog={maintenanceLog}
+            activityLog={assetActivityLog}
             manuals={assetManuals}
             onEdit={() => setModal('edit')}
             onOpenActivity={setActivityModal}
@@ -877,9 +893,9 @@ export default function AssetsBoard() {
           asset={selectedAsset}
           type={activityModal}
           tickets={assetTickets}
-          maintenanceLog={maintenanceLog}
+          activityLog={assetActivityLog}
           loading={historyLoading}
-          error={historyError}
+          error={activityModal === 'tickets' ? historyError : activityLogError}
           onClose={() => setActivityModal(null)}
           onOpenTicket={(ticketId) => {
             setActivityModal(null);
@@ -1006,14 +1022,14 @@ function StatusPill({ status }: { status: AssetStatus }) {
 function AssetDetailPanel({
   asset,
   tickets,
-  maintenanceLog,
+  activityLog,
   manuals,
   onEdit,
   onOpenActivity,
 }: {
   asset: AssetView | null;
   tickets: AssetTicketView[];
-  maintenanceLog: AssetMaintenanceLog[];
+  activityLog: ActivityLogItem[];
   manuals: AssetManual[];
   onEdit: () => void;
   onOpenActivity: (tab: DetailTab) => void;
@@ -1187,7 +1203,7 @@ function AssetDetailPanel({
           <ActivityCard
             icon={<Wrench className="h-5 w-5" />}
             label="Bitácora"
-            value={maintenanceLog.length}
+            value={activityLog.length}
             onClick={() => onOpenActivity('maintenance')}
           />
         </div>
@@ -1273,7 +1289,7 @@ function ActivityModal({
   asset,
   type,
   tickets,
-  maintenanceLog,
+  activityLog,
   loading,
   error,
   onClose,
@@ -1282,7 +1298,7 @@ function ActivityModal({
   asset: AssetView;
   type: DetailTab;
   tickets: AssetTicketView[];
-  maintenanceLog: AssetMaintenanceLog[];
+  activityLog: ActivityLogItem[];
   loading: boolean;
   error: string;
   onClose: () => void;
@@ -1290,7 +1306,7 @@ function ActivityModal({
 }) {
   const isTickets = type === 'tickets';
   const title = isTickets ? 'Histórico de mantenimientos' : 'Bitácora del activo';
-  const count = isTickets ? tickets.length : maintenanceLog.length;
+  const count = isTickets ? tickets.length : activityLog.length;
 
   return (
     <AnimatedDialog
@@ -1326,7 +1342,7 @@ function ActivityModal({
         <ActivityList
           detailTab={type}
           tickets={tickets}
-          maintenanceLog={maintenanceLog}
+          activityLog={activityLog}
           loading={loading}
           error={error}
           onOpenTicket={onOpenTicket}
@@ -1339,14 +1355,14 @@ function ActivityModal({
 function ActivityList({
   detailTab,
   tickets,
-  maintenanceLog,
+  activityLog,
   loading,
   error,
   onOpenTicket,
 }: {
   detailTab: DetailTab;
   tickets: AssetTicketView[];
-  maintenanceLog: AssetMaintenanceLog[];
+  activityLog: ActivityLogItem[];
   loading: boolean;
   error: string;
   onOpenTicket: (ticketId: BigIntLike) => void;
@@ -1406,17 +1422,17 @@ function ActivityList({
     );
   }
 
-  if (maintenanceLog.length === 0) {
+  if (activityLog.length === 0) {
     return (
       <div className="mt-4 rounded-xl border border-slate-200 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:text-slate-400">
-        Sin mantenimientos registrados.
+        Sin eventos registrados en la bitácora.
       </div>
     );
   }
 
   return (
     <div className="mt-4 max-h-64 overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">
-      {maintenanceLog.map((entry) => (
+      {activityLog.map((entry) => (
         <div
           key={String(entry.id)}
           className="border-b border-slate-100 px-4 py-3 last:border-b-0 dark:border-slate-800"
@@ -1424,15 +1440,66 @@ function ActivityList({
           <div className="flex items-start gap-2 text-sm font-bold text-slate-900 dark:text-slate-100">
             <ScrollText className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
             <span className="min-w-0 truncate">
-              {entry.maintenance_type} · {entry.summary}
+              {entry.summary ?? entry.action}
             </span>
           </div>
           <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {formatDateTime(entry.performed_at)}
-            {entry.ticket_id ? ` · OT #${String(entry.ticket_id)}` : ''}
+            {formatDateTime(entry.occurredAt)}
+            {entry.actorLabel ? ` · ${entry.actorLabel}` : ''}
           </div>
+          <ActivityChangesPreview metadata={entry.metadata} />
         </div>
       ))}
     </div>
   );
+}
+
+function ActivityChangesPreview({
+  metadata,
+}: {
+  metadata: Record<string, unknown>;
+}) {
+  const rawChanges = metadata.changes;
+  if (!rawChanges || typeof rawChanges !== 'object' || Array.isArray(rawChanges)) {
+    return null;
+  }
+
+  const entries = Object.entries(rawChanges as Record<string, unknown>).slice(0, 4);
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {entries.map(([field, value]) => {
+        const change =
+          value && typeof value === 'object' && !Array.isArray(value)
+            ? (value as Record<string, unknown>)
+            : {};
+        const oldValue = formatActivityValue(change.old);
+        const newValue = formatActivityValue(change.new);
+
+        return (
+          <span
+            key={field}
+            className="inline-flex max-w-full rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            title={`${field}: ${oldValue} -> ${newValue}`}
+          >
+            <span className="truncate">
+              {field}: {oldValue} {'->'} {newValue}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatActivityValue(value: unknown): string {
+  if (value == null) return '—';
+  if (typeof value === 'string') return value.trim() || '—';
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }

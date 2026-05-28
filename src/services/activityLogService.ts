@@ -19,6 +19,7 @@ export type ActivityLogItem = {
 export type ActivityLogFilters = {
   search?: string;
   resource?: string;
+  entityId?: string;
   action?: string;
   actorUserId?: string;
   /** ISO timestamp (inclusive lower bound) */
@@ -129,6 +130,7 @@ function buildRpcParams(
   return {
     p_search: filters.search?.trim() ? filters.search.trim() : null,
     p_resource: filters.resource ? filters.resource : null,
+    p_entity_id: filters.entityId ? filters.entityId : null,
     p_action: filters.action ? filters.action : null,
     p_actor: filters.actorUserId ? filters.actorUserId : null,
     p_from: filters.from ? filters.from : null,
