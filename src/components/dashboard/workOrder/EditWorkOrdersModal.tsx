@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, type JSX } from 'react';
+import React, { useState, useEffect, useCallback, useRef, type JSX } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -47,6 +47,7 @@ import { useLocationCatalog } from '../../../hooks/useLocationCatalog';
 import { normalizeLocationId } from '../../../utils/locationId';
 import AnimatedDialog from '../../ui/AnimatedDialog';
 import TicketChatPanel from '../../tickets/TicketChatPanel';
+import TicketAssetChecklistSection from '../../tickets/TicketAssetChecklistSection';
 import { getCurrentUserId } from '../../../services/userService';
 import {
   amIApprovalRequester,
@@ -112,6 +113,12 @@ export default function EditWorkOrdersModal({
   const [submittingEvidence, setSubmittingEvidence] = useState(false);
   const [decisionNote, setDecisionNote] = useState('');
   const [deciding, setDeciding] = useState(false);
+  // Checklist de cierre del activo (obligatorio antes de enviar a validación).
+  const [checklistComplete, setChecklistComplete] = useState(true);
+  const handleChecklistChange = useCallback(
+    (v: { complete: boolean }) => setChecklistComplete(v.complete),
+    []
+  );
 
   // --- Colaboradores (estilo Asana: usuarios con solo-lectura + chat) ---
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -501,6 +508,12 @@ export default function EditWorkOrdersModal({
   };
 
   const submitEvidence = async () => {
+    if (!checklistComplete) {
+      showToastError(
+        'Completa el checklist de cierre del activo (todas las verificaciones marcadas) antes de enviar a validación.'
+      );
+      return;
+    }
     if (evidenceFiles.length === 0) {
       showToastError('Debes adjuntar al menos una imagen del trabajo terminado.');
       return;
@@ -1292,10 +1305,23 @@ export default function EditWorkOrdersModal({
                   Para finalizar esta orden debes enviarla a validación adjuntando una
                   imagen del trabajo terminado.
                 </p>
+                {!checklistComplete && (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
+                    Antes de enviar a validación, completa el «Checklist de cierre
+                    del activo» (más abajo en esta orden): marca todas las
+                    verificaciones.
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => setEvidenceOpen(true)}
-                  className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-400"
+                  disabled={!checklistComplete}
+                  title={
+                    !checklistComplete
+                      ? 'Completa el checklist de cierre del activo'
+                      : undefined
+                  }
+                  className="rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-teal-500 dark:hover:bg-teal-400"
                 >
                   Finalizar (requiere validación)
                 </button>
@@ -1303,6 +1329,16 @@ export default function EditWorkOrdersModal({
             )
           )}
         </section>
+      )}
+
+      {/* ✅ Checklist de cierre del activo (obligatorio antes de validar) */}
+      {edited.is_accepted && (
+        <TicketAssetChecklistSection
+          ticketId={Number(ticket.id)}
+          status={edited.status}
+          variant="modal"
+          onChange={handleChecklistChange}
+        />
       )}
 
       {/* ✅ Repuestos (solo si is_accepted=true) */}

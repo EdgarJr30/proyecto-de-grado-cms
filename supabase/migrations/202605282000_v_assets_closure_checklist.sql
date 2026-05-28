@@ -1,19 +1,24 @@
 -- =============================================================================
--- Checklist de cierre por activo fijo (obligatorio para finalizar OT)
+-- Checklist de cierre por activo fijo — script completo e idempotente
 -- =============================================================================
--- Cada activo puede tener un checklist de verificaciones (preguntas de marcación
--- rápida). Si el activo está marcado como `closure_checklist_required` y está
--- vinculado a un ticket, el técnico NO puede enviar el ticket a validación hasta
--- marcar TODAS las verificaciones activas. El supervisor ve el checklist llenado.
+-- Copia y pega TODO este archivo en el SQL Editor de Supabase y ejecútalo.
+-- Es seguro re-ejecutarlo: usa ADD COLUMN IF NOT EXISTS, CREATE ... IF NOT EXISTS,
+-- CREATE OR REPLACE FUNCTION y DROP/CREATE de vista y policies.
+--
+-- Incluye TODO el feature:
+--   1) columna assets.closure_checklist_required
+--   2) recreación de la vista v_assets para exponer la columna  <-- ESTE era el fix
+--   3) tabla de preguntas por activo (asset_checklist_items)
+--   4) tabla de respuestas por ticket+activo (ticket_asset_checklist_responses)
+--   5) helpers + RPCs (guardar / leer / completitud)
+--   6) RLS
+--   7) override de request_ticket_approval (bloquea enviar a validación si falta)
 --
 -- Reglas:
---  - Para enviar a validación: todas las preguntas activas marcadas (checked=true).
---  - Al guardar: si una pregunta queda sin cumplir (checked=false) exige nota.
---
--- Depende de: assets, tickets, work_order_assignees, assignees, approval_*,
--- helpers me_has_permission/write_activity_log/set_created_by/set_updated_by,
--- is_ticket_approver (18_approvals / approvals_finalized_lock).
--- Idempotente. Debe ejecutarse DESPUÉS de core_cmms (override de request_ticket_approval).
+--   - Para enviar a validación: todas las preguntas activas marcadas (checked=true).
+--   - Al guardar: si una pregunta queda sin cumplir (checked=false) exige nota.
+-- Baseline canónico: sql/modules/assets/05_asset_checklists.sql
+-- Debe ejecutarse DESPUÉS de core_cmms (override de request_ticket_approval).
 
 -- -----------------------------------------------------------------------------
 -- 1) Flag en assets
@@ -22,10 +27,13 @@
 ALTER TABLE public.assets
   ADD COLUMN IF NOT EXISTS closure_checklist_required boolean NOT NULL DEFAULT false;
 
--- Recrear la vista para exponer la nueva columna. `v_assets` se definió con
--- `SELECT a.*`, que Postgres expande a la lista de columnas existentes al crearla;
--- agregar una columna con ALTER no la refleja, y CREATE OR REPLACE no permite
--- insertar columnas en medio, por eso se hace DROP + CREATE.
+-- -----------------------------------------------------------------------------
+-- 2) Recrear la vista para exponer la nueva columna.
+--    `v_assets` se definió con `SELECT a.*`, que Postgres expande a la lista de
+--    columnas existentes al crearla; agregar una columna con ALTER no la refleja,
+--    y CREATE OR REPLACE no permite insertar columnas en medio: por eso DROP + CREATE.
+-- -----------------------------------------------------------------------------
+
 DROP VIEW IF EXISTS public.v_assets;
 CREATE VIEW public.v_assets AS
 SELECT
@@ -57,7 +65,7 @@ LEFT JOIN public.asset_preventive_maintenance_plans p ON p.asset_id = a.id;
 GRANT SELECT ON public.v_assets TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 2) Plantilla de preguntas por activo
+-- 3) Plantilla de preguntas por activo
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.asset_checklist_items (
@@ -86,7 +94,7 @@ BEFORE UPDATE ON public.asset_checklist_items
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_by();
 
 -- -----------------------------------------------------------------------------
--- 3) Respuestas del técnico por ticket + activo
+-- 4) Respuestas del técnico por ticket + activo
 -- -----------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.ticket_asset_checklist_responses (
@@ -106,10 +114,9 @@ CREATE INDEX IF NOT EXISTS idx_ticket_asset_checklist_resp_ticket
   ON public.ticket_asset_checklist_responses (ticket_id, asset_id);
 
 -- -----------------------------------------------------------------------------
--- 4) Helpers
+-- 5) Helpers
 -- -----------------------------------------------------------------------------
 
--- ¿El usuario es el técnico asignado del ticket? (principal/secundario activo o legacy)
 CREATE OR REPLACE FUNCTION public.is_ticket_assigned_technician(p_uid uuid, p_ticket_id bigint)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -132,7 +139,6 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   );
 $$;
 
--- ¿Está completo el checklist de cierre para todos los activos requeridos del ticket?
 CREATE OR REPLACE FUNCTION public.is_ticket_asset_checklist_complete(p_ticket_id bigint)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -154,7 +160,7 @@ GRANT EXECUTE ON FUNCTION public.is_ticket_assigned_technician(uuid, bigint) TO 
 GRANT EXECUTE ON FUNCTION public.is_ticket_asset_checklist_complete(bigint) TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 5) RPCs
+-- 6) RPCs
 -- -----------------------------------------------------------------------------
 
 -- Guardar respuestas del checklist para un ticket + activo.
@@ -199,7 +205,6 @@ BEGIN
     v_checked := COALESCE((v_elem->>'checked')::boolean, false);
     v_note    := NULLIF(trim(COALESCE(v_elem->>'note', '')), '');
 
-    -- Solo aceptamos items activos que pertenezcan al activo (snapshot del label).
     SELECT label INTO v_label
     FROM public.asset_checklist_items
     WHERE id = v_item_id AND asset_id = p_asset_id AND is_active = true;
@@ -313,7 +318,7 @@ GRANT EXECUTE ON FUNCTION public.save_ticket_asset_checklist(bigint, bigint, jso
 GRANT EXECUTE ON FUNCTION public.get_ticket_asset_checklists(bigint) TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 6) RLS
+-- 7) RLS
 -- -----------------------------------------------------------------------------
 
 ALTER TABLE public.asset_checklist_items ENABLE ROW LEVEL SECURITY;
@@ -383,7 +388,7 @@ GRANT SELECT ON public.ticket_asset_checklist_responses TO authenticated;
 GRANT USAGE, SELECT ON SEQUENCE public.ticket_asset_checklist_responses_id_seq TO authenticated;
 
 -- -----------------------------------------------------------------------------
--- 7) Override: request_ticket_approval con guard de checklist de cierre
+-- 8) Override: request_ticket_approval con guard de checklist de cierre
 --    (copia de 18_approvals.sql + bloqueo si el checklist no está completo)
 -- -----------------------------------------------------------------------------
 
