@@ -1,5 +1,6 @@
 -- DROPS
 drop policy if exists users_select_rbac       on public.users;
+drop policy if exists users_select_self_profile on public.users;
 drop policy if exists users_insert_rbac       on public.users;
 drop policy if exists users_update_rbac       on public.users;
 drop policy if exists users_update_self_profile on public.users;
@@ -80,6 +81,10 @@ end $$;
 create policy users_select_rbac
 on public.users for select to authenticated
 using ( public.me_has_permission('users:read') or public.me_has_permission('users:full_access') );
+
+create policy users_select_self_profile
+on public.users for select to authenticated
+using ( id = auth.uid() );
 
 create policy users_insert_rbac
 on public.users for insert to authenticated

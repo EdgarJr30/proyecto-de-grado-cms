@@ -190,19 +190,17 @@ export async function updateCurrentUserProfile(
     }
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from('users')
     .update(patch)
-    .eq('id', userId)
-    .select('id, name, last_name, email, phone, location_id')
-    .single();
+    .eq('id', userId);
 
   if (error) {
     console.error('Error updating user profile:', error.message);
     return null;
   }
   invalidateData('users');
-  return data as UserProfile;
+  return getCurrentUserProfile();
 }
 
 export async function changeCurrentUserPassword(
