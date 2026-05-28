@@ -40,6 +40,7 @@ export interface Asset {
   purchase_cost: number | null;
   salvage_value: number | null;
   image_url: string | null;
+  closure_checklist_required: boolean;
   created_at: ISOTimestamp;
   updated_at: ISOTimestamp;
   created_by: UUID | null;
@@ -107,6 +108,54 @@ export type AssetManualInsert = Omit<
   AssetManual,
   'id' | 'created_at'
 > & { id?: never };
+
+// ============ TABLE: public.asset_checklist_items ============
+export interface AssetChecklistItem {
+  id: BigIntLike;
+  asset_id: BigIntLike;
+  label: string;
+  position: number;
+  is_active: boolean;
+  created_at: ISOTimestamp;
+  updated_at: ISOTimestamp;
+  created_by: UUID | null;
+  updated_by: UUID | null;
+}
+
+export type AssetChecklistItemInsert = {
+  asset_id: BigIntLike;
+  label: string;
+  position?: number;
+  is_active?: boolean;
+};
+
+// ============ Checklist de cierre por ticket (vista para la UI) ============
+export interface TicketChecklistItem {
+  item_id: BigIntLike;
+  label: string;
+  position: number;
+  checked: boolean;
+  note: string | null;
+}
+
+export interface TicketAssetChecklist {
+  asset_id: BigIntLike;
+  code: string;
+  name: string;
+  items: TicketChecklistItem[];
+}
+
+export interface TicketAssetChecklistView {
+  can_fill: boolean;
+  complete: boolean;
+  assets: TicketAssetChecklist[];
+}
+
+export interface TicketChecklistResponseInput {
+  item_id: BigIntLike;
+  checked: boolean;
+  note?: string | null;
+}
 
 // ============ TABLE: public.asset_status_history ============
 export interface AssetStatusHistory {

@@ -14,6 +14,10 @@ import type {
   AssetMaintenanceLog,
   AssetMaintenanceLogInsert,
   AssetManual,
+  AssetChecklistItem,
+  AssetChecklistItemInsert,
+  TicketAssetChecklistView,
+  TicketChecklistResponseInput,
   TicketAsset,
   TicketAssetInsert,
   AssetTicketView,
@@ -450,6 +454,103 @@ export function getAssetManualViewUrl(
     )}`;
   }
   return publicUrl;
+}
+
+// ============ ASSET CHECKLIST (plantilla de cierre) ============
+
+/** Preguntas del checklist de cierre de un activo. */
+export async function listAssetChecklistItems(
+  asset_id: BigIntLike
+): Promise<AssetChecklistItem[]> {
+  const { data, error } = await supabase
+    .from('asset_checklist_items')
+    .select('*')
+    .eq('asset_id', asset_id)
+    .eq('is_active', true)
+    .order('position', { ascending: true })
+    .order('id', { ascending: true });
+
+  return assertOk(data, error, 'No se pudo obtener el checklist del activo.');
+}
+
+export async function createAssetChecklistItem(
+  payload: AssetChecklistItemInsert
+): Promise<AssetChecklistItem> {
+  const { data, error } = await supabase
+    .from('asset_checklist_items')
+    .insert({
+      asset_id: toId(payload.asset_id),
+      label: payload.label.trim(),
+      position: payload.position ?? 0,
+      is_active: payload.is_active ?? true,
+    })
+    .select('*')
+    .single();
+
+  return assertOk(data, error, 'No se pudo crear la pregunta del checklist.');
+}
+
+export async function updateAssetChecklistItem(
+  id: BigIntLike,
+  patch: { label?: string; position?: number; is_active?: boolean }
+): Promise<void> {
+  const { error } = await supabase
+    .from('asset_checklist_items')
+    .update({
+      ...(patch.label !== undefined ? { label: patch.label.trim() } : {}),
+      ...(patch.position !== undefined ? { position: patch.position } : {}),
+      ...(patch.is_active !== undefined ? { is_active: patch.is_active } : {}),
+    })
+    .eq('id', id);
+
+  if (error) throw new Error(toErrorMessage(error));
+}
+
+export async function deleteAssetChecklistItem(id: BigIntLike): Promise<void> {
+  const { error } = await supabase
+    .from('asset_checklist_items')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw new Error(toErrorMessage(error));
+}
+
+// ============ TICKET ASSET CHECKLIST (llenado por el técnico) ============
+
+/** Devuelve los checklists de cierre de los activos del ticket (plantilla + respuestas). */
+export async function getTicketAssetChecklists(
+  ticket_id: BigIntLike
+): Promise<TicketAssetChecklistView> {
+  const { data, error } = await supabase.rpc('get_ticket_asset_checklists', {
+    p_ticket_id: toId(ticket_id),
+  });
+
+  if (error) throw new Error(toErrorMessage(error));
+
+  return (data as TicketAssetChecklistView | null) ?? {
+    can_fill: false,
+    complete: true,
+    assets: [],
+  };
+}
+
+/** Guarda las respuestas del checklist de un activo para un ticket. */
+export async function saveTicketAssetChecklist(params: {
+  ticket_id: BigIntLike;
+  asset_id: BigIntLike;
+  responses: TicketChecklistResponseInput[];
+}): Promise<void> {
+  const { error } = await supabase.rpc('save_ticket_asset_checklist', {
+    p_ticket_id: toId(params.ticket_id),
+    p_asset_id: toId(params.asset_id),
+    p_responses: params.responses.map((r) => ({
+      item_id: toId(r.item_id),
+      checked: r.checked,
+      note: r.note ?? null,
+    })),
+  });
+
+  if (error) throw new Error(toErrorMessage(error));
 }
 
 // ============ TICKET-ASSETS (many-to-many) ============

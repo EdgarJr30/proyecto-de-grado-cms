@@ -11,6 +11,7 @@ import {
 } from '../services/ticketCommentsService';
 import type { WorkOrder } from '../types/Ticket';
 import TicketApprovalSection from '../components/tickets/TicketApprovalSection';
+import TicketAssetChecklistSection from '../components/tickets/TicketAssetChecklistSection';
 import {
   listTicketCollaborators,
   type Collaborator,
@@ -36,12 +37,18 @@ export default function TicketDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [checklistComplete, setChecklistComplete] = useState(true);
 
   const navigationState = (location.state ?? null) as
     | { backTo?: string; backLabel?: string }
     | null;
   const backTo = navigationState?.backTo?.trim() || '/mi-perfil';
   const backLabel = navigationState?.backLabel?.trim() || 'Mi perfil';
+
+  const handleChecklistChange = useCallback(
+    (view: { complete: boolean }) => setChecklistComplete(view.complete),
+    []
+  );
 
   const loadTicket = useCallback(async () => {
     if (!Number.isInteger(numericTicketId) || numericTicketId <= 0) {
@@ -273,9 +280,16 @@ export default function TicketDetailsPage() {
               </section>
             )}
 
+            <TicketAssetChecklistSection
+              ticketId={ticket.id as unknown as number}
+              status={ticket.status}
+              onChange={handleChecklistChange}
+            />
+
             <TicketApprovalSection
               ticketId={ticket.id as unknown as number}
               status={ticket.status}
+              checklistComplete={checklistComplete}
               onChanged={loadTicket}
             />
 

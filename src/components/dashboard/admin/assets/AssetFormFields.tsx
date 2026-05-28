@@ -182,6 +182,7 @@ export type AssetFormShape = {
   purchase_cost?: number | null;
   salvage_value?: number | null;
   image_url?: string | null;
+  closure_checklist_required?: boolean | null;
 
   preventive_enabled?: boolean | null;
   preventive_frequency_value?: number | null;
@@ -913,6 +914,48 @@ export default function AssetFormFields<T extends AssetFormShape>({
           )}
           placeholder="Notas del activo..."
         />
+      </div>
+
+      {/* Checklist de cierre */}
+      <div className="md:col-span-2">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-semibold text-slate-900">
+                Checklist de cierre obligatorio
+              </div>
+              <div className="text-xs text-slate-600">
+                Si se activa, el técnico deberá completar el checklist de
+                verificación de este activo antes de enviar el ticket a
+                validación. Las preguntas se gestionan más abajo (solo al editar).
+              </div>
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.closure_checklist_required ?? false}
+                onChange={(e) => {
+                  if (isLocked('closure_checklist_required')) return;
+                  setForm(
+                    (p) =>
+                      ({
+                        ...p,
+                        closure_checklist_required: e.target.checked,
+                      }) as T
+                  );
+                }}
+                disabled={isFieldDisabled('closure_checklist_required')}
+                className={cx(
+                  'h-4 w-4 rounded border-slate-300 text-indigo-600',
+                  isFieldDisabled('closure_checklist_required') &&
+                    'opacity-70 cursor-not-allowed'
+                )}
+              />
+              Requerir
+            </label>
+          </div>
+        </div>
       </div>
 
       {/* Preventivo */}

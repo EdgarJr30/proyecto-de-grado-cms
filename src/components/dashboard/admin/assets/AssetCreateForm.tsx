@@ -58,6 +58,7 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
     purchase_cost: null,
     salvage_value: null,
     image_url: null,
+    closure_checklist_required: false,
     preventive_enabled: false,
     preventive_frequency_value: 1,
     preventive_frequency_unit: 'MONTH',
@@ -169,6 +170,7 @@ export default function AssetCreateForm({ onClose, onCreated }: Props) {
         purchase_cost: form.purchase_cost ?? null,
         salvage_value: form.salvage_value ?? null,
         image_url: form.image_url ?? null,
+        closure_checklist_required: form.closure_checklist_required ?? false,
       });
 
       if (form.preventive_enabled) {

@@ -16,9 +16,16 @@ type Props = {
   ticketId: number;
   status: string;
   onChanged: () => void | Promise<void>;
+  /** Si es false, no se permite solicitar validación (falta checklist de cierre del activo). */
+  checklistComplete?: boolean;
 };
 
-export default function TicketApprovalSection({ ticketId, status, onChanged }: Props) {
+export default function TicketApprovalSection({
+  ticketId,
+  status,
+  onChanged,
+  checklistComplete = true,
+}: Props) {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [pending, setPending] = useState<ApprovalRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -195,11 +202,24 @@ export default function TicketApprovalSection({ ticketId, status, onChanged }: P
             imagen del trabajo terminado.
           </p>
 
+          {!checklistComplete && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800">
+              Completa el checklist de cierre del activo (todas las verificaciones
+              marcadas) antes de enviar a validación.
+            </p>
+          )}
+
           {!showRequest ? (
             <button
               type="button"
               onClick={() => setShowRequest(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
+              disabled={!checklistComplete}
+              title={
+                !checklistComplete
+                  ? 'Completa el checklist de cierre del activo'
+                  : undefined
+              }
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Upload className="h-4 w-4" />
               Solicitar validación

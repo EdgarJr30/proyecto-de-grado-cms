@@ -7,6 +7,7 @@ import {
 import { showToastError, showToastSuccess } from '../../../../notifications';
 import AssetFormFields from './AssetFormFields';
 import AssetManualsManager from './AssetManualsManager';
+import AssetChecklistManager from './AssetChecklistManager';
 import AnimatedDialog from '../../../ui/AnimatedDialog';
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -63,6 +64,7 @@ export default function AssetEditForm({
     purchase_cost: asset.purchase_cost || undefined,
     salvage_value: asset.salvage_value || undefined,
     image_url: asset.image_url || undefined,
+    closure_checklist_required: Boolean(asset.closure_checklist_required),
     preventive_enabled: Boolean(asset.preventive_is_active),
     preventive_frequency_value: asset.preventive_frequency_value ?? 1,
     preventive_frequency_unit: asset.preventive_frequency_unit ?? 'MONTH',
@@ -135,6 +137,7 @@ export default function AssetEditForm({
         purchase_cost: form.purchase_cost ?? null,
         salvage_value: form.salvage_value ?? null,
         image_url: form.image_url ?? null,
+        closure_checklist_required: form.closure_checklist_required ?? false,
       });
 
       await upsertAssetPreventivePlan({
@@ -243,6 +246,15 @@ export default function AssetEditForm({
                   }
                   disabled={isSaving}
                   onChanged={onManualsChanged}
+                />
+              </div>
+
+              <div className="mt-4">
+                <AssetChecklistManager
+                  assetId={
+                    typeof asset.id === 'string' ? Number(asset.id) : asset.id
+                  }
+                  disabled={isSaving}
                 />
               </div>
             </div>
