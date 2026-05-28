@@ -457,6 +457,14 @@ DECLARE
   v_reason text := COALESCE(NULLIF(trim(p_reason), ''), 'ticket_transition');
   v_count integer := 0;
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.tickets t
+    WHERE t.id = p_ticket_id
+  ) THEN
+    RETURN 0;
+  END IF;
+
   WITH open_rows AS (
     SELECT r.id, r.tool_id, r.status
     FROM public.ticket_tool_requests r
@@ -502,7 +510,7 @@ BEGIN
     SET status = 'AVAILABLE',
         updated_at = v_now
     WHERE t.id IN (SELECT tool_id FROM updated_requests)
-      AND t.status IN ('RESERVED', 'CHECKED_OUT')
+      AND t.status IN ('AVAILABLE', 'RESERVED', 'CHECKED_OUT')
     RETURNING t.id
   )
   SELECT count(*) INTO v_count FROM updated_requests;
@@ -527,6 +535,7 @@ BEGIN
   IF NOT (
     OLD.status IS DISTINCT FROM NEW.status
     OR OLD.finalized_at IS DISTINCT FROM NEW.finalized_at
+    OR OLD.is_archived IS DISTINCT FROM NEW.is_archived
   ) THEN
     RETURN NEW;
   END IF;
@@ -534,7 +543,8 @@ BEGIN
   IF NEW.status = 'En Validación' THEN
     v_reason := 'ticket_en_validacion';
   ELSIF NEW.status = 'Finalizadas'
-     OR (OLD.finalized_at IS NULL AND NEW.finalized_at IS NOT NULL) THEN
+     OR NEW.finalized_at IS NOT NULL
+     OR (NEW.is_archived = true AND OLD.is_archived IS DISTINCT FROM NEW.is_archived) THEN
     v_reason := 'ticket_finalizado';
   ELSE
     RETURN NEW;
@@ -547,7 +557,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_release_ticket_tools_on_ticket_terminal_state ON public.tickets;
 CREATE TRIGGER trg_release_ticket_tools_on_ticket_terminal_state
-AFTER UPDATE OF status, finalized_at ON public.tickets
+AFTER UPDATE OF status, finalized_at, is_archived ON public.tickets
 FOR EACH ROW EXECUTE FUNCTION public.release_ticket_tools_on_ticket_terminal_state();
 
 ALTER TABLE public.tool_categories ENABLE ROW LEVEL SECURITY;
