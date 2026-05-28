@@ -1,14 +1,10 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  BadgeCheck,
   Building2,
+  ChevronDown,
   KeyRound,
   Megaphone,
   ScrollText,
@@ -21,7 +17,6 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import Sidebar from '../../components/layout/Sidebar';
 import { Can, useCan } from '../../rbac/PermissionsContext';
-import { cn } from '../../utils/cn';
 import GeneralSettings from '../../components/dashboard/admin/settings/GeneralSettings';
 import RoleList from '../../components/dashboard/roles/RoleList';
 import PermissionsTable from '../../components/dashboard/permissions/PermissionsTable';
@@ -30,6 +25,7 @@ import SpecialIncidentsTable from '../../components/dashboard/special-incidents/
 import AnnouncementsTable from '../../components/dashboard/admin/announcements/AnnouncementsTable';
 import SocietySettingsTable from '../../components/dashboard/society/SocietySettingsDetail';
 import ActivityLogPanel from '../../components/dashboard/admin/activity-log/ActivityLogPanel';
+import ApprovalProcessesPanel from '../../components/dashboard/admin/approvals/ApprovalProcessesPanel';
 
 type TabKey =
   | 'general'
@@ -38,24 +34,15 @@ type TabKey =
   | 'incidents'
   | 'announcements'
   | 'sociedad'
-  | 'logs';
-
-type ModuleTone = {
-  iconBg: string;
-  iconColor: string;
-  selectedBg: string;
-  selectedBorder: string;
-  focusRing: string;
-};
+  | 'logs'
+  | 'approvals';
 
 type SettingsModule = {
   key: TabKey;
   label: string;
   description: string;
-  helper: string;
   icon: LucideIcon;
   enabled: boolean;
-  tone: ModuleTone;
 };
 
 const TAB_ORDER: TabKey[] = [
@@ -64,6 +51,7 @@ const TAB_ORDER: TabKey[] = [
   'incidents',
   'announcements',
   'sociedad',
+  'approvals',
   'logs',
   'general',
 ];
@@ -74,58 +62,6 @@ const SEARCHABLE_TABS = new Set<TabKey>([
   'incidents',
   'announcements',
 ]);
-
-const TAB_TONES: Record<TabKey, ModuleTone> = {
-  roles: {
-    iconBg: 'bg-indigo-100 dark:bg-indigo-500/15',
-    iconColor: 'text-indigo-700 dark:text-indigo-300',
-    selectedBg: 'bg-indigo-50 dark:bg-indigo-500/15',
-    selectedBorder: 'border-indigo-200 dark:border-indigo-400/30',
-    focusRing: 'focus-visible:ring-indigo-500',
-  },
-  permissions: {
-    iconBg: 'bg-cyan-100 dark:bg-cyan-500/15',
-    iconColor: 'text-cyan-700 dark:text-cyan-300',
-    selectedBg: 'bg-cyan-50 dark:bg-cyan-500/15',
-    selectedBorder: 'border-cyan-200 dark:border-cyan-400/30',
-    focusRing: 'focus-visible:ring-cyan-500',
-  },
-  incidents: {
-    iconBg: 'bg-amber-100 dark:bg-amber-500/15',
-    iconColor: 'text-amber-700 dark:text-amber-300',
-    selectedBg: 'bg-amber-50 dark:bg-amber-500/15',
-    selectedBorder: 'border-amber-200 dark:border-amber-400/30',
-    focusRing: 'focus-visible:ring-amber-500',
-  },
-  announcements: {
-    iconBg: 'bg-rose-100 dark:bg-rose-500/15',
-    iconColor: 'text-rose-700 dark:text-rose-300',
-    selectedBg: 'bg-rose-50 dark:bg-rose-500/15',
-    selectedBorder: 'border-rose-200 dark:border-rose-400/30',
-    focusRing: 'focus-visible:ring-rose-500',
-  },
-  sociedad: {
-    iconBg: 'bg-emerald-100 dark:bg-emerald-500/15',
-    iconColor: 'text-emerald-700 dark:text-emerald-300',
-    selectedBg: 'bg-emerald-50 dark:bg-emerald-500/15',
-    selectedBorder: 'border-emerald-200 dark:border-emerald-400/30',
-    focusRing: 'focus-visible:ring-emerald-500',
-  },
-  logs: {
-    iconBg: 'bg-slate-100 dark:bg-slate-500/15',
-    iconColor: 'text-slate-700 dark:text-slate-300',
-    selectedBg: 'bg-slate-50 dark:bg-slate-500/15',
-    selectedBorder: 'border-slate-200 dark:border-slate-400/30',
-    focusRing: 'focus-visible:ring-slate-500',
-  },
-  general: {
-    iconBg: 'bg-blue-100 dark:bg-blue-500/15',
-    iconColor: 'text-blue-700 dark:text-blue-300',
-    selectedBg: 'bg-blue-50 dark:bg-blue-500/15',
-    selectedBorder: 'border-blue-200 dark:border-blue-400/30',
-    focusRing: 'focus-visible:ring-blue-500',
-  },
-};
 
 const SEARCH_PLACEHOLDERS: Partial<Record<TabKey, string>> = {
   roles: 'Buscar por nombre o descripción del rol',
@@ -144,7 +80,7 @@ function isTabKey(value: string | null): value is TabKey {
   return TAB_ORDER.includes(value as TabKey);
 }
 
-function SettingsModuleNav({
+function SettingsModulePicker({
   modules,
   value,
   onChange,
@@ -153,145 +89,30 @@ function SettingsModuleNav({
   value: TabKey;
   onChange: (tab: TabKey) => void;
 }) {
-  const prefersReducedMotion = useReducedMotion();
-  const refs = useRef<Array<HTMLButtonElement | null>>([]);
-  const enabledIndices = useMemo(
-    () => modules.flatMap((module, index) => (module.enabled ? [index] : [])),
-    [modules]
-  );
-
-  const handleKeyboard = (event: KeyboardEvent<HTMLButtonElement>, idx: number) => {
-    if (enabledIndices.length === 0) return;
-
-    const currentPos = enabledIndices.indexOf(idx);
-    if (currentPos === -1) return;
-
-    let nextPos = currentPos;
-
-    switch (event.key) {
-      case 'ArrowDown':
-      case 'ArrowRight':
-        nextPos = (currentPos + 1) % enabledIndices.length;
-        break;
-      case 'ArrowUp':
-      case 'ArrowLeft':
-        nextPos = (currentPos - 1 + enabledIndices.length) % enabledIndices.length;
-        break;
-      case 'Home':
-        nextPos = 0;
-        break;
-      case 'End':
-        nextPos = enabledIndices.length - 1;
-        break;
-      default:
-        return;
-    }
-
-    event.preventDefault();
-    const nextIndex = enabledIndices[nextPos];
-    const nextModule = modules[nextIndex];
-    if (!nextModule || !nextModule.enabled) return;
-
-    refs.current[nextIndex]?.focus();
-    onChange(nextModule.key);
-  };
+  const activeModule = modules.find((module) => module.key === value) ?? modules[0];
+  const ActiveIcon = activeModule.icon;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-      <div className="border-b border-gray-200 px-4 py-3 dark:border-slate-700">
-        <h2 className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-          Submódulos
-        </h2>
-        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
-          Navega por secciones con foco claro y permisos visibles.
-        </p>
-      </div>
-
-      <div
-        role="tablist"
-        aria-orientation="vertical"
-        aria-label="Submódulos de configuración"
-        className="space-y-2 p-2"
-      >
-        {modules.map((module, idx) => {
-          const Icon = module.icon;
-          const selected = value === module.key;
-
-          return (
-            <motion.div
-              key={module.key}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={
-                prefersReducedMotion
-                  ? undefined
-                  : {
-                      duration: 0.3,
-                      delay: idx * 0.045,
-                      ease: [0.22, 1, 0.36, 1],
-                    }
-              }
-            >
-              <button
-                ref={(el) => {
-                  refs.current[idx] = el;
-                }}
-                type="button"
-                role="tab"
-                id={`settings-tab-${module.key}`}
-                aria-controls={`settings-panel-${module.key}`}
-                aria-selected={selected}
-                tabIndex={selected ? 0 : -1}
-                disabled={!module.enabled}
-                onClick={() => onChange(module.key)}
-                onKeyDown={(event) => handleKeyboard(event, idx)}
-                className={cn(
-                  'w-full rounded-xl border px-3 py-3 text-left transition focus:outline-none focus-visible:ring-2',
-                  module.tone.focusRing,
-                  selected
-                    ? `${module.tone.selectedBg} ${module.tone.selectedBorder}`
-                    : 'border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-slate-600 dark:hover:bg-slate-800/70',
-                  !module.enabled &&
-                    'cursor-not-allowed border-gray-200 bg-gray-100 opacity-70 dark:border-slate-700 dark:bg-slate-800'
-                )}
-                title={module.enabled ? module.description : 'Sin permisos'}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={cn(
-                      'mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
-                      module.tone.iconBg,
-                      module.tone.iconColor
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </span>
-
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-gray-900 dark:text-slate-100">
-                      {module.label}
-                    </span>
-                    <span className="mt-1 block text-xs text-gray-500 dark:text-slate-400">
-                      {module.helper}
-                    </span>
-                    <span
-                      className={cn(
-                        'mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                        module.enabled
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                          : 'bg-gray-200 text-gray-600 dark:bg-slate-700 dark:text-slate-300'
-                      )}
-                    >
-                      {module.enabled ? 'Disponible' : 'Sin acceso'}
-                    </span>
-                  </span>
-                </div>
-              </button>
-            </motion.div>
-          );
-        })}
-      </div>
-    </div>
+    <label className="flex w-full max-w-[28rem] items-center gap-3 rounded-xl border border-slate-300/20 bg-slate-950/20 px-4 py-2 text-sm text-slate-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] dark:border-slate-600/60 dark:bg-slate-950/30">
+      <span className="shrink-0 text-slate-400">Módulo</span>
+      <span className="relative min-w-0 flex-1">
+        <span className="pointer-events-none absolute left-2 top-1/2 z-10 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-teal-500/15 text-teal-300 ring-1 ring-teal-400/10">
+          <ActiveIcon className="h-4 w-4" />
+        </span>
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value as TabKey)}
+          className="h-10 w-full appearance-none rounded-lg border border-slate-500/40 bg-slate-950/30 py-0 pl-12 pr-10 text-sm font-semibold text-slate-100 outline-none transition hover:border-slate-400/70 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20"
+        >
+          {modules.map((module) => (
+            <option key={module.key} value={module.key}>
+              {module.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+      </span>
+    </label>
   );
 }
 
@@ -327,6 +148,7 @@ export default function AdminSettingsHubPage() {
     canSocietyFull || canSocietyDisable || canSocietyDelete || canSocietyRead;
 
   const canViewLogs = useCan(['logs:read', 'logs:export']);
+  const canManageApprovals = useCan('approvals:full_access');
 
   const modules = useMemo<SettingsModule[]>(
     () => [
@@ -334,64 +156,57 @@ export default function AdminSettingsHubPage() {
         key: 'roles',
         label: 'Roles',
         description: 'Gestiona los roles y su asignación de permisos.',
-        helper: 'Estructura de acceso por perfil',
         icon: ShieldCheck,
         enabled: canManageRoles,
-        tone: TAB_TONES.roles,
       },
       {
         key: 'permissions',
         label: 'Permisos',
         description: 'Administra códigos, descripciones y sincronización de permisos.',
-        helper: 'Catálogo central de permisos',
         icon: KeyRound,
         enabled: canSeePermissions,
-        tone: TAB_TONES.permissions,
       },
       {
         key: 'incidents',
         label: 'Incidencias',
         description: 'Mantén incidencias especiales para clasificación operativa.',
-        helper: 'Tipos especiales para tickets',
         icon: AlertTriangle,
         enabled: canManageIncidents,
-        tone: TAB_TONES.incidents,
       },
       {
         key: 'announcements',
         label: 'Anuncios',
         description: 'Publica avisos por rol y controla vigencia/visibilidad.',
-        helper: 'Comunicaciones internas',
         icon: Megaphone,
         enabled: canManageAnnouncements,
-        tone: TAB_TONES.announcements,
       },
       {
         key: 'sociedad',
         label: 'Sociedad',
         description: 'Configura nombre, branding e identidad institucional.',
-        helper: 'Datos de organización y marca',
         icon: Building2,
         enabled: canManageSociety,
-        tone: TAB_TONES.sociedad,
+      },
+      {
+        key: 'approvals',
+        label: 'Aprobaciones',
+        description: 'Crea procesos de validación y asigna aprobadores y solicitantes.',
+        icon: BadgeCheck,
+        enabled: canManageApprovals,
       },
       {
         key: 'logs',
         label: 'Bitácora',
         description: 'Audita las acciones realizadas en la plataforma.',
-        helper: 'Registro de auditoría',
         icon: ScrollText,
         enabled: canViewLogs,
-        tone: TAB_TONES.logs,
       },
       {
         key: 'general',
         label: 'General',
         description: 'Ajustes transversales del sistema y catálogos base.',
-        helper: 'Parámetros globales',
         icon: Settings,
         enabled: true,
-        tone: TAB_TONES.general,
       },
     ],
     [
@@ -401,6 +216,7 @@ export default function AdminSettingsHubPage() {
       canManageAnnouncements,
       canManageSociety,
       canViewLogs,
+      canManageApprovals,
     ]
   );
 
@@ -439,6 +255,10 @@ export default function AdminSettingsHubPage() {
   const searchPlaceholder =
     SEARCH_PLACEHOLDERS[tab] ?? 'Buscar elementos del submódulo';
   const enabledCount = modules.filter((module) => module.enabled).length;
+  const availableModules = useMemo(
+    () => modules.filter((module) => module.enabled),
+    [modules]
+  );
 
   useEffect(() => {
     if (!moduleMap.get(tab)?.enabled) {
@@ -474,7 +294,7 @@ export default function AdminSettingsHubPage() {
         };
 
   return (
-    <div className="h-screen flex bg-[#f4f6fb] text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="h-screen flex bg-[#f4f6fb] text-slate-900 dark:bg-[#061224] dark:text-slate-100">
       <Sidebar />
 
       <main className="flex flex-col h-[100dvh] overflow-hidden flex-1 min-w-0">
@@ -482,38 +302,47 @@ export default function AdminSettingsHubPage() {
           className="px-4 md:px-6 lg:px-8 pt-4 md:pt-6 pb-0"
           {...revealProps(0.04)}
         >
-          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/70 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                  <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/70 p-5 shadow-sm dark:border-slate-800/90 dark:from-[#071426] dark:via-[#081629] dark:to-[#061224] dark:shadow-[0_24px_90px_rgba(0,0,0,0.18)] md:p-6">
+            <div className="absolute inset-x-6 top-0 hidden h-32 rounded-full bg-sky-500/5 blur-3xl dark:block" />
+            <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+              <div className="max-w-4xl">
+                <p className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 dark:border-slate-700/80 dark:bg-slate-950/30 dark:text-slate-300">
+                  <Sparkles className="h-3.5 w-3.5 text-sky-500 dark:text-sky-300" />
                   Centro de configuración
                 </p>
-                <h1 className="mt-2 text-3xl font-bold tracking-tight">
+                <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 dark:text-white">
                   Configuración
                 </h1>
-                <p className="mt-1 text-sm text-slate-600 max-w-3xl dark:text-slate-300">
+                <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-600 dark:text-slate-300">
                   Organiza roles, permisos, incidencias, anuncios, datos de
                   sociedad y parámetros globales desde una sola vista.
                 </p>
+
+                <div className="mt-8">
+                  <SettingsModulePicker
+                    modules={availableModules}
+                    value={tab}
+                    onChange={(next) => setTab(next)}
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+              <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:min-w-[28rem]">
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/80 dark:bg-slate-950/20">
                   <p className="text-slate-500 dark:text-slate-400">Submódulos</p>
-                  <p className="mt-1 text-lg font-bold text-slate-900 dark:text-slate-100">
+                  <p className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
                     {modules.length}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700/80 dark:bg-slate-950/20">
                   <p className="text-slate-500 dark:text-slate-400">Disponibles</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                  <p className="mt-2 text-xl font-bold text-emerald-700 dark:text-emerald-300">
                     {enabledCount}
                   </p>
                 </div>
-                <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 col-span-2 sm:col-span-1 dark:border-slate-700 dark:bg-slate-900">
+                <div className="col-span-2 rounded-xl border border-slate-200 bg-white px-4 py-3 sm:col-span-1 dark:border-slate-700/80 dark:bg-slate-950/20">
                   <p className="text-slate-500 dark:text-slate-400">Módulo activo</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900 truncate dark:text-slate-100">
+                  <p className="mt-2 truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {activeModule.label}
                   </p>
                 </div>
@@ -522,118 +351,54 @@ export default function AdminSettingsHubPage() {
           </div>
         </motion.header>
 
-        <section className="flex-1 overflow-auto px-4 md:px-6 lg:px-8 pt-4 pb-8">
-          <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-            <motion.aside
-              className="space-y-4 xl:sticky xl:top-4 self-start"
-              {...revealProps(0.1)}
+        <section className="flex-1 overflow-auto px-4 pb-8 pt-4 md:px-6 lg:px-8">
+          <motion.div className="min-w-0" {...revealProps(0.16)}>
+            <section
+              role="tabpanel"
+              id={`settings-panel-${tab}`}
+              aria-label={`Submódulo ${activeModule.label}`}
+              className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 shadow-sm dark:border-slate-700/80 dark:bg-[#071426]/85 dark:shadow-[0_20px_80px_rgba(0,0,0,0.16)]"
             >
-              <SettingsModuleNav
-                modules={modules}
-                value={tab}
-                onChange={(next) => setTab(next)}
-              />
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  Estado de acceso
-                </h3>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Los módulos bloqueados requieren permisos adicionales.
-                </p>
-                <div className="mt-3 space-y-2 text-xs">
-                  {modules.map((module, index) => (
-                    <motion.div
-                      key={`${module.key}-status`}
-                      className="flex items-center justify-between rounded-lg border border-slate-200 px-2.5 py-2 dark:border-slate-700"
-                      initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={
-                        prefersReducedMotion
-                          ? undefined
-                          : {
-                              duration: 0.26,
-                              delay: 0.05 + index * 0.04,
-                              ease: [0.22, 1, 0.36, 1],
-                            }
-                      }
-                    >
-                      <span className="font-medium text-slate-700 dark:text-slate-200">
-                        {module.label}
-                      </span>
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-0.5 font-semibold',
-                          module.enabled
-                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                            : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                        )}
-                      >
-                        {module.enabled ? 'OK' : 'Bloqueado'}
-                      </span>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            </motion.aside>
-
-            <motion.div
-              className="space-y-4 min-w-0"
-              {...revealProps(0.16)}
-            >
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        'mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                        activeModule.tone.iconBg,
-                        activeModule.tone.iconColor
-                      )}
-                    >
-                      <ActiveIcon className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
-                        {activeModule.label}
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                        {activeModule.description}
-                      </p>
-                    </div>
+              <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 lg:flex-row lg:items-start lg:justify-between dark:border-slate-700/80">
+                <div className="flex items-start gap-4">
+                  <div className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-500/15 text-teal-500 ring-1 ring-teal-400/10 dark:bg-teal-400/10 dark:text-teal-300">
+                    <ActiveIcon className="h-5 w-5" />
                   </div>
 
-                  {searchable && (
-                    <div className="w-full lg:w-[360px]">
-                      <label
-                        htmlFor="admin-settings-search"
-                        className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
-                      >
-                        Buscar en {activeModule.label}
-                      </label>
-                      <div className="relative mt-1">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-                        <input
-                          id="admin-settings-search"
-                          type="search"
-                          value={searchTerm}
-                          onChange={(event) => setSearchTerm(event.target.value)}
-                          placeholder={searchPlaceholder}
-                          className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-500/30"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <div>
+                    <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-100">
+                      {activeModule.label}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                      {activeModule.description}
+                    </p>
+                  </div>
                 </div>
+
+                {searchable && (
+                  <div className="w-full lg:w-[360px]">
+                    <label
+                      htmlFor="admin-settings-search"
+                      className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                    >
+                      Buscar en {activeModule.label}
+                    </label>
+                    <div className="relative mt-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+                      <input
+                        id="admin-settings-search"
+                        type="search"
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder={searchPlaceholder}
+                        className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-600 dark:bg-slate-950/40 dark:text-slate-100 dark:focus:ring-sky-500/30"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <section
-                role="tabpanel"
-                id={`settings-panel-${tab}`}
-                aria-labelledby={`settings-tab-${tab}`}
-                className="rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
-              >
+              <div className="p-5">
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.div
                     key={tab}
@@ -685,6 +450,12 @@ export default function AdminSettingsHubPage() {
                       </Can>
                     )}
 
+                    {tab === 'approvals' && (
+                      <Can perm="approvals:full_access">
+                        <ApprovalProcessesPanel />
+                      </Can>
+                    )}
+
                     {tab === 'logs' && (
                       <Can perm={['logs:read', 'logs:export']}>
                         <ActivityLogPanel />
@@ -698,9 +469,9 @@ export default function AdminSettingsHubPage() {
                     )}
                   </motion.div>
                 </AnimatePresence>
-              </section>
-            </motion.div>
-          </div>
+              </div>
+            </section>
+          </motion.div>
         </section>
       </main>
 
